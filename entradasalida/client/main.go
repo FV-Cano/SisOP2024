@@ -6,10 +6,23 @@ import (
 	"log"
 )
 
+/*
+IDEA:
+const Kernel | Memoria
+
+log.Println("Indicar servidor a conectarse")
+scanf(nombreServidor)
+
+if Kernel
+globals.ClientConfig = utils.IniciarConfiguracion("configKernel.json")
+else 
+globals.ClientConfig = utils.IniciarConfiguracion("configMemoria.json")*/
+
 func main() {
 
 	utils.ConfigurarLogger()
 
+	
 	globals.ClientConfig = utils.IniciarConfiguracion("config.json")
 	// validar que la config este cargada correctamente
 	if globals.ClientConfig == nil {

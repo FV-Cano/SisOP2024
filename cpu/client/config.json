@@ -1,8 +1,0 @@
-{
-    "port": 8003,
-    "ip_memory": "127.0.0.1",
-    "port_memory": 8002,
-    "number_felling_tlb": 32,
-    "algorithm_tlb": "FIFO",
-    "message": "Hola soy un cliente"
-}

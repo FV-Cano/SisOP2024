@@ -10,3 +10,67 @@
 2024/04/11 20:44:33 Hola, soy un log
 2024/04/11 20:44:33 Hola soy un cliente
 2024/04/11 20:44:33 error enviando mensaje a ip: puerto:0
+2024/04/11 18:27:10 Hola, soy un log
+2024/04/11 18:27:10 Hola soy un cliente
+2024/04/11 18:27:10 error enviando mensaje a ip: puerto:0
+2024/04/11 18:35:57 Hola, soy un log
+2024/04/11 18:35:57 Hola soy un cliente
+2024/04/11 18:35:57 error enviando mensaje a ip: puerto:0
+2024/04/11 21:29:33 Hola, soy un log
+2024/04/11 21:29:33 Hola soy un cliente
+2024/04/11 21:29:33 error enviando mensaje a ip: puerto:0
+2024/04/11 21:30:30 Hola, soy un log
+2024/04/11 21:30:30 
+2024/04/11 21:30:30 error enviando mensaje a ip: puerto:0
+2024/04/11 21:30:50 Hola, soy un log
+2024/04/11 21:30:50 
+2024/04/11 21:30:50 error enviando mensaje a ip: puerto:0
+2024/04/11 22:39:08 Hola, soy un log
+2024/04/11 22:39:08 
+2024/04/11 22:39:08 error enviando mensaje a ip:  puerto: 0
+2024/04/12 20:57:57 Hola, soy un log
+2024/04/12 20:57:57 
+2024/04/12 20:57:57 error enviando mensaje a ip:  puerto: 0
+2024/04/12 21:10:11 Hola, soy un log
+2024/04/12 21:10:11 
+2024/04/12 21:10:11 error enviando mensaje a ip:  puerto: 8002
+2024/04/12 21:14:12 Hola, soy un log
+2024/04/12 21:14:12 
+2024/04/12 21:14:12 error enviando mensaje a ip:  puerto: 0
+2024/04/12 21:15:05 Hola, soy un log
+2024/04/12 21:15:05 
+2024/04/12 21:15:05 error enviando mensaje a ip:  puerto: 0
+2024/04/12 21:16:13 Hola, soy un log
+2024/04/12 21:16:13 Hola soy un cliente
+2024/04/12 21:16:13 error enviando mensaje a ip:  puerto: 0
+2024/04/12 21:25:06 Hola, soy un log
+2024/04/12 21:25:06 Hola soy un cliente
+2024/04/12 21:25:06 error enviando mensaje a ip: puerto:0
+2024/04/12 21:26:04 Hola, soy un log
+2024/04/12 21:26:04 Hola soy un cliente
+2024/04/12 21:26:04 error enviando mensaje a ip: puerto:8002
+2024/04/12 21:36:13 Hola, soy un log
+2024/04/12 21:36:13 Hola soy un cliente
+2024/04/12 21:36:13 error enviando mensaje a ip: puerto:0
+2024/04/12 21:37:41 Hola, soy un log
+2024/04/12 21:37:41 Hola soy un cliente
+2024/04/12 21:37:41 error enviando mensaje a ip: puerto:0
+2024/04/12 21:53:22 Hola, soy un log
+2024/04/12 21:53:22 Hola soy un cliente
+2024/04/12 21:53:22 error enviando mensaje a ip: puerto:0
+2024/04/12 21:57:18 Hola, soy un log
+2024/04/12 21:57:18 Hola soy un cliente
+2024/04/12 21:57:18 error enviando mensaje a ip:127.0.0.1 puerto:0
+2024/04/12 21:57:38 Hola, soy un log
+2024/04/12 21:57:38 Hola soy un cliente
+2024/04/12 21:57:38 respuesta del servidor: 200 OK
+2024/04/12 21:57:38 Ingrese los mensajes
+2024/04/12 21:58:10 hola
+2024/04/12 21:58:12 chau
+2024/04/12 21:58:13 Ingrese los mensajes
+2024/04/12 21:58:15 holi
+2024/04/12 21:58:16 chauchi
+2024/04/12 21:58:17 paquete a enviar: {Valores:[holi
+ chauchi
+]}
+2024/04/12 21:58:17 respuesta del servidor: 200 OK

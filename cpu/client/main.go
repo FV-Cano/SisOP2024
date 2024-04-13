@@ -26,8 +26,9 @@ func main() {
 	// ADVERTENCIA: Antes de continuar, tenemos que asegurarnos que el servidor esté corriendo para poder conectarnos a él
 
 	// enviar un mensaje al servidor con el valor de la config
+	//TODO PONER globals.ClientConfig.Port_memory
 	utils.EnviarMensaje(globals.ClientConfig.Ip_memory, globals.ClientConfig.Port, globals.ClientConfig.Message)
-	// leer de la consola el mensaje
+	// leer de la consola el mensaje 
 	utils.LeerConsola()
 
 	// generamos un paquete y lo enviamos al servidor

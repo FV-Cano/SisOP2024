@@ -1,9 +1,9 @@
-go 1.22
+//go 1.22
 
-use (
-	./cpu
-	./entradasalida
-	./kernel
-	./memoria
-	./utils
-)
+//use (
+//	./cpu
+//	./entradasalida
+//	./kernel
+//	./memoria
+//	./utils
+//)

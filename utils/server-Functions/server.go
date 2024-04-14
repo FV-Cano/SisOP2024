@@ -1,7 +1,8 @@
-package datareceive
+package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 )
@@ -48,4 +49,22 @@ func RecibirMensaje(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("ok"))
+}
+
+/**
+ * ServerStart: Inicia un servidor en el puerto especificado
+
+ * @param port string
+*/
+func ServerStart(port int) {
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("/paquetes", RecibirPaquetes)
+	mux.HandleFunc("/mensaje", RecibirMensaje)
+
+	log.Printf("Server listening on port %d\n", port)
+	err := http.ListenAndServe(":"+fmt.Sprintf("%v", port), mux)
+	if err != nil {
+		panic(err)
+	}
 }

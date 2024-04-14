@@ -2,10 +2,11 @@ package main
 
 import (
 	"log"
-	"net/http"
 
+	client "github.com/sisoputnfrba/tp-golang/utils/client-Functions"
 	cfg "github.com/sisoputnfrba/tp-golang/utils/config"
-	datareceive "github.com/sisoputnfrba/tp-golang/utils/data-receive"
+	logger "github.com/sisoputnfrba/tp-golang/utils/log"
+	server "github.com/sisoputnfrba/tp-golang/utils/server-Functions"
 )
 
 type T_ConfigKernel struct {
@@ -24,23 +25,24 @@ type T_ConfigKernel struct {
 var configkernel T_ConfigKernel
 
 func main() {
-    err := cfg.ConfigInit("config_kernel.json", &configkernel)
+	// Iniciar loggers
+	logger.ConfigurarLogger()
+	logger.LogfileCreate("kernel.log")
+
+	// Inicializamos la config y tomamos valores
+	err := cfg.ConfigInit("config_kernel.json", &configkernel)
 	if err != nil {
 		log.Fatalf("Error al cargar la configuracion %v", err)
 	}
 
-	log.Printf("Config resources: %v", configkernel.Resources)
-}
+	ipMemory := configkernel.IP_memory
+	portMemory := configkernel.Port_memory
+	ipCpu := configkernel.IP_cpu
+	portCpu := configkernel.Port_cpu
 
-func IO_serverStart() {
-	mux := http.NewServeMux()
+	// TODO check si funciona
+	go server.ServerStart(configkernel.Port)
 
-	mux.HandleFunc("/paquetes", datareceive.RecibirPaquetes)
-	mux.HandleFunc("/mensaje", datareceive.RecibirMensaje)
-
-	log.Println("IO server running on http://localhost:8001")
-	err := http.ListenAndServe(":8001", mux)
-	if err != nil {
-		panic(err)
-	}
+	client.EnviarMensaje(ipMemory, portMemory, "Saludo memoria desde Kernel")
+	client.EnviarMensaje(ipCpu, portCpu, "Saludo cpu desde Kernel")
 }

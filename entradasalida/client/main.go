@@ -16,8 +16,8 @@ func main() {
 		log.Fatalf("No se pudo cargar la configuración")
 	}
 
-	go Comunicacion(globals.ClientConfig.Message, globals.ClientConfig.Ip_Kernel, globals.ClientConfig.Port_Kernel)
-	go Comunicacion(globals.ClientConfig.Message, globals.ClientConfig.Ip_Memory, globals.ClientConfig.Port_Memory)
+	Comunicacion(globals.ClientConfig.Message, globals.ClientConfig.Ip_Kernel, globals.ClientConfig.Port_Kernel)
+	Comunicacion(globals.ClientConfig.Message, globals.ClientConfig.Ip_Memory, globals.ClientConfig.Port_Memory)
 
 }
 

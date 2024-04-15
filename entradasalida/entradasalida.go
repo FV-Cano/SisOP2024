@@ -25,17 +25,12 @@ type T_ConfigIO struct {
 var configio T_ConfigIO
 
 func main() {
-	err := cfg.ConfigInit("config_io.json", &configio)
+	err := cfg.ConfigInit("config-io.json", &configio)
 	if err != nil {
 		log.Fatalf("Error al cargar la configuracion %v", err)
 	}
 
 	log.Printf(("Cantidad de bloques de DialFS: %d"), configio.Dialfs_block_count)
-
-
-	/*if configio == nil {
-		log.Fatalf("No se pudo cargar la configuración")
-	}*/
 
 	Comunicacion(configio.Message, configio.Ip_kernel, configio.Port_kernel)
 	Comunicacion(configio.Message, configio.Ip_memory, configio.Port_memory)

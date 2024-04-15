@@ -1,7 +1,20 @@
 package main
 
-func main() {
-	
+import (
+	"log"
+
+	cfg "github.com/sisoputnfrba/tp-golang/utils/config"
+)
+
+type T_ConfigKernel struct {
+	Port 				int 	`json:"port"`
+	IP_memory 			string 	`json:"ip_memory"`
+	Port_memory 		int 	`json:"port_memory"`
+	IP_cpu 				string 	`json:"ip_cpu"`
+	Port_cpu 			int 	`json:"port_cpu"`
+	Planning_algorithm 	string 	`json:"planning_algorithm"`
+	Quantum 			int 	`json:"quantum"`
+	Multiprogramming 	int 	`json:"multiprogramming"`
 }
 
 // Resources 			list `json:"resources"`

@@ -62,45 +62,35 @@ func RecibirMensaje(w http.ResponseWriter, r *http.Request) {
  * @param moduleRoutes optional
 */
 func ServerStart(port int, moduleRoutes ...http.Handler) {
-	var finalHandler http.Handler
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/paquetes", RecibirPaquetes)
 	mux.HandleFunc("/mensaje", RecibirMensaje)
 	mux.HandleFunc("GET /helloworld", HelloWorld)
 
-	// Combinar rutas comunes y específicas
-	finalHandler = mux
-
-	if len(moduleRoutes) > 0 {
-		finalHandler = http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			for _, moduleRoute := range moduleRoutes {
-				moduleRoute.ServeHTTP(w, r)
-				return
-			}
-		mux.ServeHTTP(w, r)
-		}))
+	for _, route := range moduleRoutes {
+		mux.Handle("/", route)
 	}
 
 	log.Printf("Server listening on port %d\n", port)
-	err := http.ListenAndServe(":"+fmt.Sprintf("%v", port), finalHandler)
+	err := http.ListenAndServe(":"+fmt.Sprintf("%v", port), mux)
 	if err != nil {
 		panic(err)
 	}
 }
 
 /**
- * NewModule: Crea un nuevo módulo con las rutas especificadas
+ * NewModule: Atiende la ruta de los módulos. Si no la encuentra, deja que el DefaultServeMux la atienda
 
  * @return ModuleHandler
 */
 func (m *ModuleHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	handler, ok := m.RouteHandlers[r.Method+" "+r.URL.Path]
-	if !ok {
-		http.NotFound(w, r)
+	if ok {
+		handler(w, r)
 		return
 	}
-	handler(w, r)
+	http.DefaultServeMux.ServeHTTP(w, r)
 }
 
 func HelloWorld(w http.ResponseWriter, r *http.Request) {

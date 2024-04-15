@@ -47,8 +47,6 @@ func main() {
 	
 	kernelRoutes := RegisteredModuleRoutes()
 
-	//http.ListenAndServe(":8001", nil) -> http.DefaultServerMux vs http.NewServeMux() routing
-
 	// Iniciar servidor
 
 	go server.ServerStart(configkernel.Port, kernelRoutes)
@@ -70,10 +68,3 @@ func RegisteredModuleRoutes() http.Handler {
 	}
 	return moduleHandler
 }
-
-
-/* func RegisteredModuleRoutes() http.Handler {
-	r := mux.NewRouter()
-	r.HandleFunc("PUT /process", kernel_api.ProcessInit)
-	return r
-} */

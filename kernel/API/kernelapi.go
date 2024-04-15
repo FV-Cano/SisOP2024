@@ -41,17 +41,3 @@ func ProcessInit(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write(response)
 }
-
-// -----------------
-
-func HelloWorld(w http.ResponseWriter, r *http.Request) {
-
-	respuesta, err := json.Marshal("Hola! Como andas?")
-	if err != nil {
-		http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-	w.Write(respuesta)
-}

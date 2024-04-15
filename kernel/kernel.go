@@ -44,13 +44,14 @@ func main() {
 	UNUSED(ipMemory, portMemory, ipCpu, portCpu)
 
 	// Handlers
-	http.HandleFunc("PUT /process", kernel_api.ProcessInit)
-	http.HandleFunc("GET /helloworld", kernel_api.HelloWorld)
+	
+	kernelRoutes := RegisteredModuleRoutes()
+
 	//http.ListenAndServe(":8001", nil) -> http.DefaultServerMux vs http.NewServeMux() routing
 
 	// Iniciar servidor
 
-	go server.ServerStart(configkernel.Port)
+	go server.ServerStart(configkernel.Port, kernelRoutes)
 
 	/* client.EnviarMensaje(ipMemory, portMemory, "Saludo memoria desde Kernel")
 	client.EnviarMensaje(ipCpu, portCpu, "Saludo cpu desde Kernel") */
@@ -60,3 +61,19 @@ func main() {
 
 // Literalmente no hace nada, es para evitar el error de compilación de "imported and not used"
 func UNUSED(x ...interface{}){}
+
+func RegisteredModuleRoutes() http.Handler {
+	moduleHandler := &server.ModuleHandler{
+		RouteHandlers: map[string]http.HandlerFunc{
+			"PUT /process": kernel_api.ProcessInit,
+		},
+	}
+	return moduleHandler
+}
+
+
+/* func RegisteredModuleRoutes() http.Handler {
+	r := mux.NewRouter()
+	r.HandleFunc("PUT /process", kernel_api.ProcessInit)
+	return r
+} */

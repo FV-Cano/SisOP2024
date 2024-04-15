@@ -2,11 +2,12 @@ package main
 
 import (
 	"log"
+	"net/http"
 
-	client "github.com/sisoputnfrba/tp-golang/utils/client-Functions"
+	kernel_api "github.com/sisoputnfrba/tp-golang/kernel/API"
 	cfg "github.com/sisoputnfrba/tp-golang/utils/config"
 	logger "github.com/sisoputnfrba/tp-golang/utils/log"
-	server "github.com/sisoputnfrba/tp-golang/utils/server-Functions"
+	"github.com/sisoputnfrba/tp-golang/utils/server-Functions"
 )
 
 type T_ConfigKernel struct {
@@ -40,9 +41,22 @@ func main() {
 	ipCpu := configkernel.IP_cpu
 	portCpu := configkernel.Port_cpu
 
-	// TODO check si funciona
+	UNUSED(ipMemory, portMemory, ipCpu, portCpu)
+
+	// Handlers
+	http.HandleFunc("PUT /process", kernel_api.ProcessInit)
+	http.HandleFunc("GET /helloworld", kernel_api.HelloWorld)
+	//http.ListenAndServe(":8001", nil) -> http.DefaultServerMux vs http.NewServeMux() routing
+
+	// Iniciar servidor
+
 	go server.ServerStart(configkernel.Port)
 
-	client.EnviarMensaje(ipMemory, portMemory, "Saludo memoria desde Kernel")
-	client.EnviarMensaje(ipCpu, portCpu, "Saludo cpu desde Kernel")
+	/* client.EnviarMensaje(ipMemory, portMemory, "Saludo memoria desde Kernel")
+	client.EnviarMensaje(ipCpu, portCpu, "Saludo cpu desde Kernel") */
+
+	select {}		// Deja que la goroutine principal siga corriendo (Preguntas)
 }
+
+// Literalmente no hace nada, es para evitar el error de compilación de "imported and not used"
+func UNUSED(x ...interface{}){}

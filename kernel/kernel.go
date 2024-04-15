@@ -64,7 +64,14 @@ func RegisteredModuleRoutes() http.Handler {
 	moduleHandler := &server.ModuleHandler{
 		RouteHandlers: map[string]http.HandlerFunc{
 			"PUT /process": kernel_api.ProcessInit,
+			"DELETE /process": kernel_api.ProcessDelete,
+			"GET /process/{pid}": kernel_api.ProcessState,
+			"PUT /plani": kernel_api.PlanificationStart,
+			"DELETE /plani": kernel_api.PlanificationStop,
+			"GET /process": kernel_api.ProcessList,
 		},
 	}
 	return moduleHandler
 }
+
+// TODO: Probar finalizar proceso y estado proceso

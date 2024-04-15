@@ -20,6 +20,12 @@ type ProcessStart_BRS struct {
 	Pid int `json:"pid"`
 }
 
+/**
+ * ProcessInit: Inicia un proceso en base a un archivo dentro del FS de Linux.
+	[ ] Creación de PCB
+	[ ] Asignación de PID incrementando en 1 por cada proceso creado
+	[ ] Estado de proceso: NEW
+*/
 func ProcessInit(w http.ResponseWriter, r *http.Request) {
 	var request ProcessStart_BRQ
 	err := json.NewDecoder(r.Body).Decode(&request)
@@ -28,9 +34,84 @@ func ProcessInit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// No sé que hago con el path
+	// En algún lugar voy a tener que usar el path
 
-	var respBody ProcessStart_BRS = ProcessStart_BRS{Pid: 1} // TODO: Implementar la creación de un proceso, valor hardcodeado, incrementar en 1 por cada proceso creado
+	var respBody ProcessStart_BRS = ProcessStart_BRS{Pid: 1}
+
+	response, err := json.Marshal(respBody)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(response)
+}
+
+/**
+ * ProcessDelete: Elimina un proceso en base a un PID. Realiza las operaciones como si el proceso llegase a EXIT
+	[ ] Cambio de estado de proceso: EXIT
+	[ ] Liberación de recursos
+	[ ] Liberación de archivos
+	[ ] Liberación de memoria
+*/
+func ProcessDelete(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Proceso eliminado"))
+}
+
+type ProcessStatus_BRS struct {
+	State string `json:"state"`
+}
+
+/**
+ * ProcessState: Devuelve el estado de un proceso en base a un PID
+	[ ] Devuelve el estado del proceso
+
+	Por el momento devuelve un dato hardcodeado
+*/
+func ProcessState(w http.ResponseWriter, r *http.Request) {
+	var respBody ProcessStatus_BRS = ProcessStatus_BRS{State: "EXEC"}
+
+	response, err := json.Marshal(respBody)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(response)
+}
+
+/**
+ * PlanificationStart: Retoma el STS y LTS en caso de que la planificación se encuentre pausada. Si no, ignora la petición.
+*/
+func PlanificationStart(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Planificacion iniciada"))
+}
+
+/**
+ * PlanificationStart: Detiene el STS y LTS en caso de que la planificación se encuentre en ejecución. Si no, ignora la petición.
+	El proceso que se encuentra en ejecución NO es desalojado. Una vez que salga de EXEC se pausa el manejo de su motivo de desalojo.
+	El resto de procesos bloqueados van a pausar su transición a la cola de Ready
+*/
+func PlanificationStop(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Planificacion detenida"))
+}
+
+// TODO: Reemplazar el response con la futura struct de PCB. Preguntar cómo retornar varias struct
+type ProcessList_BRS struct {
+	Pid int `json:"pid"`
+	State string `json:"state"`
+}
+
+/**
+ * ProcessList: Devuelve una lista de procesos con su PID y estado
+*/
+func ProcessList(w http.ResponseWriter, r *http.Request) {
+	var respBody ProcessList_BRS = ProcessList_BRS{Pid: 5, State: "BLOCK"}
 
 	response, err := json.Marshal(respBody)
 	if err != nil {

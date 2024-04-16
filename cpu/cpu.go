@@ -26,12 +26,12 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error al cargar la configuracion %v", err)
 	}
-	// log.Printf(("Algoritmo de reemplazo de TLB: %s"), configcpu.Algorithm_tlb)
+	 log.Printf(("Algoritmo de reemplazo de TLB: %s"), configcpu.Algorithm_tlb)
 
 	log.Println("Configuracion cargada")
 
 	// ? loggeamos el valor de la config
-	// log.Println(configcpu.Message)
+	 log.Println(configcpu.Message)
 
 	// *** SERVIDOR ***
 	go inicializarServidor()
@@ -39,12 +39,12 @@ func main() {
 	// *** CLIENTE ***
 	// ! ADVERTENCIA: Antes de continuar, tenemos que asegurarnos que el servidor esté corriendo para poder conectarnos a él
 
-	//TODO PONER configcpu.Port_memory
+	
 	log.Println("Enviando mensaje al servidor")
-	datasend.EnviarMensaje(configcpu.IP_memory, configcpu.Port, configcpu.Message)
+	datasend.EnviarMensaje(configcpu.IP_memory, configcpu.Port_memory, configcpu.Message)
 
 	// Generamos un paquete y lo enviamos al servidor
-	// datasend.GenerarYEnviarPaquete(configcpu.IP_memory, configcpu.Port)
+	datasend.GenerarYEnviarPaquete(configcpu.IP_memory, configcpu.Port)
 
 	select {}
 }

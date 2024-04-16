@@ -6,7 +6,7 @@ import (
 )
 
 /*	ConfigInit:
-
+	
 	Hay que pasarle una interfaz como parámetro para que el decoder pueda
 	decodificar el json con el formato de la interfaz especificada.
 	Si no lo haces, decodifica con un map[string]interface{}.
@@ -25,3 +25,4 @@ func ConfigInit(filePath string, config interface{}) error {
 
 	return nil
 }
+ 

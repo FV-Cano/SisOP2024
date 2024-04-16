@@ -2,11 +2,11 @@ package main
 
 import (
 	"log"
-	"net/http"
 
+	client "github.com/sisoputnfrba/tp-golang/utils/client-Functions"
 	cfg "github.com/sisoputnfrba/tp-golang/utils/config"
-	datareceive "github.com/sisoputnfrba/tp-golang/utils/data-receive"
-	datasend "github.com/sisoputnfrba/tp-golang/utils/data-send"
+	logger "github.com/sisoputnfrba/tp-golang/utils/log"
+	server "github.com/sisoputnfrba/tp-golang/utils/server-Functions"
 )
 
 type T_CPU struct {
@@ -15,50 +15,30 @@ type T_CPU struct {
 	Port_memory        int    `json:"port_memory"`
 	Number_felling_tlb int    `json:"number_felling_tlb"`
 	Algorithm_tlb      string `json:"algorithm_tlb"`
-	Message            string `json:"message"`
 }
 
 var configcpu T_CPU
 
 func main() {
+	// Iniciar loggers
+	logger.ConfigurarLogger("cpu.log")
+	logger.LogfileCreate("cpu_debug.log")
+
 	// *** CONFIGURACION ***
 	err := cfg.ConfigInit("config-cpu.json", &configcpu)
 	if err != nil {
 		log.Fatalf("Error al cargar la configuracion %v", err)
 	}
-	 log.Printf(("Algoritmo de reemplazo de TLB: %s"), configcpu.Algorithm_tlb)
-
-	log.Println("Configuracion cargada")
-
-	// ? loggeamos el valor de la config
-	 log.Println(configcpu.Message)
+	log.Println("Configuracion CPU cargada")
 
 	// *** SERVIDOR ***
-	go inicializarServidor()
+	go server.ServerStart(configcpu.Port)
 
 	// *** CLIENTE ***
-	// ! ADVERTENCIA: Antes de continuar, tenemos que asegurarnos que el servidor esté corriendo para poder conectarnos a él
-
 	
 	log.Println("Enviando mensaje al servidor")
-	datasend.EnviarMensaje(configcpu.IP_memory, configcpu.Port_memory, configcpu.Message)
 
-	// Generamos un paquete y lo enviamos al servidor
-	datasend.GenerarYEnviarPaquete(configcpu.IP_memory, configcpu.Port)
+	client.EnviarMensaje(configcpu.IP_memory, configcpu.Port_memory, "Saludo memoria desde CPU")
 
 	select {}
-}
-
-func inicializarServidor() {
-	mux := http.NewServeMux()
-
-	mux.HandleFunc("/paquetes", datareceive.RecibirPaquetes)
-	mux.HandleFunc("/mensaje", datareceive.RecibirMensaje)
-
-	log.Println("Servidor corriendo en el puerto 8003")
-
-	err := http.ListenAndServe(":8003", mux)
-	if err != nil {
-		panic(err)
-	}
 }

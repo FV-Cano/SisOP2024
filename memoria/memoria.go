@@ -28,7 +28,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error al cargar la configuracion %v", err)
 	}
-
+	log.Println("Configuracion MEMORIA cargada")
 	// Handlers
 
 	// Iniciar servidor // TODO: Inicializamos un solo servidor?

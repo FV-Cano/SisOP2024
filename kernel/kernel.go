@@ -36,6 +36,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error al cargar la configuracion %v", err)
 	}
+	log.Println("Configuracion KERNEL cargada")
 
 	ipMemory := configkernel.IP_memory
 	portMemory := configkernel.Port_memory
@@ -53,7 +54,7 @@ func main() {
 	go server.ServerStart(configkernel.Port, kernelRoutes)
 
 	client.EnviarMensaje(ipMemory, portMemory, "Saludo memoria desde Kernel")
-	/* client.EnviarMensaje(ipCpu, portCpu, "Saludo cpu desde Kernel") */
+	client.EnviarMensaje(ipCpu, portCpu, "Saludo cpu desde Kernel")
 
 	select {}		// Deja que la goroutine principal siga corriendo (Preguntas)
 }

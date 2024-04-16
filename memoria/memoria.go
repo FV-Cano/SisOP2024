@@ -31,7 +31,7 @@ func main() {
 	log.Println("Configuracion MEMORIA cargada")
 	// Handlers
 
-	// Iniciar servidor // TODO: Inicializamos un solo servidor?
+	// Iniciar servidor
 
 	go server.ServerStart(configmemory.Port)
 

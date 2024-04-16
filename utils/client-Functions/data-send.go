@@ -1,4 +1,4 @@
-package datasend
+package client
 
 import (
 	"bufio"

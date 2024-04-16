@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	kernel_api "github.com/sisoputnfrba/tp-golang/kernel/API"
+	"github.com/sisoputnfrba/tp-golang/utils/client-Functions"
 	cfg "github.com/sisoputnfrba/tp-golang/utils/config"
 	logger "github.com/sisoputnfrba/tp-golang/utils/log"
 	"github.com/sisoputnfrba/tp-golang/utils/server-Functions"
@@ -27,8 +28,8 @@ var configkernel T_ConfigKernel
 
 func main() {
 	// Iniciar loggers
-	logger.ConfigurarLogger()
-	logger.LogfileCreate("kernel.log")
+	logger.ConfigurarLogger("kernel.log")
+	logger.LogfileCreate("kernel_debug.log")
 
 	// Inicializamos la config y tomamos valores
 	err := cfg.ConfigInit("config_kernel.json", &configkernel)
@@ -51,8 +52,8 @@ func main() {
 
 	go server.ServerStart(configkernel.Port, kernelRoutes)
 
-	/* client.EnviarMensaje(ipMemory, portMemory, "Saludo memoria desde Kernel")
-	client.EnviarMensaje(ipCpu, portCpu, "Saludo cpu desde Kernel") */
+	client.EnviarMensaje(ipMemory, portMemory, "Saludo memoria desde Kernel")
+	/* client.EnviarMensaje(ipCpu, portCpu, "Saludo cpu desde Kernel") */
 
 	select {}		// Deja que la goroutine principal siga corriendo (Preguntas)
 }
@@ -64,7 +65,7 @@ func RegisteredModuleRoutes() http.Handler {
 	moduleHandler := &server.ModuleHandler{
 		RouteHandlers: map[string]http.HandlerFunc{
 			"PUT /process": kernel_api.ProcessInit,
-			"DELETE /process": kernel_api.ProcessDelete,
+			"DELETE /process/{pid}": kernel_api.ProcessDelete,
 			"GET /process/{pid}": kernel_api.ProcessState,
 			"PUT /plani": kernel_api.PlanificationStart,
 			"DELETE /plani": kernel_api.PlanificationStop,
@@ -75,3 +76,4 @@ func RegisteredModuleRoutes() http.Handler {
 }
 
 // TODO: Probar finalizar proceso y estado proceso
+// TODO: Preguntar utilización de APIs externas

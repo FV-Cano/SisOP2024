@@ -27,8 +27,8 @@ func LogfileCreate(filepath string) (*os.File, error) {
 /**
  * ConfigurarLogger: Configura un logger general para todo el trabajo
 */
-func ConfigurarLogger() {
-	logFile, err := os.OpenFile("GODieGO.log", os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
+func ConfigurarLogger(path string) {
+	logFile, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
 	if err != nil {
 		panic(err)
 	}

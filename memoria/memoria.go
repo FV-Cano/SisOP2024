@@ -4,6 +4,8 @@ import (
 	"log"
 
 	cfg "github.com/sisoputnfrba/tp-golang/utils/config"
+	logger "github.com/sisoputnfrba/tp-golang/utils/log"
+	"github.com/sisoputnfrba/tp-golang/utils/server-Functions"
 )
 
 type T_ConfigMemory struct {
@@ -17,10 +19,21 @@ type T_ConfigMemory struct {
 var configmemory T_ConfigMemory
 
 func main() {
-	err := cfg.ConfigInit("config_memory.json", &configmemory)
+	// Iniciar loggers
+	logger.ConfigurarLogger("memory.log")
+	logger.LogfileCreate("memory_debug.log")
+
+	// Inicializamos la config
+	err := cfg.ConfigInit("config-memory.json", &configmemory)
 	if err != nil {
 		log.Fatalf("Error al cargar la configuracion %v", err)
 	}
+	log.Println("Configuracion MEMORIA cargada")
+	// Handlers
 
-	log.Printf(("Tamanio de la memoria: %d"), configmemory.Memory_size)
+	// Iniciar servidor
+
+	go server.ServerStart(configmemory.Port)
+
+	select {}
 }

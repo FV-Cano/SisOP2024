@@ -43,8 +43,6 @@ func main() {
 	ipCpu := configkernel.IP_cpu
 	portCpu := configkernel.Port_cpu
 
-	UNUSED(ipMemory, portMemory, ipCpu, portCpu)
-
 	// Handlers
 	
 	kernelRoutes := RegisteredModuleRoutes()
@@ -77,4 +75,4 @@ func RegisteredModuleRoutes() http.Handler {
 }
 
 // TODO: Probar finalizar proceso y estado proceso
-// TODO: Preguntar utilización de APIs externas
+// ?: Preguntar utilización de APIs externas

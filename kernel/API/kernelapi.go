@@ -3,6 +3,10 @@ package kernel_api
 import (
 	"encoding/json"
 	"net/http"
+
+	"github.com/sisoputnfrba/tp-golang/kernel/globals"
+	"github.com/sisoputnfrba/tp-golang/utils/pcb"
+	"github.com/sisoputnfrba/tp-golang/utils/slice"
 )
 
 /* Glossary:
@@ -17,13 +21,13 @@ type ProcessStart_BRQ struct {
 }
 
 type ProcessStart_BRS struct {
-	Pid int `json:"pid"`
+	PID uint32 `json:"pid"`
 }
 
 /**
- * ProcessInit: Inicia un proceso en base a un archivo dentro del FS de Linux.
-	[ ] Creación de PCB
-	[ ] Asignación de PID incrementando en 1 por cada proceso creado
+ * ProcessInit: Inicia un proceso en base a un archivo dentro del FS de Linux. // ?: Qué contiene el path del archivo? las instrucciones?
+	[x] Creación de PCB
+	[x] Asignación de PID incrementando en 1 por cada proceso creado
 	[ ] Estado de proceso: NEW
 */
 func ProcessInit(w http.ResponseWriter, r *http.Request) {
@@ -33,10 +37,22 @@ func ProcessInit(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
+	
 	// En algún lugar voy a tener que usar el path
+	pcb := &pcb.T_PCB{
+		PID: 		generatePID(),
+		PC: 		0,
+		Quantum: 	0,
+		CPU_reg: 	[]int{0, 0, 0, 0, 0, 0, 0, 0},
+		State: 		"READY", // TODO: La idea es que el estado sea NEW cuando implementemos el LTS
+	}
 
-	var respBody ProcessStart_BRS = ProcessStart_BRS{Pid: 1}
+	globals.PidMutex.Lock()
+	globals.Processes = slice.Push(globals.Processes, *pcb)
+	globals.STS = slice.Push(globals.STS, *pcb)	// TODO: Implementar LTS
+	globals.PidMutex.Unlock()
+
+	var respBody ProcessStart_BRS = ProcessStart_BRS{PID: pcb.PID}
 
 	response, err := json.Marshal(respBody)
 	if err != nil {
@@ -46,6 +62,13 @@ func ProcessInit(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	w.Write(response)
+}
+
+func generatePID() uint32 {
+	globals.PidMutex.Lock()
+	defer globals.PidMutex.Unlock()
+	globals.NextPID++
+	return globals.NextPID
 }
 
 /**
@@ -92,7 +115,7 @@ func PlanificationStart(w http.ResponseWriter, r *http.Request) {
 }
 
 /**
- * PlanificationStart: Detiene el STS y LTS en caso de que la planificación se encuentre en ejecución. Si no, ignora la petición.
+ * PlanificationStop: Detiene el STS y LTS en caso de que la planificación se encuentre en ejecución. Si no, ignora la petición.
 	El proceso que se encuentra en ejecución NO es desalojado. Una vez que salga de EXEC se pausa el manejo de su motivo de desalojo.
 	El resto de procesos bloqueados van a pausar su transición a la cola de Ready
 */

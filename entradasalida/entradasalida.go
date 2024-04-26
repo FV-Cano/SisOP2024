@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"time"
 
 	client "github.com/sisoputnfrba/tp-golang/utils/client-Functions"
 	logger "github.com/sisoputnfrba/tp-golang/utils/log"
@@ -38,4 +39,15 @@ func main() {
 
 	client.EnviarMensaje(configio.Ip_kernel, configio.Port_kernel, "Saludo kernel desde IO")
 	client.EnviarMensaje(configio.Ip_memory, configio.Port_memory, "Saludo memoria desde IO")
+
+	//RecibirPeticionKernel(configio.Unit_work_time) revisar para que sea un muxhandle o algo asi
+
+}
+
+func RecibirPeticionKernel(unit_work_time uint32) {
+	IO_GEN_SLEEP(unit_work_time)
+}
+
+func IO_GEN_SLEEP(unit_work_time uint32) {
+	time.Sleep(time.Duration(unit_work_time))
 }

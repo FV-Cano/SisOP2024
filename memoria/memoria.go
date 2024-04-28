@@ -49,7 +49,7 @@ func main() {
 	
 }
 
-func OpenFile(filePath string)(*os.File){
+func AbrirArchivo(filePath string)(*os.File){
 	file, err := os.Open(filePath) //El paquete os provee el método ReadFile el cual recibe como argumento el nombre de un archivo el cual se encargará de leer. Al completar la lectura, retorna un slice de bytes, de forma que si se desea leer, tiene que ser convertido primero a una cadena de tipo string
 	if err != nil {
 			log.Fatal(err)
@@ -58,11 +58,11 @@ func OpenFile(filePath string)(*os.File){
 	return file
 }
 
-func  ReadInstructions(filePath string) []string {
+func  LeerInstrucciones(filePath string) []string {
 	
 	var instrucciones []string
 	//Lee linea por linea el archivo
-	scanner := bufio.NewScanner(OpenFile(filePath))
+	scanner := bufio.NewScanner(AbrirArchivo(filePath))
     for scanner.Scan() {
         // Agregar cada línea al slice de strings
         instrucciones = append(instrucciones, scanner.Text())
@@ -74,9 +74,9 @@ func  ReadInstructions(filePath string) []string {
 }
 
 
-func ServerResponse(w http.ResponseWriter, r *http.Request) {
+func RespuestaServidor(w http.ResponseWriter, r *http.Request) {
 
-	respuesta, err := json.Marshal(ReadInstructions(configmemory.Instructions_path))
+	respuesta, err := json.Marshal(LeerInstrucciones(configmemory.Instructions_path))
 	if err != nil {
 		http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
 		return
@@ -89,7 +89,7 @@ func ServerResponse(w http.ResponseWriter, r *http.Request) {
 func RegisteredModuleRoutes() http.Handler {
 	moduleHandler := &server.ModuleHandler{
 		RouteHandlers: map[string]http.HandlerFunc{
-			"GET /serverresponse": ServerResponse,
+			"GET /instrucciones": RespuestaServidor,
 		},
 	}
 	return moduleHandler

@@ -1,12 +1,11 @@
 package main
 
 import (
-
 	"encoding/json"
 	"log"
 	"net/http"
-	"time"
 
+	cpuGlobals "github.com/sisoputnfrba/tp-golang/cpu/globals"
 	client "github.com/sisoputnfrba/tp-golang/utils/client-Functions"
 	logger "github.com/sisoputnfrba/tp-golang/utils/log"
 
@@ -34,7 +33,6 @@ type CantUnidadesTrabajo struct {
 	Unidades int `json:"cantUnidades"`
 }
 
-
 func main() {
 	// Iniciar loggers
 	logger.ConfigurarLogger("io.log")
@@ -50,12 +48,6 @@ func main() {
 	client.EnviarMensaje(configio.Ip_kernel, configio.Port_kernel, "Saludo kernel desde IO")
 	client.EnviarMensaje(configio.Ip_memory, configio.Port_memory, "Saludo memoria desde IO")
 
-
-}
-
-func IO_GEN_SLEEP(cantidadUnidadesTrabajo int) {
-	time.Sleep(time.Duration(configio.Unit_work_time * cantidadUnidadesTrabajo))
-	log.Println("Se cumplio el tiempo de espera")
 }
 
 func RecibirPeticionKernel(w http.ResponseWriter, r *http.Request) {
@@ -72,10 +64,8 @@ func RecibirPeticionKernel(w http.ResponseWriter, r *http.Request) {
 	log.Println("Me llego una petición de Kernel")
 	log.Printf("%+v\n", cantUnidadesTrabajo)
 
-	IO_GEN_SLEEP(cantUnidadesTrabajo.Unidades)
+	cpuGlobals.IO_GEN_SLEEP(cantUnidadesTrabajo.Unidades, configio.Unit_work_time)
 
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Espera finalizada"))
 }
-
-

@@ -3,6 +3,8 @@ package main
 import (
 	"bufio"
 	"log"
+	"strconv"
+
 	//"path/filepath"
 
 	cfg "github.com/sisoputnfrba/tp-golang/utils/config"
@@ -75,8 +77,13 @@ func  LeerInstrucciones(filePath string) []string {
 
 
 func RespuestaServidor(w http.ResponseWriter, r *http.Request) {
-
-	respuesta, err := json.Marshal(LeerInstrucciones(configmemory.Instructions_path))
+	name := r.PathValue("pc")
+	pc, err := strconv.Atoi(name) //de esta forma convierto la cadena (que sería el pc)
+	if err != nil{				//en un int para usarlo de indice
+		log.Fatal(err)
+	}
+	instrucciones := LeerInstrucciones(configmemory.Instructions_path)
+	respuesta, err := json.Marshal(instrucciones[pc])
 	if err != nil {
 		http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
 		return
@@ -89,7 +96,7 @@ func RespuestaServidor(w http.ResponseWriter, r *http.Request) {
 func RegisteredModuleRoutes() http.Handler {
 	moduleHandler := &server.ModuleHandler{
 		RouteHandlers: map[string]http.HandlerFunc{
-			"GET /instrucciones": RespuestaServidor,
+			"GET /instrucciones/{pc}": RespuestaServidor,
 		},
 	}
 	return moduleHandler

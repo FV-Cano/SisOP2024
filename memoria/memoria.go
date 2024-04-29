@@ -2,9 +2,10 @@ package main
 
 import (
 	"bufio"
+	//"fmt"
 	"log"
 	"strconv"
-
+	
 	//"path/filepath"
 
 	cfg "github.com/sisoputnfrba/tp-golang/utils/config"
@@ -75,11 +76,11 @@ func  LeerInstrucciones(filePath string) []string {
     return instrucciones
 }
 
-
 func RespuestaServidor(w http.ResponseWriter, r *http.Request) {
-	name := r.PathValue("pc")
+	queryParams := r.URL.Query()	//Nos permitirá acceder a aquellas variables definidas en la ruta.
+	name := queryParams.Get("name") //para obtener la variable name y utilizarla dentro de nuestra respuesta.
 	pc, err := strconv.Atoi(name) //de esta forma convierto la cadena (que sería el pc)
-	if err != nil{				//en un int para usarlo de indice
+	if err != nil{								//en un int para usarlo de indice
 		log.Fatal(err)
 	}
 	instrucciones := LeerInstrucciones(configmemory.Instructions_path)
@@ -96,7 +97,7 @@ func RespuestaServidor(w http.ResponseWriter, r *http.Request) {
 func RegisteredModuleRoutes() http.Handler {
 	moduleHandler := &server.ModuleHandler{
 		RouteHandlers: map[string]http.HandlerFunc{
-			"GET /instrucciones/{pc}": RespuestaServidor,
+			"GET /instrucciones": RespuestaServidor,
 		},
 	}
 	return moduleHandler

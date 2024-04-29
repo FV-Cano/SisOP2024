@@ -5,10 +5,12 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strconv"
 
 	client "github.com/sisoputnfrba/tp-golang/utils/client-Functions"
 	cfg "github.com/sisoputnfrba/tp-golang/utils/config"
 	logger "github.com/sisoputnfrba/tp-golang/utils/log"
+	//"github.com/sisoputnfrba/tp-golang/utils/pcb"
 	//"github.com/sisoputnfrba/tp-golang/utils/pcb"
 	//server "github.com/sisoputnfrba/tp-golang/utils/server-Functions"
 )
@@ -43,21 +45,25 @@ func main() {
 	log.Println("Enviando mensaje al servidor")
 
 	client.EnviarMensaje(configcpu.IP_memory, configcpu.Port_memory, "Saludo memoria desde CPU")
-		/*La cpu empieza a ejecutar y segun el contexto de ejecución va a tener las instrucciones a
-	ejecutar, (memoria hace lo suyo), fetch agarra la instrucción y se fija en el program counter
-	peticion para que memoria me de la peticion segun pc, ese valor*/
-	PeticionMemoria()
+		
+	Fetch()
+	
 	//select {}
 }
 
-func PeticionMemoria(){
-	pc := string(10)
+func Fetch(){
+
+	pc := strconv.Itoa(5) // acá debería ir pcb.T_PCB.PC
+	
 	cliente := &http.Client{}
-	url := fmt.Sprintf("http://localhost:8002/instrucciones/%s", pc)
+	url := fmt.Sprintf("http://localhost:8002/instrucciones")
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return 
 	}
+	q := req.URL.Query()
+	q.Add("name", pc)
+	req.URL.RawQuery = q.Encode()
 
 	req.Header.Set("Content-Type", "application/json")
 	respuesta, err := cliente.Do(req)

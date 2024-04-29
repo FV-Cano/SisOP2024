@@ -1,7 +1,10 @@
 package main
 
 import (
+
+	"encoding/json"
 	"log"
+	"net/http"
 	"time"
 
 	client "github.com/sisoputnfrba/tp-golang/utils/client-Functions"
@@ -25,6 +28,13 @@ type T_ConfigIO struct {
 
 var configio T_ConfigIO
 
+// TODO, este struct va en el globals, en Kernel hay que desarrollar
+// una funcion que codifique las unidades de trabajo en un json
+type CantUnidadesTrabajo struct {
+	Unidades int `json:"cantUnidades"`
+}
+
+
 func main() {
 	// Iniciar loggers
 	logger.ConfigurarLogger("io.log")
@@ -40,14 +50,32 @@ func main() {
 	client.EnviarMensaje(configio.Ip_kernel, configio.Port_kernel, "Saludo kernel desde IO")
 	client.EnviarMensaje(configio.Ip_memory, configio.Port_memory, "Saludo memoria desde IO")
 
-	//RecibirPeticionKernel(configio.Unit_work_time) revisar para que sea un muxhandle o algo asi
 
 }
 
-func RecibirPeticionKernel(unit_work_time uint32) {
-	IO_GEN_SLEEP(unit_work_time)
+func IO_GEN_SLEEP(cantidadUnidadesTrabajo int) {
+	time.Sleep(time.Duration(configio.Unit_work_time * cantidadUnidadesTrabajo))
+	log.Println("Se cumplio el tiempo de espera")
 }
 
-func IO_GEN_SLEEP(unit_work_time uint32) {
-	time.Sleep(time.Duration(unit_work_time))
+func RecibirPeticionKernel(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+	var cantUnidadesTrabajo CantUnidadesTrabajo
+	err := decoder.Decode(&cantUnidadesTrabajo)
+	if err != nil {
+		log.Printf("Error al decodificar mensaje: %s\n", err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Error al decodificar mensaje"))
+		return
+	}
+
+	log.Println("Me llego una petición de Kernel")
+	log.Printf("%+v\n", cantUnidadesTrabajo)
+
+	IO_GEN_SLEEP(cantUnidadesTrabajo.Unidades)
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Espera finalizada"))
 }
+
+

@@ -3,8 +3,6 @@ package main
 import (
 	"bufio"
 	"log"
-	"strconv"
-
 	//"path/filepath"
 
 	cfg "github.com/sisoputnfrba/tp-golang/utils/config"
@@ -51,7 +49,7 @@ func main() {
 	
 }
 
-func AbrirArchivo(filePath string)(*os.File){
+func OpenFile(filePath string)(*os.File){
 	file, err := os.Open(filePath) //El paquete os provee el método ReadFile el cual recibe como argumento el nombre de un archivo el cual se encargará de leer. Al completar la lectura, retorna un slice de bytes, de forma que si se desea leer, tiene que ser convertido primero a una cadena de tipo string
 	if err != nil {
 			log.Fatal(err)
@@ -60,11 +58,11 @@ func AbrirArchivo(filePath string)(*os.File){
 	return file
 }
 
-func  LeerInstrucciones(filePath string) []string {
+func  ReadInstructions(filePath string) []string {
 	
 	var instrucciones []string
 	//Lee linea por linea el archivo
-	scanner := bufio.NewScanner(AbrirArchivo(filePath))
+	scanner := bufio.NewScanner(OpenFile(filePath))
     for scanner.Scan() {
         // Agregar cada línea al slice de strings
         instrucciones = append(instrucciones, scanner.Text())
@@ -76,14 +74,9 @@ func  LeerInstrucciones(filePath string) []string {
 }
 
 
-func RespuestaServidor(w http.ResponseWriter, r *http.Request) {
-	name := r.PathValue("pc")
-	pc, err := strconv.Atoi(name) //de esta forma convierto la cadena (que sería el pc)
-	if err != nil{				//en un int para usarlo de indice
-		log.Fatal(err)
-	}
-	instrucciones := LeerInstrucciones(configmemory.Instructions_path)
-	respuesta, err := json.Marshal(instrucciones[pc])
+func ServerResponse(w http.ResponseWriter, r *http.Request) {
+
+	respuesta, err := json.Marshal(ReadInstructions(configmemory.Instructions_path))
 	if err != nil {
 		http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
 		return
@@ -96,7 +89,7 @@ func RespuestaServidor(w http.ResponseWriter, r *http.Request) {
 func RegisteredModuleRoutes() http.Handler {
 	moduleHandler := &server.ModuleHandler{
 		RouteHandlers: map[string]http.HandlerFunc{
-			"GET /instrucciones/{pc}": RespuestaServidor,
+			"GET /serverresponse": ServerResponse,
 		},
 	}
 	return moduleHandler

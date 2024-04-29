@@ -1,12 +1,16 @@
 package main
 
 import (
+	"fmt"
+	"io"
 	"log"
+	"net/http"
 
 	client "github.com/sisoputnfrba/tp-golang/utils/client-Functions"
 	cfg "github.com/sisoputnfrba/tp-golang/utils/config"
 	logger "github.com/sisoputnfrba/tp-golang/utils/log"
-	server "github.com/sisoputnfrba/tp-golang/utils/server-Functions"
+	//"github.com/sisoputnfrba/tp-golang/utils/pcb"
+	//server "github.com/sisoputnfrba/tp-golang/utils/server-Functions"
 )
 
 type T_CPU struct {
@@ -32,7 +36,7 @@ func main() {
 	log.Println("Configuracion CPU cargada")
 
 	// *** SERVIDOR ***
-	go server.ServerStart(configcpu.Port)
+	//go server.ServerStart(configcpu.Port)
 
 	// *** CLIENTE ***
 	
@@ -42,5 +46,34 @@ func main() {
 		/*La cpu empieza a ejecutar y segun el contexto de ejecución va a tener las instrucciones a
 	ejecutar, (memoria hace lo suyo), fetch agarra la instrucción y se fija en el program counter
 	peticion para que memoria me de la peticion segun pc, ese valor*/
-	select {}
+	PeticionMemoria()
+	//select {}
+}
+
+func PeticionMemoria(){
+	pc := string(10)
+	cliente := &http.Client{}
+	url := fmt.Sprintf("http://localhost:8002/instrucciones/%s", pc)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return 
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	respuesta, err := cliente.Do(req)
+	if err != nil {
+		return
+	}
+
+	// Verificar el código de estado de la respuesta
+	if respuesta.StatusCode != http.StatusOK {
+		return
+	}
+
+	bodyBytes, err := io.ReadAll(respuesta.Body)
+	if err != nil {
+		return
+	}
+
+	fmt.Println(string(bodyBytes))
 }

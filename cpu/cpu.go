@@ -39,6 +39,8 @@ func main() {
 	log.Println("Enviando mensaje al servidor")
 
 	client.EnviarMensaje(configcpu.IP_memory, configcpu.Port_memory, "Saludo memoria desde CPU")
-
+		/*La cpu empieza a ejecutar y segun el contexto de ejecución va a tener las instrucciones a
+	ejecutar, (memoria hace lo suyo), fetch agarra la instrucción y se fija en el program counter
+	peticion para que memoria me de la peticion segun pc, ese valor*/
 	select {}
 }

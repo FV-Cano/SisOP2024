@@ -1,8 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
+	"net/http"
 
+	cpuGlobals "github.com/sisoputnfrba/tp-golang/cpu/globals"
 	client "github.com/sisoputnfrba/tp-golang/utils/client-Functions"
 	logger "github.com/sisoputnfrba/tp-golang/utils/log"
 
@@ -24,6 +27,12 @@ type T_ConfigIO struct {
 
 var configio T_ConfigIO
 
+// TODO, este struct va en el globals, en Kernel hay que desarrollar
+// una funcion que codifique las unidades de trabajo en un json
+type CantUnidadesTrabajo struct {
+	Unidades int `json:"cantUnidades"`
+}
+
 func main() {
 	// Iniciar loggers
 	logger.ConfigurarLogger("io.log")
@@ -38,4 +47,25 @@ func main() {
 
 	client.EnviarMensaje(configio.Ip_kernel, configio.Port_kernel, "Saludo kernel desde IO")
 	client.EnviarMensaje(configio.Ip_memory, configio.Port_memory, "Saludo memoria desde IO")
+
+}
+
+func RecibirPeticionKernel(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+	var cantUnidadesTrabajo CantUnidadesTrabajo
+	err := decoder.Decode(&cantUnidadesTrabajo)
+	if err != nil {
+		log.Printf("Error al decodificar mensaje: %s\n", err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Error al decodificar mensaje"))
+		return
+	}
+
+	log.Println("Me llego una petición de Kernel")
+	log.Printf("%+v\n", cantUnidadesTrabajo)
+
+	cpuGlobals.IO_GEN_SLEEP(cantUnidadesTrabajo.Unidades, configio.Unit_work_time)
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Espera finalizada"))
 }

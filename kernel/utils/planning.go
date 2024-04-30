@@ -9,14 +9,6 @@ import (
 	"github.com/sisoputnfrba/tp-golang/utils/slice"
 )
 
-// Channels para comunicación con CPU
-var (
-	cpuChannel = make(chan pcb.T_PCB)
-	cpuResponseChannel = make(chan pcb.T_PCB)
-	ioChannel = make(chan pcb.T_PCB)
-	ioResponseChannel = make(chan pcb.T_PCB)
-)
-
 func Plan() {
 	switch globals.Configkernel.Planning_algorithm {
 	case "FIFO":
@@ -72,14 +64,10 @@ func FIFO_Plan(wg *sync.WaitGroup) {
 		CurrentJob = slice.Shift(&globals.STS)
 		
 		// 2. Envío el PCB al CPU
-		cpuChannel <- CurrentJob
 
 		// 3. Espero y recibo la respuesta del CPU
-		response := <-cpuResponseChannel
 
 		// 4. Actualizo el proceso
-		CurrentJob = response
-
 
 		// TODO Operar desalojo: función con switch para cada estado del proceso
 		// 5. Agrego el proceso a la lista de procesos terminados

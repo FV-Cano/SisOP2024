@@ -48,8 +48,8 @@ func ProcessInit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	globals.PidMutex.Lock()
-	globals.Processes = slice.Push(globals.Processes, *pcb)
-	globals.STS = slice.Push(globals.STS, *pcb)	// TODO: Implementar LTS
+	slice.Push(&globals.Processes, *pcb)
+	slice.Push(&globals.STS, *pcb)	// TODO: Implementar LTS
 	globals.PidMutex.Unlock()
 
 	var respBody ProcessStart_BRS = ProcessStart_BRS{PID: pcb.PID}

@@ -1,12 +1,18 @@
 package main
 
 import (
+	"fmt"
+	"io"
 	"log"
+	"net/http"
+	"strconv"
 
 	client "github.com/sisoputnfrba/tp-golang/utils/client-Functions"
 	cfg "github.com/sisoputnfrba/tp-golang/utils/config"
 	logger "github.com/sisoputnfrba/tp-golang/utils/log"
-	server "github.com/sisoputnfrba/tp-golang/utils/server-Functions"
+	//"github.com/sisoputnfrba/tp-golang/utils/pcb"
+	//"github.com/sisoputnfrba/tp-golang/utils/pcb"
+	//server "github.com/sisoputnfrba/tp-golang/utils/server-Functions"
 )
 
 type T_CPU struct {
@@ -32,13 +38,48 @@ func main() {
 	log.Println("Configuracion CPU cargada")
 
 	// *** SERVIDOR ***
-	go server.ServerStart(configcpu.Port)
+	//go server.ServerStart(configcpu.Port)
 
 	// *** CLIENTE ***
 	
 	log.Println("Enviando mensaje al servidor")
 
 	client.EnviarMensaje(configcpu.IP_memory, configcpu.Port_memory, "Saludo memoria desde CPU")
+		
+	Fetch()
+	
+	//select {}
+}
 
-	select {}
+func Fetch(){
+
+	pc := strconv.Itoa(5) // acá debería ir pcb.T_PCB.PC
+	
+	cliente := &http.Client{}
+	url := fmt.Sprintf("http://localhost:8002/instrucciones")
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return 
+	}
+	q := req.URL.Query()
+	q.Add("name", pc)
+	req.URL.RawQuery = q.Encode()
+
+	req.Header.Set("Content-Type", "application/json")
+	respuesta, err := cliente.Do(req)
+	if err != nil {
+		return
+	}
+
+	// Verificar el código de estado de la respuesta
+	if respuesta.StatusCode != http.StatusOK {
+		return
+	}
+
+	bodyBytes, err := io.ReadAll(respuesta.Body)
+	if err != nil {
+		return
+	}
+
+	fmt.Println(string(bodyBytes))
 }

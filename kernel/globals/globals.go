@@ -10,7 +10,13 @@ import (
 
 var (
 	NextPID 			uint32 		= 0
-	Processes 			[]pcb.T_PCB
+	Processes 			= []pcb.T_PCB{
+		{PID: 90, PC: 0, Quantum: 0, CPU_reg: [8]int{0, 0, 0, 0, 0, 0, 0, 0}, State: "READY", EvictionReason: ""},
+		{PID: 91, PC: 0, Quantum: 0, CPU_reg: [8]int{0, 0, 0, 0, 0, 0, 0, 0}, State: "BLOCKED", EvictionReason: ""},
+		{PID: 92, PC: 0, Quantum: 0, CPU_reg: [8]int{0, 0, 0, 0, 0, 0, 0, 0}, State: "READY", EvictionReason: ""},
+		{PID: 93, PC: 0, Quantum: 0, CPU_reg: [8]int{0, 0, 0, 0, 0, 0, 0, 0}, State: "EXIT", EvictionReason: ""},
+		{PID: 94, PC: 0, Quantum: 0, CPU_reg: [8]int{0, 0, 0, 0, 0, 0, 0, 0}, State: "READY", EvictionReason: ""},
+	}
 	LTS 				[]pcb.T_PCB
 	STS 				[]pcb.T_PCB
 )

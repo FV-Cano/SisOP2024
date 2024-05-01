@@ -2,8 +2,9 @@ package kernelutils
 
 import (
 	"log"
-	"sync"
+	"net/http"
 
+	kernel_api "github.com/sisoputnfrba/tp-golang/kernel/API"
 	"github.com/sisoputnfrba/tp-golang/kernel/globals"
 	"github.com/sisoputnfrba/tp-golang/utils/pcb"
 	"github.com/sisoputnfrba/tp-golang/utils/slice"
@@ -49,12 +50,11 @@ func RR_Plan() {
  * FIFO_Plan
 
 	-  [x] Tomar proceso de lista de procesos
-	-  [ ] Enviar CE a CPU
+	-  [x] Enviar CE a CPU
 	-  [ ] Esperar respuesta de CPU
 	-  [ ] Recibir respuesta de CPU
 */
-func FIFO_Plan(wg *sync.WaitGroup) {
-	defer wg.Done()
+func FIFO_Plan(w http.ResponseWriter, r *http.Request) {
 	// Proceso actual
 	var CurrentJob pcb.T_PCB
 
@@ -63,28 +63,38 @@ func FIFO_Plan(wg *sync.WaitGroup) {
 		// 1. Tomo el primer proceso de la lista y lo quito de la misma
 		CurrentJob = slice.Shift(&globals.STS)
 		
-		// 2. Envío el PCB al CPU
+		// 2. Cambio su estado a EXEC
+		CurrentJob.State = "EXEC"
 
-		// 3. Espero y recibo la respuesta del CPU
+		// 3. Envío el PCB al CPU
+		kernel_api.PCB_Send(CurrentJob)
 
-		// 4. Actualizo el proceso
+		// 4. Manejo de desalojo
+		EvictionManagement(CurrentJob)
 
-		// TODO Operar desalojo: función con switch para cada estado del proceso
-		// 5. Agrego el proceso a la lista de procesos terminados
-		if CurrentJob.State == "BLOCKED" {
-			// Se lo mando a IO
-		}
-
-		// IO me devuelve el PCB con el estado actualizado
-		if CurrentJob.State == "READY" {
-			slice.Push(&globals.STS, CurrentJob)
-		}
-
-		// 6. Logueo el estado del proceso
+		// 5. Logueo el estado del proceso
 		log.Printf("Proceso %d: %s\n", CurrentJob.PID, CurrentJob.State)
-
-		wg.Add(1)
 	}
+}
 
-	wg.Wait()
+/**
+ * EvictionManagement
+	
+	-  [ ] Implementar caso de desalojo por bloqueo
+	-  [ ] Implementar caso de desalojo por timeout
+	-  [x] Implementar caso de desalojo por finalización
+**/
+func EvictionManagement(process pcb.T_PCB) {
+	switch process.EvictionReason {
+	case "BLOCKED_IO":
+
+	case "TIMEOUT":
+		
+	case "EXIT": 
+		process.State = "FINISHED"
+		slice.Push(&globals.LTS, process)
+
+	default:
+		log.Fatalf("'%s' no es una razón de desalojo válida", process.EvictionReason)
+	}
 }

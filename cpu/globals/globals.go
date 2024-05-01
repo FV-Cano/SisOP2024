@@ -1,9 +1,8 @@
-package cpu
+package globals
 
 import (
 	"log"
 	"time"
-
 )
 
 func IO_GEN_SLEEP(cantidadUnidadesTrabajo int, cantTiempoDeTrabajo int) {

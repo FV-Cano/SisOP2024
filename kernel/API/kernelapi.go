@@ -1,7 +1,9 @@
 package kernel_api
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/sisoputnfrba/tp-golang/kernel/globals"
@@ -80,7 +82,7 @@ func generatePID() uint32 {
 */
 func ProcessDelete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Proceso eliminado"))
+	w.Write([]byte("Job deleted"))
 }
 
 type ProcessStatus_BRS struct {
@@ -111,7 +113,7 @@ func ProcessState(w http.ResponseWriter, r *http.Request) {
 */
 func PlanificationStart(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Planificacion iniciada"))
+	w.Write([]byte("Scheduler started"))
 }
 
 /**
@@ -121,7 +123,7 @@ func PlanificationStart(w http.ResponseWriter, r *http.Request) {
 */
 func PlanificationStop(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Planificacion detenida"))
+	w.Write([]byte("Scheduler stopped"))
 }
 
 // TODO: Reemplazar el response con la futura struct de PCB. Preguntar cómo retornar varias struct
@@ -144,4 +146,37 @@ func ProcessList(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	w.Write(response)
+}
+
+// -----------------------------------------------------------------
+
+func PCB_Send(pcb pcb.T_PCB) error {
+	//Encode data
+	jsonData, err := json.Marshal(pcb)
+	if err != nil {
+		return fmt.Errorf("failed to encode PCB: %v", err)
+	}
+
+	// Send data
+	url := fmt.Sprintf("http://%s:%d/pcb-recv", globals.Configkernel.IP_cpu, globals.Configkernel.Port_cpu)
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return fmt.Errorf("POST request failed. Failed to send PCB: %v", err)
+	}
+
+	// Wait for response
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected response status: %s", resp.Status)
+	}
+
+	// Decode response and update value
+	err = json.NewDecoder(resp.Body).Decode(&pcb)
+	if err != nil {
+		return fmt.Errorf("failed to decode PCB response: %v", err)
+	}
+	// Operar desalojo
+
+	return nil
 }

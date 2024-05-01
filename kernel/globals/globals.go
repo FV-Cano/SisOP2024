@@ -1,6 +1,6 @@
 package globals
 
-// Global varibles:
+// Global variables:
 
 import (
 	"sync"

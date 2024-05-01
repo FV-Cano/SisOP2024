@@ -45,7 +45,7 @@ func ProcessInit(w http.ResponseWriter, r *http.Request) {
 		PID: 		generatePID(),
 		PC: 		0,
 		Quantum: 	0,
-		CPU_reg: 	[]int{0, 0, 0, 0, 0, 0, 0, 0},
+		CPU_reg: 	[8]int{0, 0, 0, 0, 0, 0, 0, 0},
 		State: 		"READY", // TODO: La idea es que el estado sea NEW cuando implementemos el LTS
 	}
 

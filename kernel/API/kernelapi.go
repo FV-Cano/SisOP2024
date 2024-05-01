@@ -47,6 +47,7 @@ func ProcessInit(w http.ResponseWriter, r *http.Request) {
 		Quantum: 	0,
 		CPU_reg: 	[8]int{0, 0, 0, 0, 0, 0, 0, 0},
 		State: 		"READY", // TODO: La idea es que el estado sea NEW cuando implementemos el LTS
+		EvictionReason: "",
 	}
 
 	globals.PidMutex.Lock()
@@ -136,7 +137,16 @@ type ProcessList_BRS struct {
  * ProcessList: Devuelve una lista de procesos con su PID y estado
 */
 func ProcessList(w http.ResponseWriter, r *http.Request) {
-	var respBody ProcessList_BRS = ProcessList_BRS{Pid: 5, State: "BLOCK"}
+	// Me traigo los procesos de la lista de procesos
+	// allProcesses := globals.Processes
+
+	allProcesses := globals.STS
+
+	// Formateo los procesos para devolverlos
+	respBody := make([]ProcessList_BRS, len(allProcesses))
+	for i, process := range allProcesses {
+		respBody[i] = ProcessList_BRS{Pid: int(process.PID), State: process.State}
+	}
 
 	response, err := json.Marshal(respBody)
 	if err != nil {

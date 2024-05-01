@@ -36,7 +36,7 @@ func main() {
 		
 	// Fetch()
 	
-	//select {}
+	select {}
 }
 
 func RegisteredModuleRoutes() http.Handler {

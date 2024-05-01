@@ -2,7 +2,6 @@ package kernelutils
 
 import (
 	"log"
-	"net/http"
 
 	kernel_api "github.com/sisoputnfrba/tp-golang/kernel/API"
 	"github.com/sisoputnfrba/tp-golang/kernel/globals"
@@ -14,6 +13,9 @@ func Plan() {
 	switch globals.Configkernel.Planning_algorithm {
 	case "FIFO":
 		log.Println("FIFO algorithm")
+		for {
+			FIFO_Plan()
+		}
 		// FIFO
 	case "RR":
 		log.Println("ROUND ROBIN algorithm")
@@ -36,14 +38,14 @@ func Plan() {
 	-  [ ] Recibir respuesta de CPU 
 */
 func RR_Plan() {
-	quantum := globals.Configkernel.Quantum
-	var CurrentJob pcb.T_PCB
+	//quantum := globals.Configkernel.Quantum
+	//var CurrentJob pcb.T_PCB
 
-	for {
-		CurrentJob = slice.Shift(&globals.STS)
+	//for {
+	//	CurrentJob = slice.Shift(&globals.STS)
 		// TODO envío de CE a CPU
 
-	}
+	//}
 }
 
 /**
@@ -54,7 +56,7 @@ func RR_Plan() {
 	-  [ ] Recibir respuesta de CPU
 	-  [ ] Agregar semáforos
 */
-func FIFO_Plan(w http.ResponseWriter, r *http.Request) {
+func FIFO_Plan() {
 	// Proceso actual
 	var CurrentJob pcb.T_PCB
 
@@ -68,6 +70,9 @@ func FIFO_Plan(w http.ResponseWriter, r *http.Request) {
 
 		// 3. Envío el PCB al CPU
 		kernel_api.PCB_Send(CurrentJob)
+
+		// ! Simulación de finalización de proceso - BORRAR
+		CurrentJob.State = "EXIT"
 
 		// 4. Manejo de desalojo
 		EvictionManagement(CurrentJob)
@@ -94,6 +99,8 @@ func EvictionManagement(process pcb.T_PCB) {
 		process.State = "FINISHED"
 		// * VERIFICAR SI SE DEBE AGREGAR A LA LISTA LTS
 		slice.Push(&globals.LTS, process)
+
+	case "": 
 
 	default:
 		log.Fatalf("'%s' no es una razón de desalojo válida", process.EvictionReason)

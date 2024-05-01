@@ -51,8 +51,8 @@ func RR_Plan() {
 
 	-  [x] Tomar proceso de lista de procesos
 	-  [x] Enviar CE a CPU
-	-  [ ] Esperar respuesta de CPU
 	-  [ ] Recibir respuesta de CPU
+	-  [ ] Agregar semáforos
 */
 func FIFO_Plan(w http.ResponseWriter, r *http.Request) {
 	// Proceso actual
@@ -92,6 +92,7 @@ func EvictionManagement(process pcb.T_PCB) {
 		
 	case "EXIT": 
 		process.State = "FINISHED"
+		// * VERIFICAR SI SE DEBE AGREGAR A LA LISTA LTS
 		slice.Push(&globals.LTS, process)
 
 	default:

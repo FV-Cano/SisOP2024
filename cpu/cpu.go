@@ -1,12 +1,9 @@
 package main
 
 import (
-	"fmt"
-	"io"
+
 	"log"
 	"net/http"
-	"strconv"
-
 	cpu_api "github.com/sisoputnfrba/tp-golang/cpu/API"
 	"github.com/sisoputnfrba/tp-golang/cpu/globals"
 	cfg "github.com/sisoputnfrba/tp-golang/utils/config"

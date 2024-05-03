@@ -2,12 +2,16 @@ package kernelutils
 
 import (
 	"log"
+	"time"
 
 	kernel_api "github.com/sisoputnfrba/tp-golang/kernel/API"
 	"github.com/sisoputnfrba/tp-golang/kernel/globals"
 	"github.com/sisoputnfrba/tp-golang/utils/pcb"
 	"github.com/sisoputnfrba/tp-golang/utils/slice"
 )
+
+var CurrentJob pcb.T_PCB
+var quantum int
 
 func Plan() {
 	switch globals.Configkernel.Planning_algorithm {
@@ -18,6 +22,7 @@ func Plan() {
 		}
 		// FIFO
 	case "RR":
+		quantum = globals.Configkernel.Quantum * int(time.Millisecond)
 		log.Println("ROUND ROBIN algorithm")
 		// RR
 	case "VRR":
@@ -32,20 +37,41 @@ func Plan() {
  * RR_Plan
 
 	-  [x] Tomar proceso de lista de procesos
-	-  [ ] Enviar CE a CPU
-	-  [ ] Ejecutar Quantum -> // [ ] Mandar interrupción a CPU por endpoint interrupt si termina el quantum
+	-  [x] Enviar CE a CPU
+	-  [x] Ejecutar Quantum -> // [ ] Mandar interrupción a CPU por endpoint interrupt si termina el quantum
 	-  [ ] Esperar respuesta de CPU (Bloqueado)
 	-  [ ] Recibir respuesta de CPU 
 */
+type T_Quantum struct {
+	TimeExpired chan bool
+}
+
 func RR_Plan() {
-	//quantum := globals.Configkernel.Quantum
-	//var CurrentJob pcb.T_PCB
+	CurrentJob = slice.Shift(&globals.STS)
+	CurrentJob.State = "EXEC"
+	kernel_api.PCB_Send(CurrentJob) // <-- Envía proceso y espera respuesta (la respuesta teóricamente actualiza la variable enviada como parámetro) // ? Bloquea?
 
-	//for {
-	//	CurrentJob = slice.Shift(&globals.STS)
-		// TODO envío de CE a CPU
+	// Timer
+	timer := &T_Quantum{TimeExpired: make(chan bool)}
+	go startTimer(timer)
 
-	//}
+	// Esperar a que el proceso termine o sea desalojado por el timer
+	select {
+	case <-timer.TimeExpired:
+		// Procesar desalojo por fin de quantum
+	case <-pcb.Finished: // TODO: Actualizar canal con true cuando el proceso termine
+		// Desalojo normal
+	}
+}
+
+func startTimer(timer *T_Quantum) {
+	quantumTime := time.Duration(quantum)
+	time.Sleep(quantumTime)
+	timer.TimeExpired <- true
+}
+
+func quantumInterrupt() {
+	// TODO: Cómo funciona la interrupción? Si me comunico por el endpoint de dispatch que debería hacer? Puedo parar la ejecución de un proceso que está siendo llevada a cabo por un HTTP request?
 }
 
 /**
@@ -58,7 +84,6 @@ func RR_Plan() {
 */
 func FIFO_Plan() {
 	// Proceso actual
-	var CurrentJob pcb.T_PCB
 
 	// Mientras haya procesos en la lista de procesos
 	for globals.STS != nil {

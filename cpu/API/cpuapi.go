@@ -8,6 +8,9 @@ import (
 	"github.com/sisoputnfrba/tp-golang/utils/pcb"
 )
 
+/**
+ * PCB_recv: Recibe un PCB, lo procesa y lo devuelve
+ */
 func PCB_recv(w http.ResponseWriter, r *http.Request) {
 	var received_pcb pcb.T_PCB
 

@@ -27,8 +27,11 @@ func main() {
 	}
 	log.Println("Configuracion CPU cargada")
 
+	// Handlers
+	cpuRoutes := RegisteredModuleRoutes()
+
 	// *** SERVIDOR ***
-	go server.ServerStart(globals.Configcpu.Port)
+	go server.ServerStart(globals.Configcpu.Port, cpuRoutes)
 
 	// *** CLIENTE ***
 	
@@ -42,7 +45,7 @@ func main() {
 func RegisteredModuleRoutes() http.Handler {
 	moduleHandler := &server.ModuleHandler{
 		RouteHandlers: map[string]http.HandlerFunc{
-			"POST /pcb-recv": cpu_api.PCB_recv,
+			"POST /dispatch": cpu_api.PCB_recv,
 		},
 	}
 	return moduleHandler

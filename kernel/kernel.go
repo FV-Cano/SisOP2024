@@ -52,7 +52,6 @@ func RegisteredModuleRoutes() http.Handler {
 			"PUT /plani": kernel_api.PlanificationStart,
 			"DELETE /plani": kernel_api.PlanificationStop,
 			"GET /process": kernel_api.ProcessList,
-			/* "POST /pcb-recv": kernel_api.PCB_recv, */
 		},
 	}
 	return moduleHandler

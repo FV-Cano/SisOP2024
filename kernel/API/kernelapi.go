@@ -42,11 +42,11 @@ func ProcessInit(w http.ResponseWriter, r *http.Request) {
 	
 	// En algún lugar voy a tener que usar el path
 	pcb := &pcb.T_PCB{
-		PID: 		generatePID(),
-		PC: 		0,
-		Quantum: 	0,
-		CPU_reg: 	[8]int{0, 0, 0, 0, 0, 0, 0, 0},
-		State: 		"READY", // TODO: La idea es que el estado sea NEW cuando implementemos el LTS
+		PID: 			generatePID(),
+		PC: 			0,
+		Quantum: 		0,
+		CPU_reg: 		[8]int{0, 0, 0, 0, 0, 0, 0, 0},
+		State: 			"READY", // TODO: La idea es que el estado sea NEW cuando implementemos el LTS
 		EvictionReason: "",
 	}
 
@@ -140,7 +140,7 @@ func ProcessList(w http.ResponseWriter, r *http.Request) {
 	// Me traigo los procesos de la lista de procesos
 	// allProcesses := globals.Processes
 
-	allProcesses := globals.STS
+	allProcesses := globals.STS // ? <-- No debería ser globals.Processes?
 
 	// Formateo los procesos para devolverlos
 	respBody := make([]ProcessList_BRS, len(allProcesses))
@@ -158,8 +158,12 @@ func ProcessList(w http.ResponseWriter, r *http.Request) {
 	w.Write(response)
 }
 
-// -----------------------------------------------------------------
+/**
+ * PCB_Send: Envía un PCB al CPU y recibe la respuesta
 
+ * @param pcb: PCB a enviar
+ * @return error: Error en caso de que falle el envío
+*/
 func PCB_Send(pcb pcb.T_PCB) error {
 	//Encode data
 	jsonData, err := json.Marshal(pcb)
@@ -168,7 +172,7 @@ func PCB_Send(pcb pcb.T_PCB) error {
 	}
 
 	// Send data
-	url := fmt.Sprintf("http://%s:%d/pcb-recv", globals.Configkernel.IP_cpu, globals.Configkernel.Port_cpu)
+	url := fmt.Sprintf("http://%s:%d/dispatch", globals.Configkernel.IP_cpu, globals.Configkernel.Port_cpu)
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		return fmt.Errorf("POST request failed. Failed to send PCB: %v", err)
@@ -186,7 +190,6 @@ func PCB_Send(pcb pcb.T_PCB) error {
 	if err != nil {
 		return fmt.Errorf("failed to decode PCB response: %v", err)
 	}
-	// Operar desalojo
 
 	return nil
 }

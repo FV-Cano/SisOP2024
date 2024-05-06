@@ -2,7 +2,7 @@ package operaciones
 
 import (
 	"log"
-	"time"
+	//"time"
 	"github.com/sisoputnfrba/tp-golang/utils/pcb"
 )
 
@@ -21,8 +21,7 @@ type T_Registers struct {
 }
 
 func IO_GEN_SLEEP(cantidadUnidadesTrabajo int, cantTiempoDeTrabajo int) {
-	time.Sleep(time.Duration(cantTiempoDeTrabajo * cantidadUnidadesTrabajo))
-	log.Println("Se cumplio el tiempo de espera")
+	
 }
 
 // para llamarla SET(&registro, valor)
@@ -42,10 +41,11 @@ func SUB(registroDestino *uint32, registroOrigen uint32) {
 	}
 }
 
-var instruccionActual pcb.T_PCB
+var instruccionActual pcb.T_PCB //Temporal, debería ser la instruccion actual
 
-func JNZ(registro uint32, instruccion pcb.T_PCB) {
-	if registro != 0 {
-		instruccionActual.PID = instruccion.PID
+func JNZ(registro *uint32,  parametro uint32) {//instruccion pcb.T_PCB) { //A QUE SE REFIERE CON INSTRUCCIOOOOOON
+	if *registro != 0 {
+		instruccionActual.PC = parametro //instruccion.PC
+		log.Printf("El PC de la instruccion actual es %d", parametro)
 	}
 }

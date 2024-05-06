@@ -1,10 +1,11 @@
 package main
 
 import (
-
 	"log"
 	"net/http"
+
 	cpu_api "github.com/sisoputnfrba/tp-golang/cpu/API"
+	cicloinstruccion "github.com/sisoputnfrba/tp-golang/cpu/cicloInstruccion"
 	"github.com/sisoputnfrba/tp-golang/cpu/globals"
 	cfg "github.com/sisoputnfrba/tp-golang/utils/config"
 	logger "github.com/sisoputnfrba/tp-golang/utils/log"
@@ -31,7 +32,7 @@ func main() {
 	
 	
 		
-	// Fetch()
+	cicloinstruccion.DecodeAndExecute()
 	
 	//select {}
 }

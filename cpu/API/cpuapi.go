@@ -8,9 +8,15 @@ import (
 	"github.com/sisoputnfrba/tp-golang/utils/pcb"
 )
 
+type interruptionRequest struct {
+	InterruptionCode int `json:"interruptCode"`
+}
+
 /**
- * PCB_recv: Recibe un PCB, lo procesa y lo devuelve
- */
+ * PCB_recv: Recibe un PCB, lo "procesa" y lo devuelve
+ * Cumple con la funcionalidad principal de CPU.
+	* Procesar = Fetch -> Decode -> Execute
+*/
 func PCB_recv(w http.ResponseWriter, r *http.Request) {
 	var received_pcb pcb.T_PCB
 
@@ -22,7 +28,16 @@ func PCB_recv(w http.ResponseWriter, r *http.Request) {
 	}
 	
 	fmt.Printf("Received PCB: %v\n", received_pcb) //Log?
-	// Sección donde trabajo el pcb recibido
+
+	// Sección donde trabajo el pcb recibido (me interesa usar un hilo?)
+
+	for !pcb.InterruptFlag {
+		// Fetch
+		// Decode
+		// Exec
+		// Check interrupt (Al ser asincrónico no puedo hacer el check, espero a que el handler ejecute y luego cambio el valor de la flag de interrupción)
+	
+	}
 	
 	// Encode PCB
 	jsonResp, err := json.Marshal(received_pcb)
@@ -34,4 +49,20 @@ func PCB_recv(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(jsonResp)	
+}
+
+func HandleInterruption(w http.ResponseWriter, r *http.Request) {
+	var request interruptionRequest
+	
+	// Decode json payload
+	err := json.NewDecoder(r.Body).Decode(&request)
+	if err != nil {
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
+	}
+
+	switch request.InterruptionCode {
+	case pcb.QUANTUM:
+		// Cambiar motivo de desalojo a "Quantum"
+	}
 }

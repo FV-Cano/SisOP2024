@@ -1,7 +1,10 @@
 package kernelutils
 
 import (
+	"bytes"
+	"fmt"
 	"log"
+	"net/http"
 	"time"
 
 	kernel_api "github.com/sisoputnfrba/tp-golang/kernel/API"
@@ -24,6 +27,9 @@ func Plan() {
 	case "RR":
 		quantum = globals.Configkernel.Quantum * int(time.Millisecond)
 		log.Println("ROUND ROBIN algorithm")
+		for {
+			RR_Plan()
+		}
 		// RR
 	case "VRR":
 		log.Println("VIRTUAL ROUND ROBIN algorithm")
@@ -33,45 +39,58 @@ func Plan() {
 	}
 }
 
+type T_Quantum struct {
+	TimeExpired chan bool
+}
+
 /**
  * RR_Plan
 
 	-  [x] Tomar proceso de lista de procesos
 	-  [x] Enviar CE a CPU
-	-  [x] Ejecutar Quantum -> // [ ] Mandar interrupción a CPU por endpoint interrupt si termina el quantum
+	-  [x] Ejecutar Quantum -> // [x] Mandar interrupción a CPU por endpoint interrupt si termina el quantum
 	-  [ ] Esperar respuesta de CPU (Bloqueado)
 	-  [ ] Recibir respuesta de CPU 
 */
-type T_Quantum struct {
-	TimeExpired chan bool
-}
-
 func RR_Plan() {
 	CurrentJob = slice.Shift(&globals.STS)
 	CurrentJob.State = "EXEC"
-	kernel_api.PCB_Send(CurrentJob) // <-- Envía proceso y espera respuesta (la respuesta teóricamente actualiza la variable enviada como parámetro) // ? Bloquea?
-
-	// Timer
-	timer := &T_Quantum{TimeExpired: make(chan bool)}
-	go startTimer(timer)
+	go startTimer() // ? Puedo arrancar el timer antes de enviar la pcb?
+	kernel_api.PCB_Send(CurrentJob) // <-- Envía proceso y espera respuesta (la respuesta teóricamente actualiza la variable enviada como parámetro)s
 
 	// Esperar a que el proceso termine o sea desalojado por el timer
-	select {
-	case <-timer.TimeExpired:
-		// Procesar desalojo por fin de quantum
-	case <-pcb.Finished: // TODO: Actualizar canal con true cuando el proceso termine
-		// Desalojo normal
-	}
 }
 
-func startTimer(timer *T_Quantum) {
+func startTimer() {
 	quantumTime := time.Duration(quantum)
 	time.Sleep(quantumTime)
-	timer.TimeExpired <- true
+	quantumInterrupt()
 }
 
 func quantumInterrupt() {
-	// TODO: Cómo funciona la interrupción? Si me comunico por el endpoint de dispatch que debería hacer? Puedo parar la ejecución de un proceso que está siendo llevada a cabo por un HTTP request?
+	pcb.InterruptFlag = true
+	interruptionCode := pcb.QUANTUM
+
+	// Interrumpir proceso actual, response = OK message
+	url := fmt.Sprintf("http://%s:%d/interrupt", globals.Configkernel.IP_cpu, globals.Configkernel.Port_cpu)
+	
+	// Json payload
+	jsonStr := fmt.Sprintf("interruption code: %d", interruptionCode)
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer([]byte(jsonStr)))
+	if err != nil {
+		log.Fatalf("Error al crear request: %v", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println("Error sending HTTP request: ", err)
+	}
+	defer resp.Body.Close()
+
+	fmt.Println("HTTP response status: ", resp.Status)
 }
 
 /**

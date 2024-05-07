@@ -13,10 +13,10 @@ import (
 )
 
 func main() {
+
 	// Iniciar loggers
 	logger.ConfigurarLogger("cpu.log")
 	logger.LogfileCreate("cpu_debug.log")
-
 
 	// *** CONFIGURACION ***
 	err := cfg.ConfigInit("config-cpu.json", &globals.Configcpu)
@@ -29,11 +29,9 @@ func main() {
 	go server.ServerStart(globals.Configcpu.Port)
 
 	// *** CLIENTE ***
-	
-	
-		
+
 	cicloinstruccion.DecodeAndExecute()
-	
+
 	//select {}
 }
 

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/sisoputnfrba/tp-golang/kernel/globals"
 	"github.com/sisoputnfrba/tp-golang/utils/pcb"
@@ -79,11 +80,21 @@ func generatePID() uint32 {
 	[ ] Cambio de estado de proceso: EXIT
 	[ ] Liberación de recursos
 	[ ] Liberación de archivos
-	[ ] Liberación de memoria
+	[ ] Liberación de memoria 
 */
 func ProcessDelete(w http.ResponseWriter, r *http.Request) {
+	pidString := r.PathValue("pid")
+	pid, err := GetPIDFromString(pidString)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Elimino el proceso de la lista de procesos
+	RemoveByID(pid)
+
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Job deleted"))
+	w.Write([]byte("Job deleted")) // ! No tiene que devolver nada
 }
 
 type ProcessStatus_BRS struct {
@@ -97,9 +108,18 @@ type ProcessStatus_BRS struct {
 	Por el momento devuelve un dato hardcodeado
 */
 func ProcessState(w http.ResponseWriter, r *http.Request) {
-	var respBody ProcessStatus_BRS = ProcessStatus_BRS{State: "EXEC"}
+	pidString := r.PathValue("pid")
+	pid, err := GetPIDFromString(pidString)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
-	response, err := json.Marshal(respBody)
+	process, _ := SearchByID(pid, globals.Processes)
+
+	result := ProcessStatus_BRS{State: process.State}
+
+	response, err := json.Marshal(result)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -114,7 +134,7 @@ func ProcessState(w http.ResponseWriter, r *http.Request) {
 */
 func PlanificationStart(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Scheduler started"))
+	w.Write([]byte("Scheduler started")) // ! No tiene que devolver nada
 }
 
 /**
@@ -124,10 +144,9 @@ func PlanificationStart(w http.ResponseWriter, r *http.Request) {
 */
 func PlanificationStop(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Scheduler stopped"))
+	w.Write([]byte("Scheduler stopped")) // ! No tiene que devolver nada
 }
 
-// TODO: Reemplazar el response con la futura struct de PCB. Preguntar cómo retornar varias struct
 type ProcessList_BRS struct {
 	Pid int `json:"pid"`
 	State string `json:"state"`
@@ -138,9 +157,7 @@ type ProcessList_BRS struct {
 */
 func ProcessList(w http.ResponseWriter, r *http.Request) {
 	// Me traigo los procesos de la lista de procesos
-	// allProcesses := globals.Processes
-
-	allProcesses := globals.STS // ? <-- No debería ser globals.Processes?
+	allProcesses := globals.Processes
 
 	// Formateo los procesos para devolverlos
 	respBody := make([]ProcessList_BRS, len(allProcesses))
@@ -192,4 +209,56 @@ func PCB_Send(pcb pcb.T_PCB) error {
 	}
 
 	return nil
+}
+
+/**
+ * SearchByID: Busca un proceso en la lista de procesos en base a su PID
+
+ * @param pid: PID del proceso a buscar
+ * @return *pcb.T_PCB: Proceso encontrado
+*/
+func SearchByID(pid uint32, processList []pcb.T_PCB) (*pcb.T_PCB, int) {
+	for i, process := range processList {
+		if process.PID == pid {
+			return &process, i
+		}
+	}
+	return nil, -1
+}
+
+/**
+ * RemoveByID: Remueve un proceso de la lista de procesos en base a su PID
+
+ * @param pid: PID del proceso a remover
+*/
+func RemoveByID(pid uint32) error {
+	_, generalIndex := SearchByID(pid, globals.Processes)
+	if (generalIndex == -1) {
+		return fmt.Errorf("process with PID %d not found", pid)
+	} else {
+		slice.RemoveAtIndex(&globals.Processes, generalIndex)
+	}
+	
+	_, ltsIndex := SearchByID(pid, globals.LTS)
+	_, stsIndex := SearchByID(pid, globals.STS)
+
+	if ltsIndex != -1 {
+		slice.RemoveAtIndex(&globals.LTS, ltsIndex)	
+	}
+	if stsIndex != -1 {
+		slice.RemoveAtIndex(&globals.STS, stsIndex)
+	}
+
+	return nil
+}
+
+/**
+ * GetPIDFromQueryPath: Obtiene el PID de un path de query
+
+ * @param path: Path de query
+ * @return uint32: PID extraído
+*/
+func GetPIDFromString(pidString string) (uint32, error) {
+	pid64, error := strconv.ParseUint(pidString, 10, 32)
+	return uint32(pid64), error
 }

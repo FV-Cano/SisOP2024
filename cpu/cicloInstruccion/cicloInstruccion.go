@@ -10,15 +10,8 @@ import (
 
 	"github.com/sisoputnfrba/tp-golang/cpu/globals"
 	"github.com/sisoputnfrba/tp-golang/cpu/operaciones"
+	"github.com/sisoputnfrba/tp-golang/utils/pcb"
 )
-
-type T_Instruccion struct {
-	instruccion string
-	parametro1  string
-	parametro2  string
-}
-
-var instruccionActual T_Instruccion
 
 func Delimitador() []string {
 	var instruccion = Fetch()
@@ -27,43 +20,17 @@ func Delimitador() []string {
 	return instruccionDecodificada
 }
 
-func Convertir(parametro string) uint32 {
-
-	if parametro == "" {
-		log.Fatal("La cadena de texto está vacía")
-	}
-
-	registro, err := strconv.Atoi(parametro)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	log.Println("Conversion realizada")
-
-	return uint32(registro)
-
-}
-
-func CargarStruct() {
-	instruccionDecodificada := Delimitador()
-
-	instruccionActual.instruccion = instruccionDecodificada[0]
-	instruccionActual.parametro1 = instruccionDecodificada[1]
-	instruccionActual.parametro2 = instruccionDecodificada[2]
-
-}
-
 func Fetch() string {
 
 	pc := strconv.Itoa(1) // acá debería ir pcb.T_PCB.PC
 
 	url := fmt.Sprintf("http://%s:%d/instrucciones", globals.Configcpu.IP_memory, globals.Configcpu.Port_memory)
 
-    cliente := &http.Client{}
-    req, err := http.NewRequest("GET", url, nil)
-    if err != nil {
-        return("Error")
-    }
+	cliente := &http.Client{}
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return ("Error")
+	}
 
 	q := req.URL.Query()
 	q.Add("name", pc)
@@ -91,21 +58,63 @@ func Fetch() string {
 }
 
 func DecodeAndExecute() {
-	parametro1 := Convertir(instruccionActual.parametro1)
-	//var Convertir(instruccionActual.parametro2)  = Convertir(instruccion[2])
 
-	switch instruccionActual.instruccion {
+	instruccion := Delimitador()
+	posRegistro1 := ElegirRegistro(instruccion[1])
+	posRegistro2 := ElegirRegistro(instruccion[2])
+
+	switch instruccion[0] {
 	//case "IO_GEN_SLEEP": operaciones.IO_GEN_SLEEP(instruccionActual.parametro1, instruccionActual.parametro2)
 	case "JNZ":
-		operaciones.JNZ(&parametro1, 4) //mandamos un 4 para probar
+		operaciones.JNZ(pcb.pcbPrueba.CPU_reg[posRegistro1], Convertir(instruccion[2])) //mandamos un 4 para probar
 	case "SET":
-		operaciones.SET(&parametro1, Convertir(instruccionActual.parametro2))
+		operaciones.SET(&pcb.pcbPrueba.CPU_reg[posRegistro1], Convertir(instruccion[2]))
 	case "SUM":
-		operaciones.SUM(&parametro1, Convertir(instruccionActual.parametro2))
+		operaciones.SUM(&pcb.pcbPrueba.CPU_reg[posRegistro1], pcb.pcbPrueba.CPU_reg[posRegistro2])
 	case "SUB":
-		operaciones.SUB(&parametro1, Convertir(instruccionActual.parametro2))
+		operaciones.SUB(&pcb.pcbPrueba.CPU_reg[posRegistro1], pcb.pcbPrueba.CPU_reg[posRegistro2])
 
 	}
-	
 
+}
+
+func Convertir(parametro string) uint32 {
+
+	if parametro == "" {
+		log.Fatal("La cadena de texto está vacía")
+	}
+
+	registro, err := strconv.Atoi(parametro)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Println("Conversion realizada")
+
+	return uint32(registro)
+
+}
+
+func ElegirRegistro(registro string) int {
+
+	switch registro {
+	case "AX":   
+		return 0
+	case "BX":  
+		return 1
+	case "CX":  
+		return 2
+	case "DX": 
+		return 3
+	case "EAX": 
+		return 4
+	case "EBX": 
+		return 5
+	case "ECX": 
+		return 6
+	case "EDX": 
+		return 7
+	default:
+		return -1
+	}
 }

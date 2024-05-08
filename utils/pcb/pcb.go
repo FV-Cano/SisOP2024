@@ -12,3 +12,5 @@ type T_PCB struct {
 	EvictionReason 	string `json:"eviction_reason"`
 }
 
+var pcbPrueba T_PCB
+

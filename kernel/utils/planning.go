@@ -145,7 +145,7 @@ func EvictionManagement(process pcb.T_PCB) {
 		slice.Push(&globals.LTS, process)
 
 	case "": 
-
+		// ? Es necesario?
 	default:
 		log.Fatalf("'%s' no es una razón de desalojo válida", process.EvictionReason)
 	}

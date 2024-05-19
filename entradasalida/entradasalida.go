@@ -5,7 +5,8 @@ import (
 	"log"
 	"net/http"
 
-	cpuGlobals "github.com/sisoputnfrba/tp-golang/cpu/globals"
+
+	"github.com/sisoputnfrba/tp-golang/cpu/operaciones"
 	client "github.com/sisoputnfrba/tp-golang/utils/client-Functions"
 	logger "github.com/sisoputnfrba/tp-golang/utils/log"
 
@@ -64,7 +65,7 @@ func RecibirPeticionKernel(w http.ResponseWriter, r *http.Request) {
 	log.Println("Me llego una petición de Kernel")
 	log.Printf("%+v\n", cantUnidadesTrabajo)
 
-	cpuGlobals.IO_GEN_SLEEP(cantUnidadesTrabajo.Unidades, configio.Unit_work_time)
+	operaciones.IO_GEN_SLEEP(cantUnidadesTrabajo.Unidades, configio.Unit_work_time)
 
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Espera finalizada"))

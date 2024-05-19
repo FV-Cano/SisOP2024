@@ -27,8 +27,14 @@ func Pop[T any](slice *[]T) T {
 
  * @param slice: Slice de cualquier tipo.
  * @return T: Primer elemento del slice.
+ * ! Si el slice está vacío, devuelve un valor por defecto.
 */
 func Shift[T any](slice *[]T) T {
+	if len(*slice) == 0 {
+		var zero T
+		return zero
+	}
+
 	first := (*slice)[0]
 	*slice = (*slice)[1:]
 	return first

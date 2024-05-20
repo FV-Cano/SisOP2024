@@ -102,28 +102,19 @@ func quantumInterrupt() {
 	-  [ ] Agregar semáforos
 */
 func FIFO_Plan() {
-	// Proceso actual
-
-	// Mientras haya procesos en la lista de procesos
-	for globals.STS != nil {
-		// 1. Tomo el primer proceso de la lista y lo quito de la misma
-		CurrentJob = slice.Shift(&globals.STS)
-		
-		// 2. Cambio su estado a EXEC
-		CurrentJob.State = "EXEC"
-
-		// 3. Envío el PCB al CPU
-		kernel_api.PCB_Send(CurrentJob)
-
-		// ! Simulación de finalización de proceso - BORRAR
-		CurrentJob.State = "EXIT"
-
-		// 4. Manejo de desalojo
-		EvictionManagement(CurrentJob)
-
-		// 5. Logueo el estado del proceso
-		log.Printf("Proceso %d: %s\n", CurrentJob.PID, CurrentJob.State)
-	}
+	
+	// 1. Tomo el primer proceso de la lista y lo quito de la misma
+	CurrentJob = slice.Shift(&globals.STS)
+	// 2. Cambio su estado a EXEC
+	CurrentJob.State = "EXEC"
+	// 3. Envío el PCB al CPU
+	kernel_api.PCB_Send(CurrentJob)
+	// ! Simulación de finalización de proceso - BORRAR
+	CurrentJob.State = "EXIT"
+	// 4. Manejo de desalojo
+	EvictionManagement(CurrentJob)
+	// 5. Logueo el estado del proceso
+	log.Printf("Proceso %d: %s\n", CurrentJob.PID, CurrentJob.State)
 }
 
 /**

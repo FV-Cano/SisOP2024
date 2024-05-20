@@ -5,7 +5,7 @@ import (
 	//"fmt"
 	"log"
 	"strconv"
-	
+
 	//"path/filepath"
 
 	cfg "github.com/sisoputnfrba/tp-golang/utils/config"
@@ -44,9 +44,9 @@ func main() {
 	// Handlers
 	// Iniciar servidor
 
-	log.Println("Instrucciones leídas por memoria.")
+	// log.Println("Instrucciones leídas por memoria.")
 	go server.ServerStart(configmemory.Port,RegisteredModuleRoutes())
-	log.Println("Instrucciones enviadas a CPU")	
+	// log.Println("Instrucciones enviadas a CPU")	
 	
 	select {}
 	

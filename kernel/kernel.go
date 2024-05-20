@@ -13,6 +13,8 @@ import (
 	"github.com/sisoputnfrba/tp-golang/utils/server-Functions"
 )
 
+// ? Handshake IO?
+
 func main() {
 	// Iniciar loggers
 	logger.ConfigurarLogger("kernel.log")
@@ -34,7 +36,7 @@ func main() {
 	client.EnviarMensaje(globals.Configkernel.IP_memory, globals.Configkernel.Port_memory, "Saludo memoria desde Kernel")
 	client.EnviarMensaje(globals.Configkernel.IP_cpu, globals.Configkernel.Port_cpu, "Saludo cpu desde Kernel")
 
-	// ! Planificación
+	// * Planificación
 	go kernelutils.Plan()
 
 	select {}		// Deja que la goroutine principal siga corriendo

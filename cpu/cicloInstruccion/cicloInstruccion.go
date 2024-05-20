@@ -1,4 +1,4 @@
-package cicloinstruccion
+package cicloInstruccion
 
 import (
 	"fmt"
@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/sisoputnfrba/tp-golang/cpu/globals"
-	"github.com/sisoputnfrba/tp-golang/cpu/operaciones"
 	"github.com/sisoputnfrba/tp-golang/utils/pcb"
 )
 
@@ -20,9 +19,9 @@ func Delimitador() []string {
 	return instruccionDecodificada
 }
 
-func Fetch() string {
+func Fetch(currentPCB pcb.T_PCB) string {
 
-	pc := strconv.Itoa(1) // acá debería ir pcb.T_PCB.PC
+	pc := int(currentPCB.PC) // Recast
 
 	url := fmt.Sprintf("http://%s:%d/instrucciones", globals.Configcpu.IP_memory, globals.Configcpu.Port_memory)
 
@@ -33,7 +32,7 @@ func Fetch() string {
 	}
 
 	q := req.URL.Query()
-	q.Add("name", pc)
+	q.Add("name", strconv.Itoa(pc))
 	req.URL.RawQuery = q.Encode()
 
 	req.Header.Set("Content-Type", "application/json")
@@ -41,6 +40,10 @@ func Fetch() string {
 	if err != nil {
 		fmt.Printf("Error") //revisar
 	}
+
+	// * Otra salida
+
+	
 
 	// Verificar el código de estado de la respuesta
 	if respuesta.StatusCode != http.StatusOK {
@@ -60,19 +63,17 @@ func Fetch() string {
 func DecodeAndExecute() {
 
 	instruccion := Delimitador()
-	posRegistro1 := ElegirRegistro(instruccion[1])
-	posRegistro2 := ElegirRegistro(instruccion[2])
 
 	switch instruccion[0] {
 	//case "IO_GEN_SLEEP": operaciones.IO_GEN_SLEEP(instruccionActual.parametro1, instruccionActual.parametro2)
 	case "JNZ":
-		operaciones.JNZ(pcb.pcbPrueba.CPU_reg[posRegistro1], Convertir(instruccion[2])) //mandamos un 4 para probar
+		
 	case "SET":
-		operaciones.SET(&pcb.pcbPrueba.CPU_reg[posRegistro1], Convertir(instruccion[2]))
+
 	case "SUM":
-		operaciones.SUM(&pcb.pcbPrueba.CPU_reg[posRegistro1], pcb.pcbPrueba.CPU_reg[posRegistro2])
+		
 	case "SUB":
-		operaciones.SUB(&pcb.pcbPrueba.CPU_reg[posRegistro1], pcb.pcbPrueba.CPU_reg[posRegistro2])
+		
 
 	}
 
@@ -110,7 +111,7 @@ func ElegirRegistro(registro string) int {
 		return 4
 	case "EBX": 
 		return 5
-	case "ECX": 
+	case "ECX":
 		return 6
 	case "EDX": 
 		return 7

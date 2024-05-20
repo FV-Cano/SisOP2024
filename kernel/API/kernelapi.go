@@ -188,9 +188,13 @@ func PCB_Send(pcb pcb.T_PCB) error {
 		return fmt.Errorf("failed to encode PCB: %v", err)
 	}
 
+	client := &http.Client{
+		Timeout: 0,
+	}
+
 	// Send data
 	url := fmt.Sprintf("http://%s:%d/dispatch", globals.Configkernel.IP_cpu, globals.Configkernel.Port_cpu)
-	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
+	resp, err := client.Post(url, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		return fmt.Errorf("POST request failed. Failed to send PCB: %v", err)
 	}

@@ -12,8 +12,8 @@ import (
 	"github.com/sisoputnfrba/tp-golang/utils/pcb"
 )
 
-func Delimitador() []string {
-	var instruccion = Fetch()
+func Delimitador(currentPCB pcb.T_PCB) []string {
+	var instruccion = Fetch(currentPCB)
 	delimitador := " "
 	instruccionDecodificada := strings.Split(instruccion, delimitador)
 	return instruccionDecodificada
@@ -60,9 +60,9 @@ func Fetch(currentPCB pcb.T_PCB) string {
 	return string(bodyBytes)
 }
 
-func DecodeAndExecute() {
+func DecodeAndExecute(currentPCB pcb.T_PCB) {
 
-	instruccion := Delimitador()
+	instruccion := Delimitador(currentPCB)
 
 	switch instruccion[0] {
 	//case "IO_GEN_SLEEP": operaciones.IO_GEN_SLEEP(instruccionActual.parametro1, instruccionActual.parametro2)

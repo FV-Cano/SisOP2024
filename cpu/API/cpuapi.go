@@ -34,7 +34,7 @@ func PCB_recv(w http.ResponseWriter, r *http.Request) {
 
 	for !pcb.InterruptFlag {
 		
-		cicloInstruccion.DecodeAndExecute()
+		cicloInstruccion.DecodeAndExecute(received_pcb)
 		// Decode
 		// Exec
 		// Check interrupt (Al ser asincrónico no puedo hacer el check, espero a que el handler ejecute y luego cambio el valor de la flag de interrupción)

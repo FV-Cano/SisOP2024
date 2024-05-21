@@ -10,19 +10,6 @@ type T_Registers struct {
 	DI  uint32 `json:"di"`
 }
 
-/* type T_CPU_reg struct {
-	registers map[string]interface{}
-} */
-
-/* func NewT_CPU_reg() *T_CPU_reg {
-	return &T_CPU_reg{
-		registers: make(map[string]interface{}){
-			"AX": uint8(0), "BX": uint8(0), "CX": uint8(0), "DX": uint8(0),
-			"EAX": uint32(0), "EBX": uint32(0), "ECX": uint32(0), "EDX": uint32(0),
-		}
-	}
-} */
-
 type Uint interface {~uint8 | ~uint32}
 
 func IO_GEN_SLEEP(cantidadUnidadesTrabajo int, cantTiempoDeTrabajo int) {
@@ -42,14 +29,18 @@ func SET[T Uint](registro *T, valor T) {
 }
 
 // para llamarla SUM(&registroDestino, registroOrigen)
-func SUM[T Uint](registroDestino *T, registroOrigen T) {
-	*registroDestino = *registroDestino + registroOrigen
+func SUM[T Uint, Z Uint](registroDestino *T, registroOrigen Z) {
+	registroOrigenConvertido := T(registroOrigen)
+
+	*registroDestino = *registroDestino + registroOrigenConvertido
 }
 
 // para llamarla SUB(&registroDestino, registroOrigen)
-func SUB[T Uint](registroDestino *T, registroOrigen T) {
-	if *registroDestino  >= registroOrigen {
-		*registroDestino = *registroDestino - registroOrigen
+func SUB[T Uint, Z Uint](registroDestino *T, registroOrigen Z) {
+	registroOrigenConvertido := T(registroOrigen)
+
+	if *registroDestino  >= registroOrigenConvertido {
+		*registroDestino = *registroDestino - registroOrigenConvertido
 	}
 }
 

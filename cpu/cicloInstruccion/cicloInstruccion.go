@@ -5,9 +5,10 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"reflect"
 	"strconv"
 	"strings"
-	"reflect"
+
 	"github.com/sisoputnfrba/tp-golang/cpu/globals"
 	"github.com/sisoputnfrba/tp-golang/cpu/operaciones"
 	"github.com/sisoputnfrba/tp-golang/utils/pcb"
@@ -67,46 +68,82 @@ func DecodeAndExecute(currentPCB pcb.T_PCB) {
 
 	reg1 := parametros[instruccionDecodificada[1]]
 	tipoReg1 := reflect.TypeOf(reg1).String()
+	reg1Uint8 := reg1.(uint8)
+	reg1Uint32 := reg1.(uint32)
 
 	currentPCB.PC++
 
 	switch instruccionDecodificada[0] {
 		case "IO_GEN_SLEEP": 
 		//operaciones.IO_GEN_SLEEP(instruccionActual.parametro1, instruccionActual.parametro2)
-		case "JNZ":			
-			operaciones.JNZ(reg1, Convertir(tipoReg1, instruccionDecodificada[2]))
-
-		case "SET":
-			operaciones.SET(&reg1, Convertir(tipoReg1, instruccionDecodificada[2]))
 		
+		case "JNZ":
+			if tipoReg1 == "uint8" {
+				operaciones.JNZ(reg1Uint8, Convertir[uint8](tipoReg1, instruccionDecodificada[2]))
+				} else {
+				operaciones.JNZ(reg1Uint32, Convertir[uint32](tipoReg1, instruccionDecodificada[2]))
+			}
+			
+		case "SET":
+			if tipoReg1 == "uint8" {
+				operaciones.SET(&reg1Uint8, Convertir[uint8](tipoReg1, instruccionDecodificada[2]))
+			} else {
+				operaciones.SET(&reg1Uint32, Convertir[uint32](tipoReg1, instruccionDecodificada[2]))
+			}
+								
 		case "SUM":
 			reg2 := parametros[instruccionDecodificada[2]]
-			operaciones.SUM(&reg1, reg2)
+			tipoReg2 := reflect.TypeOf(reg2).String()
+			reg2Uint8 := reg2.(uint8)
+			reg2Uint32 := reg2.(uint32)
+
+			if (tipoReg1 == "uint8" && tipoReg2 == "uint8")  {
+				operaciones.SUM(&reg1Uint8, reg2Uint8)
+			} else if (tipoReg1 == "uint32" && tipoReg2 == "uint32"){
+				operaciones.SUM(&reg1Uint32, reg2Uint32)
+			} else if (tipoReg1 == "uint32" && tipoReg2 == "uint8"){
+				operaciones.SUM(&reg1Uint32, reg2Uint8)
+			} else {operaciones.SUM(&reg2Uint8, reg2Uint32)}
 			
 		case "SUB":
 			reg2 := parametros[instruccionDecodificada[2]]
-			operaciones.SUB(&reg1, reg2)
+			tipoReg2 := reflect.TypeOf(reg2).String()
+			reg2Uint8 := reg2.(uint8)
+			reg2Uint32 := reg2.(uint32)
+
+			if (tipoReg1 == "uint8" && tipoReg2 == "uint8")  {
+				operaciones.SUB(&reg1Uint8, reg2Uint8)
+			} else if (tipoReg1 == "uint32" && tipoReg2 == "uint32"){
+				operaciones.SUB(&reg1Uint32, reg2Uint32)
+			} else if (tipoReg1 == "uint32" && tipoReg2 == "uint8"){
+				operaciones.SUB(&reg1Uint32, reg2Uint8)
+			} else {operaciones.SUB(&reg2Uint8, reg2Uint32)}
 	}
 }
 
 type Uint interface {~uint8 | ~uint32}
 func Convertir[T Uint](tipo string, parametro string) T {
+
 	if parametro == "" {
 		log.Fatal("La cadena de texto está vacía")
 	}
+	var valor uint64
+	var err error
 
 	switch tipo {
-	case "uint8":
-		valor, err := strconv.ParseUint(parametro, 10, 8)
-	case "uint32":
-		valor, err := strconv.ParseUint(parametro, 10, 32)
-	}
 	
-	if err != nil {
-		log.Fatal(err)
+	case "uint8":
+		valor, err = strconv.ParseUint(parametro, 10, 8)
+		if err != nil {
+			log.Fatal(err)
+		}
+	case "uint32":
+		valor, err = strconv.ParseUint(parametro, 10, 32)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	log.Println("Conversion realizada")
-
-	return valor
+	return T(valor)
 }

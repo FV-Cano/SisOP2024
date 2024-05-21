@@ -43,21 +43,30 @@ func ProcessInit(w http.ResponseWriter, r *http.Request) {
 	}
 	
 	// En algún lugar voy a tener que usar el path
-	pcb := &pcb.T_PCB{
+	newPcb := &pcb.T_PCB{
 		PID: 			generatePID(),
 		PC: 			0,
 		Quantum: 		0,
-		CPU_reg: 		[8]int{0, 0, 0, 0, 0, 0, 0, 0},
+		CPU_reg: 		map[string]interface{}{
+							"AX": uint8(0),
+							"BX": uint8(0),
+							"CX": uint8(0),
+							"DX": uint8(0),
+							"EAX": uint32(0),
+							"EBX": uint32(0),
+							"ECX": uint32(0),
+							"EDX": uint32(0),
+						},
 		State: 			"READY", // TODO: La idea es que el estado sea NEW cuando implementemos el LTS
 		EvictionReason: "",
 	}
 
 	globals.PidMutex.Lock()
-	slice.Push(&globals.Processes, *pcb)
-	slice.Push(&globals.STS, *pcb)	// TODO: Implementar LTS
+	slice.Push(&globals.Processes, *newPcb)
+	slice.Push(&globals.STS, *newPcb)	// TODO: Implementar LTS
 	globals.PidMutex.Unlock()
 
-	var respBody ProcessStart_BRS = ProcessStart_BRS{PID: pcb.PID}
+	var respBody ProcessStart_BRS = ProcessStart_BRS{PID: newPcb.PID}
 
 	response, err := json.Marshal(respBody)
 	if err != nil {
@@ -66,7 +75,7 @@ func ProcessInit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Obtengo las instrucciones del proceso
-	url := fmt.Sprintf("http://%s:%d/instrucciones/%d", globals.Configkernel.IP_memory, globals.Configkernel.Port_memory, pcb.PID)
+	url := fmt.Sprintf("http://%s:%d/instrucciones/%d", globals.Configkernel.IP_memory, globals.Configkernel.Port_memory, newPcb.PID)
 	
 	requerirInstrucciones, err := http.NewRequest("POST", url, nil)
 	if err != nil {

@@ -3,31 +3,15 @@ package pcb
 // Estructura PCB que comparten tanto el kernel como el CPU
 
 /* type T_CPU_reg struct {
-	AX 				uint8 			
-	BX 				uint8 			
-	CX 				uint8 			
-	DX 				uint8 			
-	EAX 			uint32			
+	AX 				uint8
+	BX 				uint8
+	CX 				uint8
+	DX 				uint8
+	EAX 			uint32
 	EBX				uint32
-	ECX 			uint32 			
-	EDX 			uint32 			
+	ECX 			uint32
+	EDX 			uint32
 } */
-
-// Mapa de registros de CPU
-var CPU_reg = make(map[string]interface{})
-
-
-func Init_Registers(){
-	CPU_reg["AX"] = uint8(0)
-	CPU_reg["BX"] = uint8(0)
-	CPU_reg["CX"] = uint8(0)
-	CPU_reg["DX"] = uint8(0)
-	CPU_reg["EAX"] = uint32(0)
-	CPU_reg["EBX"] = uint32(0)
-	CPU_reg["ECX"] = uint32(0)
-	CPU_reg["EDX"] = uint32(0)
-
-}
 type T_PCB struct {
 	PID 			uint32 						`json:"pid"`
 	PC 				uint32 						`json:"pc"`

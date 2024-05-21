@@ -1,10 +1,13 @@
 package cpu_api
 
 import (
+	//"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
 
+	"github.com/sisoputnfrba/tp-golang/cpu/cicloInstruccion"
+	//"github.com/sisoputnfrba/tp-golang/cpu/globals"
 	"github.com/sisoputnfrba/tp-golang/utils/pcb"
 )
 
@@ -32,11 +35,11 @@ func PCB_recv(w http.ResponseWriter, r *http.Request) {
 	// Sección donde trabajo el pcb recibido (me interesa usar un hilo?)
 
 	for !pcb.InterruptFlag {
-		// Fetch
+		
+		cicloInstruccion.DecodeAndExecute(received_pcb)
 		// Decode
 		// Exec
 		// Check interrupt (Al ser asincrónico no puedo hacer el check, espero a que el handler ejecute y luego cambio el valor de la flag de interrupción)
-	
 	}
 	
 	// Encode PCB

@@ -8,4 +8,3 @@ type T_CPU struct {
 	Number_felling_tlb 	int    `json:"number_felling_tlb"`
 	Algorithm_tlb      	string `json:"algorithm_tlb"`
 }
-

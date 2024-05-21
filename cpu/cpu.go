@@ -32,10 +32,6 @@ func main() {
 
 	// *** CLIENTE ***
 	
-	
-		
-	// Fetch()
-	
 	select {}
 }
 

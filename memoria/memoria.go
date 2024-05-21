@@ -1,104 +1,49 @@
-package main
+package pcb
 
-import (
-	"bufio"
-	//"fmt"
-	"log"
-	"strconv"
-	
-	//"path/filepath"
+// Estructura PCB que comparten tanto el kernel como el CPU
 
-	cfg "github.com/sisoputnfrba/tp-golang/utils/config"
-	logger "github.com/sisoputnfrba/tp-golang/utils/log"
-	"github.com/sisoputnfrba/tp-golang/utils/server-Functions"
+/* type T_CPU_reg struct {
+	AX 				uint8 			
+	BX 				uint8 			
+	CX 				uint8 			
+	DX 				uint8 			
+	EAX 			uint32			
+	EBX				uint32
+	ECX 			uint32 			
+	EDX 			uint32 			
+} */
 
-	//"github.com/sisoputnfrba/tp-golang/utils/server-Functions"
-	//"github.com/sisoputnfrba/tp-golang/utils/slice"
-	"encoding/json"
-	"net/http"
-	"os"
+// Mapa de registros de CPU
+var CPU_reg = make(map[string]interface{})
+
+
+func Init_Registers(){
+	CPU_reg["AX"] = uint8(0)
+	CPU_reg["BX"] = uint8(0)
+	CPU_reg["CX"] = uint8(0)
+	CPU_reg["DX"] = uint8(0)
+	CPU_reg["EAX"] = uint32(0)
+	CPU_reg["EBX"] = uint32(0)
+	CPU_reg["ECX"] = uint32(0)
+	CPU_reg["EDX"] = uint32(0)
+
+}
+type T_PCB struct {
+	PID 			uint32 						`json:"pid"`
+	PC 				uint32 						`json:"pc"`
+	Quantum 		uint32 						`json:"quantum"`
+	CPU_reg 		map[string]interface{} 		`json:"cpu_reg"`	
+	// TODO: "Estructura que contendrá los valores de los registros de uso general de la CPU". Tiene los valores enteros de AX, BX, CX, DX, etc., o es una estructura que se crea a partir de otra que represente los registros de la CPU?  
+	State 			string 						`json:"state"`
+	EvictionReason 	string  					`json:"eviction_reason"`
+}
+
+// Canal global de finalización de proceso
+var Finished chan bool
+
+var InterruptFlag bool
+
+// Interruption codes:
+const (
+	QUANTUM = 0
 )
-
-type T_ConfigMemory struct {
-	Port 				int 	`json:"port"`
-	Memory_size 		int 	`json:"memory_size"`
-	Page_size		 	int 	`json:"page_size"`
-	Instructions_path 	string 	`json:"instructions_path"`
-	Delay_response 		int 	`json:"delay_response"`
-}
-
-var configmemory T_ConfigMemory
-
-func main() {
-	// Iniciar loggers
-	logger.ConfigurarLogger("memory.log")
-	logger.LogfileCreate("memory_debug.log")
-
-	// Inicializamos la config
-	err := cfg.ConfigInit("config-memory.json", &configmemory)
-	if err != nil {
-		log.Fatalf("Error al cargar la configuracion %v", err)
-	}
-	log.Println("Configuracion MEMORIA cargada")
-	
-	// Handlers
-	// Iniciar servidor
-
-	log.Println("Instrucciones leídas por memoria.")
-	go server.ServerStart(configmemory.Port,RegisteredModuleRoutes())
-	log.Println("Instrucciones enviadas a CPU")	
-	
-	select {}
-	
-}
-
-func AbrirArchivo(filePath string)(*os.File){
-	file, err := os.Open(filePath) //El paquete os provee el método ReadFile el cual recibe como argumento el nombre de un archivo el cual se encargará de leer. Al completar la lectura, retorna un slice de bytes, de forma que si se desea leer, tiene que ser convertido primero a una cadena de tipo string
-	if err != nil {
-			log.Fatal(err)
-		}
-		
-	return file
-}
-
-func  LeerInstrucciones(filePath string) []string {
-	
-	var instrucciones []string
-	//Lee linea por linea el archivo
-	scanner := bufio.NewScanner(AbrirArchivo(filePath))
-    for scanner.Scan() {
-        // Agregar cada línea al slice de strings
-        instrucciones = append(instrucciones, scanner.Text())
-    }
-	if err := scanner.Err(); err != nil {
-        log.Fatal(err)
-    }
-    return instrucciones
-}
-
-func RespuestaServidor(w http.ResponseWriter, r *http.Request) {
-	queryParams := r.URL.Query()	//Nos permitirá acceder a aquellas variables definidas en la ruta.
-	name := queryParams.Get("name") //para obtener la variable name y utilizarla dentro de nuestra respuesta.
-	pc, err := strconv.Atoi(name) //de esta forma convierto la cadena (que sería el pc)
-	if err != nil{								//en un int para usarlo de indice
-		log.Fatal(err)
-	}
-	instrucciones := LeerInstrucciones(configmemory.Instructions_path)
-	respuesta, err := json.Marshal(instrucciones[pc])
-	if err != nil {
-		http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-	w.Write(respuesta)
-}
-
-func RegisteredModuleRoutes() http.Handler {
-	moduleHandler := &server.ModuleHandler{
-		RouteHandlers: map[string]http.HandlerFunc{
-			"GET /instrucciones": RespuestaServidor,
-		},
-	}
-	return moduleHandler
-}

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -62,6 +63,21 @@ func ProcessInit(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+
+	// Obtengo las instrucciones del proceso
+	url := fmt.Sprintf("http://%s:%d/instrucciones/%d", globals.Configkernel.IP_memory, globals.Configkernel.Port_memory, pcb.PID)
+	
+	requerirInstrucciones, err := http.NewRequest("POST", url, nil)
+	if err != nil {
+		log.Fatalf("POST request failed (No se pueden cargar instrucciones): %v", err)
+	}
+	
+	cliente := &http.Client{}
+	requerirInstrucciones.Header.Set("Content-Type", "application/json")
+	recibirRespuestaInstrucciones, err := cliente.Do(requerirInstrucciones)
+	if err != nil || recibirRespuestaInstrucciones.StatusCode != http.StatusOK {
+		log.Fatal("Error", err)
 	}
 
 	w.WriteHeader(http.StatusOK)

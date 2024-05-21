@@ -2,6 +2,6 @@
     "port": 8002,
     "memory_size": 4096,
     "page_size": 16,
-    "instructions_path": "prueba/hola.txt",
+    "instructions_path": "/home/utnso/algo-pruebas",
     "delay_response": 1000
 }

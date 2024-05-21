@@ -29,7 +29,10 @@ var (
 
 // Global semaphores
 var (
-	PidMutex 	sync.Mutex
+	PidMutex 			sync.Mutex
+	// Mutex como binario
+	PlanBinary  		= make (chan bool, 1)
+	JobExecBinary		= make (chan bool, 1)
 )
 
 var CurrentJob pcb.T_PCB

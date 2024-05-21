@@ -20,7 +20,10 @@ func Plan() {
 	case "FIFO":
 		log.Println("FIFO algorithm")
 		for {
+			globals.PlanBinary <- true
+			globals.JobExecBinary <- true
 			FIFO_Plan()
+			<- globals.PlanBinary
 		}
 		// FIFO
 	case "RR":
@@ -121,6 +124,7 @@ func FIFO_Plan() {
 	kernel_api.PCB_Send()
 	// 4. Manejo de desalojo
 	EvictionManagement()
+	<- globals.JobExecBinary
 	// 5. Logueo el estado del proceso
 	log.Printf("Proceso %d: %s\n", globals.CurrentJob.PID, globals.CurrentJob.State)
 }

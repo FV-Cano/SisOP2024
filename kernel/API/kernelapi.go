@@ -159,7 +159,7 @@ func ProcessState(w http.ResponseWriter, r *http.Request) {
 */
 func PlanificationStart(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Scheduler started")) // ! No tiene que devolver nada
+	<- globals.PlanBinary
 }
 
 /**
@@ -169,7 +169,7 @@ func PlanificationStart(w http.ResponseWriter, r *http.Request) {
 */
 func PlanificationStop(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Scheduler stopped")) // ! No tiene que devolver nada
+	globals.PlanBinary <- false
 }
 
 type ProcessList_BRS struct {

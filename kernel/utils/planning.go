@@ -13,6 +13,7 @@ import (
 	"github.com/sisoputnfrba/tp-golang/utils/slice"
 )
 
+// Guarda
 var CurrentJob pcb.T_PCB
 var quantum int
 
@@ -74,7 +75,7 @@ func startTimer() {
 }
 
 func quantumInterrupt() {
-	pcb.InterruptFlag = true
+	pcb.EvictionFlag = true
 	interruptionCode := pcb.QUANTUM
 
 	// Interrumpir proceso actual, response = OK message
@@ -119,9 +120,7 @@ func FIFO_Plan() {
 	// 2. Cambio su estado a EXEC
 	CurrentJob.State = "EXEC"
 	// 3. Envío el PCB al CPU
-	kernel_api.PCB_Send(CurrentJob)
-	// ! Simulación de finalización de proceso - BORRAR
-	CurrentJob.State = "EXIT"
+	kernel_api.PCB_Send(CurrentJob)	// * Guaaaarda
 	// 4. Manejo de desalojo
 	EvictionManagement(CurrentJob)
 	// 5. Logueo el estado del proceso
@@ -148,9 +147,9 @@ func EvictionManagement(process pcb.T_PCB) {
 	case "TIMEOUT":
 
 	case "EXIT":
-		process.State = "FINISHED"
+		process.State = "TERMINATED"
 		// * VERIFICAR SI SE DEBE AGREGAR A LA LISTA LTS
-		slice.Push(&globals.LTS, process)
+		// slice.Push(&globals.LTS, process)
 
 	case "":
 		// ? Es necesario?

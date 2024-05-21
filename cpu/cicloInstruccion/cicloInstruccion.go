@@ -118,6 +118,10 @@ func DecodeAndExecute(currentPCB pcb.T_PCB) {
 			} else if (tipoReg1 == "uint32" && tipoReg2 == "uint8"){
 				operaciones.SUB(&reg1Uint32, reg2Uint8)
 			} else {operaciones.SUB(&reg2Uint8, reg2Uint32)}
+		//Placeholder
+		case "EXIT":
+			currentPCB.EvictionReason = "EXIT"
+			pcb.EvictionFlag = true
 	}
 }
 

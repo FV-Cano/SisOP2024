@@ -25,7 +25,7 @@ type T_PCB struct {
 // Canal global de finalización de proceso
 var Finished chan bool
 
-var InterruptFlag bool
+var EvictionFlag bool
 
 // Interruption codes:
 const (

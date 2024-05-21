@@ -13,8 +13,6 @@ import (
 	"github.com/sisoputnfrba/tp-golang/utils/slice"
 )
 
-// Guarda
-var CurrentJob pcb.T_PCB
 var quantum int
 
 func Plan() {
@@ -60,10 +58,10 @@ type T_Quantum struct {
   - [ ] Recibir respuesta de CPU
 */
 func RR_Plan() {
-	CurrentJob = slice.Shift(&globals.STS)
-	CurrentJob.State = "EXEC"
+	globals.CurrentJob = slice.Shift(&globals.STS)
+	globals.CurrentJob.State = "EXEC"
 	go startTimer()                 // ? Puedo arrancar el timer antes de enviar la pcb?
-	kernel_api.PCB_Send(CurrentJob) // <-- Envía proceso y espera respuesta (la respuesta teóricamente actualiza la variable enviada como parámetro)s
+	kernel_api.PCB_Send() // <-- Envía proceso y espera respuesta (la respuesta teóricamente actualiza la variable enviada como parámetro)s
 
 	// Esperar a que el proceso termine o sea desalojado por el timer
 }
@@ -116,15 +114,15 @@ func quantumInterrupt() {
 func FIFO_Plan() {
 
 	// 1. Tomo el primer proceso de la lista y lo quito de la misma
-	CurrentJob = slice.Shift(&globals.STS)
+	globals.CurrentJob = slice.Shift(&globals.STS)
 	// 2. Cambio su estado a EXEC
-	CurrentJob.State = "EXEC"
+	globals.CurrentJob.State = "EXEC"
 	// 3. Envío el PCB al CPU
-	kernel_api.PCB_Send(CurrentJob)	// * Guaaaarda
+	kernel_api.PCB_Send()
 	// 4. Manejo de desalojo
-	EvictionManagement(CurrentJob)
+	EvictionManagement()
 	// 5. Logueo el estado del proceso
-	log.Printf("Proceso %d: %s\n", CurrentJob.PID, CurrentJob.State)
+	log.Printf("Proceso %d: %s\n", globals.CurrentJob.PID, globals.CurrentJob.State)
 }
 
 /*
@@ -140,20 +138,20 @@ func FIFO_Plan() {
 
 *
 */
-func EvictionManagement(process pcb.T_PCB) {
-	switch process.EvictionReason {
+func EvictionManagement() {
+	switch globals.CurrentJob.EvictionReason {
 	case "BLOCKED_IO":
 
 	case "TIMEOUT":
 
 	case "EXIT":
-		process.State = "TERMINATED"
+		globals.CurrentJob.State = "TERMINATED"
 		// * VERIFICAR SI SE DEBE AGREGAR A LA LISTA LTS
 		// slice.Push(&globals.LTS, process)
 
 	case "":
 		// ? Es necesario?
 	default:
-		log.Fatalf("'%s' no es una razón de desalojo válida", process.EvictionReason)
+		log.Fatalf("'%s' no es una razón de desalojo válida", globals.CurrentJob.EvictionReason)
 	}
 }

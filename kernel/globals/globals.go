@@ -32,6 +32,8 @@ var (
 	PidMutex 	sync.Mutex
 )
 
+var CurrentJob pcb.T_PCB
+
 type T_ConfigKernel struct {
 	Port 				int 		`json:"port"`
 	IP_memory 			string 		`json:"ip_memory"`

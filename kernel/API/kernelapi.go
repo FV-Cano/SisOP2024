@@ -206,9 +206,9 @@ func ProcessList(w http.ResponseWriter, r *http.Request) {
  * @param pcb: PCB a enviar
  * @return error: Error en caso de que falle el envío
 */
-func PCB_Send(pcb pcb.T_PCB) error {
+func PCB_Send() error {
 	//Encode data
-	jsonData, err := json.Marshal(pcb)
+	jsonData, err := json.Marshal(globals.CurrentJob)
 	if err != nil {
 		return fmt.Errorf("failed to encode PCB: %v", err)
 	}
@@ -232,7 +232,7 @@ func PCB_Send(pcb pcb.T_PCB) error {
 	}
 
 	// Decode response and update value
-	err = json.NewDecoder(resp.Body).Decode(&pcb)
+	err = json.NewDecoder(resp.Body).Decode(&globals.CurrentJob)
 	if err != nil {
 		return fmt.Errorf("failed to decode PCB response: %v", err)
 	}

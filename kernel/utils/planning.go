@@ -24,6 +24,7 @@ func Plan() {
 			globals.JobExecBinary <- true
 			FIFO_Plan()
 			<- globals.PlanBinary
+			
 		}
 		// FIFO
 	case "RR":
@@ -150,6 +151,8 @@ func EvictionManagement() {
 
 	case "EXIT":
 		globals.CurrentJob.State = "TERMINATED"
+		<- globals.MultiprogrammingCounter
+
 		// * VERIFICAR SI SE DEBE AGREGAR A LA LISTA LTS
 		// slice.Push(&globals.LTS, process)
 

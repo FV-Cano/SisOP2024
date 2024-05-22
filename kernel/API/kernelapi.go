@@ -61,10 +61,15 @@ func ProcessInit(w http.ResponseWriter, r *http.Request) {
 		EvictionReason: "",
 	}
 
-	globals.PidMutex.Lock()
+	globals.ProcessesMutex.Lock()
 	slice.Push(&globals.Processes, *newPcb)
+	defer globals.ProcessesMutex.Unlock()
+
+	globals.STSMutex.Lock()
 	slice.Push(&globals.STS, *newPcb)	// TODO: Implementar LTS
-	globals.PidMutex.Unlock()
+	defer globals.STSMutex.Unlock()
+
+	globals.MultiprogrammingCounter <- int(newPcb.PID)
 
 	var respBody ProcessStart_BRS = ProcessStart_BRS{PID: newPcb.PID}
 
@@ -182,7 +187,9 @@ type ProcessList_BRS struct {
 */
 func ProcessList(w http.ResponseWriter, r *http.Request) {
 	// Me traigo los procesos de la lista de procesos
+	globals.ProcessesMutex.Lock()
 	allProcesses := globals.Processes
+	defer globals.ProcessesMutex.Unlock()
 
 	// Formateo los procesos para devolverlos
 	respBody := make([]ProcessList_BRS, len(allProcesses))
@@ -208,7 +215,7 @@ func ProcessList(w http.ResponseWriter, r *http.Request) {
 */
 func PCB_Send() error {
 	//Encode data
-	jsonData, err := json.Marshal(globals.CurrentJob)
+	jsonData, err := json.Marshal(globals.CurrentJob) // ? Semaforo?
 	if err != nil {
 		return fmt.Errorf("failed to encode PCB: %v", err)
 	}
@@ -232,7 +239,7 @@ func PCB_Send() error {
 	}
 
 	// Decode response and update value
-	err = json.NewDecoder(resp.Body).Decode(&globals.CurrentJob)
+	err = json.NewDecoder(resp.Body).Decode(&globals.CurrentJob) // ? Semaforo?
 	if err != nil {
 		return fmt.Errorf("failed to decode PCB response: %v", err)
 	}
@@ -244,6 +251,7 @@ func PCB_Send() error {
  * SearchByID: Busca un proceso en la lista de procesos en base a su PID
 
  * @param pid: PID del proceso a buscar
+ * @param processList: Lista de procesos
  * @return *pcb.T_PCB: Proceso encontrado
 */
 func SearchByID(pid uint32, processList []pcb.T_PCB) (*pcb.T_PCB, int) {
@@ -261,23 +269,38 @@ func SearchByID(pid uint32, processList []pcb.T_PCB) (*pcb.T_PCB, int) {
  * @param pid: PID del proceso a remover
 */
 func RemoveByID(pid uint32) error {
+	globals.ProcessesMutex.Lock()
 	_, generalIndex := SearchByID(pid, globals.Processes)
+	globals.ProcessesMutex.Unlock()
+	
 	if (generalIndex == -1) {
 		return fmt.Errorf("process with PID %d not found", pid)
 	} else {
+		globals.ProcessesMutex.Lock()
+		defer globals.ProcessesMutex.Unlock()
 		slice.RemoveAtIndex(&globals.Processes, generalIndex)
 	}
 	
+	globals.LTSMutex.Lock()
 	_, ltsIndex := SearchByID(pid, globals.LTS)
+	globals.LTSMutex.Unlock()
+	
+	globals.STSMutex.Lock()
 	_, stsIndex := SearchByID(pid, globals.STS)
-
+	globals.STSMutex.Unlock()
+	
 	if ltsIndex != -1 {
+		globals.LTSMutex.Lock()
+		defer globals.LTSMutex.Unlock()
 		slice.RemoveAtIndex(&globals.LTS, ltsIndex)	
 	}
+	
 	if stsIndex != -1 {
+		globals.STSMutex.Lock()
+		defer globals.STSMutex.Unlock()
 		slice.RemoveAtIndex(&globals.STS, stsIndex)
 	}
-
+	
 	return nil
 }
 

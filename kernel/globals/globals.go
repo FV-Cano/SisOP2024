@@ -29,11 +29,21 @@ var (
 
 // Global semaphores
 var (
-	PidMutex 			sync.Mutex
-	// Mutex como binario
-	PlanBinary  		= make (chan bool, 1)
-	JobExecBinary		= make (chan bool, 1)
+	// * Mutex
+		PidMutex 				sync.Mutex
+		ProcessesMutex 			sync.Mutex
+		STSMutex 				sync.Mutex
+		LTSMutex 				sync.Mutex
+	// * Binarios
+	// TODO Revisar estos semaforos (Planning y kernel) y ver cuales faltan
+		PlanBinary  			= make (chan bool, 1)
+		JobExecBinary			= make (chan bool, 1)
+	// * Contadores
+		// Chequea si hay procesos en la cola de listos, lo usamos en EvictionManagement y en ProcessInit
+		MultiprogrammingCounter = make (chan int, Configkernel.Multiprogramming)
 )
+
+// CurrentJob (kernel_api funcion PCB_Send) se lee
 
 var CurrentJob pcb.T_PCB
 

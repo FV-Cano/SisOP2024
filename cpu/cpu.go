@@ -12,7 +12,6 @@ import (
 )
 
 func main() {
-
 	// Iniciar loggers
 	logger.ConfigurarLogger("cpu.log")
 	logger.LogfileCreate("cpu_debug.log")

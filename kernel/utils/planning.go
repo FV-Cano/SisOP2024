@@ -151,7 +151,7 @@ func EvictionManagement() {
 
 	case "EXIT":
 		globals.CurrentJob.State = "TERMINATED"
-		<- globals.MultiprogrammingCounter
+		// <- globals.MultiprogrammingCounter
 
 		// * VERIFICAR SI SE DEBE AGREGAR A LA LISTA LTS
 		// slice.Push(&globals.LTS, process)

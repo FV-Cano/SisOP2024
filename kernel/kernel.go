@@ -30,7 +30,7 @@ func main() {
 	// Handlers
 	kernelRoutes := RegisteredModuleRoutes()
 
-	globals.PlanBinary <- false
+	globals.PlanBinary <- false // ? Default false?
 
 	// Iniciar servidor
 	go server.ServerStart(globals.Configkernel.Port, kernelRoutes)

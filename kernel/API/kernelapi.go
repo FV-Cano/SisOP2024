@@ -29,7 +29,7 @@ type ProcessStart_BRS struct {
 }
 
 /**
- * ProcessInit: Inicia un proceso en base a un archivo dentro del FS de Linux. // ?: Qué contiene el path del archivo? las instrucciones?
+ * ProcessInit: Inicia un proceso en base a un archivo dentro del FS de Linux.
 	[x] Creación de PCB
 	[x] Asignación de PID incrementando en 1 por cada proceso creado
 	[ ] Estado de proceso: NEW
@@ -269,9 +269,7 @@ func SearchByID(pid uint32, processList []pcb.T_PCB) (*pcb.T_PCB, int) {
  * @param pid: PID del proceso a remover
 */
 func RemoveByID(pid uint32) error {
-	globals.ProcessesMutex.Lock()
 	_, generalIndex := SearchByID(pid, globals.Processes)
-	globals.ProcessesMutex.Unlock()
 	
 	if (generalIndex == -1) {
 		return fmt.Errorf("process with PID %d not found", pid)
@@ -281,13 +279,9 @@ func RemoveByID(pid uint32) error {
 		slice.RemoveAtIndex(&globals.Processes, generalIndex)
 	}
 	
-	globals.LTSMutex.Lock()
 	_, ltsIndex := SearchByID(pid, globals.LTS)
-	globals.LTSMutex.Unlock()
 	
-	globals.STSMutex.Lock()
 	_, stsIndex := SearchByID(pid, globals.STS)
-	globals.STSMutex.Unlock()
 	
 	if ltsIndex != -1 {
 		globals.LTSMutex.Lock()

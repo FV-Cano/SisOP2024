@@ -1,17 +1,6 @@
 package pcb
 
 // Estructura PCB que comparten tanto el kernel como el CPU
-
-/* type T_CPU_reg struct {
-	AX 				uint8
-	BX 				uint8
-	CX 				uint8
-	DX 				uint8
-	EAX 			uint32
-	EBX				uint32
-	ECX 			uint32
-	EDX 			uint32
-} */
 type T_PCB struct {
 	PID 			uint32 						`json:"pid"`
 	PC 				uint32 						`json:"pc"`

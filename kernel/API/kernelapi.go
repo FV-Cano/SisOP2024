@@ -332,3 +332,18 @@ func GetPIDFromString(pidString string) (uint32, error) {
 	pid64, error := strconv.ParseUint(pidString, 10, 32)
 	return uint32(pid64), error
 }
+
+func GetIOInterface(w http.ResponseWriter, r *http.Request) {
+	// Decode body
+	
+	err := json.NewDecoder(r.Body).Decode(&globals.IO_Interface)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// log received interface
+	log.Printf("Interface received, type: %s, port: %d\n", globals.IO_Interface.InterfaceType, globals.IO_Interface.InterfacePort)
+
+	w.WriteHeader(http.StatusOK)
+}

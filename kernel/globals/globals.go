@@ -48,6 +48,13 @@ var (
 
 var CurrentJob pcb.T_PCB
 
+type IOInterface struct {
+	InterfaceType string `json:"interfaceType"`
+	InterfacePort int    `json:"interfacePort"`
+}
+
+var IO_Interface IOInterface
+
 type T_ConfigKernel struct {
 	Port 				int 		`json:"port"`
 	IP_memory 			string 		`json:"ip_memory"`

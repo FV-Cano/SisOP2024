@@ -114,12 +114,13 @@ func DecodeAndExecute(currentPCB pcb.T_PCB) {
 	fmt.Println("DALE QUE LLEGO: ", parametros)
 	fmt.Println("ABER: ", instruccionDecodificada[1])
 	
-	reg1 := &parametros[instruccionDecodificada[1]]
+	reg1 := parametros[instruccionDecodificada[1]]
 	fmt.Println("C DECODIFICO: ", reg1)
 	
 	tipoReg1 := reflect.TypeOf(reg1).String()
-	reg1Uint8 := reg1.(uint8)
-	reg1Uint32 := reg1.(uint32)
+	
+	reg1Uint8 := Convertir[uint8](tipoReg1, reg1)
+	reg1Uint32 := Convertir[uint32](tipoReg1, reg1)
 
 	currentPCB.PC++
 	fmt.Println("PC AUMENTADO BRO")
@@ -184,7 +185,7 @@ func DecodeAndExecute(currentPCB pcb.T_PCB) {
 }
 
 type Uint interface {~uint8 | ~uint32}
-func Convertir[T Uint](tipo string, parametro string) T {
+func Convertir[T Uint](tipo string, parametro interface {}) T {
 
 	if parametro == "" {
 		log.Fatal("La cadena de texto está vacía")
@@ -193,17 +194,11 @@ func Convertir[T Uint](tipo string, parametro string) T {
 	switch tipo {
 	
 	case "uint8":
-		valor, err := strconv.ParseUint(parametro, 10, 8)
-		if err != nil {
-			log.Fatal(err)
-		}
+		valor := parametro.(uint8)
 		log.Println("Conversion realizada UINT8")
 		return T(valor)
 	case "uint32":
-		valor, err := strconv.ParseUint(parametro, 10, 32)
-		if err != nil {
-			log.Fatal(err)
-		}
+		valor := parametro.(uint32)
 		log.Println("Conversion realizada UINT32")
 		return T(valor)
 	}

@@ -27,14 +27,18 @@ func Fetch(currentPCB pcb.T_PCB) string {
 	//va a buscar en la lista de instrucciones de ese proceso, la instrucción en la posición
 	//pc y nos va a devolver esa instrucción)
 	// GET /instrucciones/{pid}/{pc}
+	fmt.Println("LABURASTESSSS?")
+	
 	semaphores.PCBMutex.Lock()
 	pid := currentPCB.PID
 	pc := currentPCB.PC
 	semaphores.PCBMutex.Unlock()
 	
+	cliente := &http.Client{}
 	url := fmt.Sprintf("http://%s:%d/instrucciones/%d/%d", globals.Configcpu.IP_memory,globals.Configcpu.Port_memory, pid, pc)
 	
-	cliente := &http.Client{}
+	fmt.Println("Hasta ahora tenemos: ", pid, pc)
+
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return "error"
@@ -46,19 +50,24 @@ func Fetch(currentPCB pcb.T_PCB) string {
 		return "error"
 	}
 
+	fmt.Println("El cliente laburó: ", respuesta.Body)
+
 	// Verificar el código de estado de la respuesta
 	if respuesta.StatusCode != http.StatusOK {
-		return "error"
+		return "error DE STATUS"
 	}
 
 	instruccionEnBytes, err := io.ReadAll(respuesta.Body)
 	if err != nil {
-		return "error"
+		return "error REBELDE"
 	}
-
+	fmt.Println("RECIBIO EL CUERPO")
+	
 	instruccion := string(instruccionEnBytes)
-
-	log.Print(instruccion)
+	
+	fmt.Println("SE PASO A STRING LA INSTRUCCION")
+	
+	log.Printf("PID: %d - FETCH - Program Counter: %d", pid, pc)
 
 	return instruccion
 }
@@ -66,21 +75,30 @@ func Fetch(currentPCB pcb.T_PCB) string {
 func DecodeAndExecute(currentPCB pcb.T_PCB) {
 	// ? Semaforo?
 	instActual := Fetch(currentPCB)
-
 	instruccionDecodificada := Delimitador(instActual)
 
+	fmt.Println("Intruc actual: ", instActual)
+	fmt.Println("Intruc decod: ", instruccionDecodificada)
+
 	semaphores.PCBMutex.Lock()
+	fmt.Println("DALE QUE LLEGO")
 	parametros := currentPCB.CPU_reg
 	defer semaphores.PCBMutex.Unlock()
 
+	
 	reg1 := parametros[instruccionDecodificada[1]]
+	fmt.Println("C DECODIFICO")
+	
 	tipoReg1 := reflect.TypeOf(reg1).String()
 	reg1Uint8 := reg1.(uint8)
 	reg1Uint32 := reg1.(uint32)
 
 	semaphores.PCBMutex.Lock()
 	currentPCB.PC++
+	fmt.Println("PC AUMENTADO BRO")
 	defer semaphores.PCBMutex.Unlock()
+	fmt.Println("BRO")
+	log.Printf("PID: %d - Ejecutando: %s - %s", currentPCB.PID, instruccionDecodificada[0], instruccionDecodificada[1:])
 
 	switch instruccionDecodificada[0] {
 		case "IO_GEN_SLEEP": 

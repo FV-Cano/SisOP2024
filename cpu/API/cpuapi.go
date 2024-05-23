@@ -3,6 +3,7 @@ package cpu_api
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/sisoputnfrba/tp-golang/cpu/cicloInstruccion"
@@ -29,22 +30,28 @@ func PCB_recv(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	
-	fmt.Printf("Received PCB: %v\n", received_pcb) //Log?
+	log.Printf("Received PCB: %v\n", received_pcb)
 
 	// Sección donde trabajo el pcb recibido (me interesa usar un hilo?)
 	globals.EvictionMutex.Lock()
+	fmt.Println("A ver muchachos si nos organizamos un poco")
 	defer globals.EvictionMutex.Unlock()
+	fmt.Println("EL MUTEX SE LIBERO POR 1VEZ")
 	for !pcb.EvictionFlag {
+		fmt.Println("EntrasteSSS?")
 		globals.EvictionMutex.Unlock()
+		fmt.Println("SeguisteSSS?")
 
 		cicloInstruccion.DecodeAndExecute(received_pcb)
-		
+		fmt.Println("SE DECODIFICO MIJO?")
 		// Check interrupt (Al ser asincrónico no puedo hacer el check, espero a que el handler ejecute y luego cambio el valor de la flag de interrupción)
 		globals.EvictionMutex.Lock()
+		fmt.Println("AGUANTE TAYLOR SWIFT")
 	}
 
+	fmt.Println("SALIOOOOOOOO")
 	pcb.EvictionFlag = false
-	
+	fmt.Println("C PUSO FOLS")
 	// Encode PCB
 	jsonResp, err := json.Marshal(received_pcb)
 	if err != nil {

@@ -28,6 +28,12 @@ type ProcessStart_BRS struct {
 	PID uint32 `json:"pid"`
 }
 
+type GetInstructions_BRQ struct {
+	Path string `json:"path"`
+	Pid  uint32 `json:"pid"`
+	Pc 	uint32  `json:"pc"`
+}
+
 /**
  * ProcessInit: Inicia un proceso en base a un archivo dentro del FS de Linux.
 	[x] Creación de PCB
@@ -41,8 +47,15 @@ func ProcessInit(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	pathInst, err := json.Marshal(fmt.Sprintf(request.Path))
+    if err != nil {
+        http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
+        return
+    }
+	pathInstString := string(pathInst)
 	
-	// En algún lugar voy a tener que usar el path
+
 	newPcb := &pcb.T_PCB{
 		PID: 			generatePID(),
 		PC: 			0,
@@ -80,9 +93,18 @@ func ProcessInit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Obtengo las instrucciones del proceso
-	url := fmt.Sprintf("http://%s:%d/instrucciones/%d", globals.Configkernel.IP_memory, globals.Configkernel.Port_memory, newPcb.PID)
+	url := fmt.Sprintf("http://%s:%d/instrucciones/", globals.Configkernel.IP_memory, globals.Configkernel.Port_memory)
+
+	bodyInst, err := json.Marshal(GetInstructions_BRQ{
+		Path: pathInstString,
+		Pid: newPcb.PID,
+		Pc: newPcb.PC,
+	})
+	if err != nil {
+		return
+	}
 	
-	requerirInstrucciones, err := http.NewRequest("POST", url, nil)
+	requerirInstrucciones, err := http.NewRequest("POST", url, bytes.NewBuffer(bodyInst))
 	if err != nil {
 		log.Fatalf("POST request failed (No se pueden cargar instrucciones): %v", err)
 	}
@@ -90,9 +112,11 @@ func ProcessInit(w http.ResponseWriter, r *http.Request) {
 	cliente := &http.Client{}
 	requerirInstrucciones.Header.Set("Content-Type", "application/json")
 	recibirRespuestaInstrucciones, err := cliente.Do(requerirInstrucciones)
-	if err != nil || recibirRespuestaInstrucciones.StatusCode != http.StatusOK {
-		log.Fatal("Error", err)
+	if (err != nil || recibirRespuestaInstrucciones.StatusCode != http.StatusOK) {
+		log.Fatal("Error en CargarInstrucciones (memoria)", err)
 	}
+
+	log.Printf("Se crea el proceso %d en %s\n", newPcb.PID, newPcb.State)
 
 	w.WriteHeader(http.StatusOK)
 	w.Write(response)

@@ -21,7 +21,9 @@ func Plan() {
 		log.Println("FIFO algorithm")
 		for {
 			globals.PlanBinary <- true
+			<- globals.MultiprogrammingCounter
 			globals.JobExecBinary <- true
+			log.Println("Planificandoooo")
 			FIFO_Plan()
 			<- globals.PlanBinary
 			
@@ -46,9 +48,7 @@ type T_Quantum struct {
 	TimeExpired chan bool
 }
 
-/*
-*
-
+/**
   - RR_Plan
 
   - [x] Tomar proceso de lista de procesos
@@ -63,7 +63,9 @@ type T_Quantum struct {
 */
 func RR_Plan() {
 	globals.CurrentJob = slice.Shift(&globals.STS)
-	globals.CurrentJob.State = "EXEC"
+	
+	globals.ChangeState(&globals.CurrentJob, "EXEC")
+
 	go startTimer()                 // ? Puedo arrancar el timer antes de enviar la pcb?
 	kernel_api.PCB_Send() // <-- Envía proceso y espera respuesta (la respuesta teóricamente actualiza la variable enviada como parámetro)s
 
@@ -99,12 +101,10 @@ func quantumInterrupt() {
 	}
 	defer resp.Body.Close()
 
-	fmt.Println("HTTP response status: ", resp.Status)
+	log.Printf("PID: %d - Desalojado por fin de quantum\n", globals.CurrentJob.PID)
 }
 
-/*
-*
-
+/**
   - FIFO_Plan
 
   - [x] Tomar proceso de lista de procesos
@@ -119,15 +119,19 @@ func FIFO_Plan() {
 
 	// 1. Tomo el primer proceso de la lista y lo quito de la misma
 	globals.CurrentJob = slice.Shift(&globals.STS)
+	
 	// 2. Cambio su estado a EXEC
-	globals.CurrentJob.State = "EXEC"
+	globals.ChangeState(&globals.CurrentJob, "EXEC")
+
 	// 3. Envío el PCB al CPU
 	kernel_api.PCB_Send()
+	
 	// 4. Manejo de desalojo
 	EvictionManagement()
 	<- globals.JobExecBinary
+	
 	// 5. Logueo el estado del proceso
-	log.Printf("Proceso %d: %s\n", globals.CurrentJob.PID, globals.CurrentJob.State)
+	// log.Printf("Proceso %d: %s\n", globals.CurrentJob.PID, globals.CurrentJob.State)
 }
 
 /*
@@ -144,21 +148,34 @@ func FIFO_Plan() {
 *
 */
 func EvictionManagement() {
-	switch globals.CurrentJob.EvictionReason {
+	evictionReason := globals.CurrentJob.EvictionReason
+
+	switch evictionReason {
 	case "BLOCKED_IO":
+		globals.ChangeState(&globals.CurrentJob, "READY")
 
 	case "TIMEOUT":
+		globals.ChangeState(&globals.CurrentJob, "READY")
+		
+		var pids []uint32
+		for _, job := range globals.STS {
+			pids = append(pids, job.PID)
+		}
+		log.Printf("Cola ready [%d]\n", pids)
 
 	case "EXIT":
-		globals.CurrentJob.State = "TERMINATED"
+		globals.ChangeState(&globals.CurrentJob, "TERMINATED") // ? Cambiar a EXIT?
+
 		// <- globals.MultiprogrammingCounter
 
 		// * VERIFICAR SI SE DEBE AGREGAR A LA LISTA LTS
 		// slice.Push(&globals.LTS, process)
 
+		log.Printf("Finaliza el proceso %d - Motivo: %s\n", globals.CurrentJob.PID, evictionReason)
+
 	case "":
 		// ? Es necesario?
 	default:
-		log.Fatalf("'%s' no es una razón de desalojo válida", globals.CurrentJob.EvictionReason)
+		log.Fatalf("'%s' no es una razón de desalojo válida", evictionReason)
 	}
 }

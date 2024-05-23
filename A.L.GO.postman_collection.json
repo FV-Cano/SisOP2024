@@ -1,0 +1,148 @@
+{
+	"info": {
+		"_postman_id": "d14ea708-9aaf-47f4-a26f-fecbc829407f",
+		"name": "A.L.GO",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "34635270"
+	},
+	"item": [
+		{
+			"name": "Kernel",
+			"item": [
+				{
+					"name": "Crear proceso",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"path\": \"/0.txt\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:8001/process",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8001",
+							"path": [
+								"process"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Obtener lista de procesos",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://127.0.0.1:8001/process",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8001",
+							"path": [
+								"process"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Iniciar planificación",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"url": {
+							"raw": "http://127.0.0.1:8001/plani",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8001",
+							"path": [
+								"plani"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Parar planificación",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"path\": \"/0.txt\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:8001/plani",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8001",
+							"path": [
+								"plani"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "CPU",
+			"item": [
+				{
+					"name": "Recibir PCB",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "http://127.0.0.1:8003/pcb-recv",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8003",
+							"path": [
+								"pcb-recv"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}

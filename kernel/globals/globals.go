@@ -3,6 +3,7 @@ package globals
 // Global variables:
 
 import (
+	"log"
 	"sync"
 
 	"github.com/sisoputnfrba/tp-golang/utils/pcb"
@@ -40,7 +41,7 @@ var (
 		JobExecBinary			= make (chan bool, 1)
 	// * Contadores
 		// Chequea si hay procesos en la cola de listos, lo usamos en EvictionManagement y en ProcessInit
-		MultiprogrammingCounter = make (chan int, Configkernel.Multiprogramming)
+		MultiprogrammingCounter = make (chan int, 10)
 )
 
 // CurrentJob (kernel_api funcion PCB_Send) se lee
@@ -61,3 +62,12 @@ type T_ConfigKernel struct {
 }
 
 var Configkernel *T_ConfigKernel
+
+func ChangeState(pcb *pcb.T_PCB, newState string) {
+	ProcessesMutex.Lock()
+	defer ProcessesMutex.Unlock()
+	
+	prevState := pcb.State
+	pcb.State = newState
+	log.Printf("PID: %d - Estado anterior: %s - Estado actual: %s \n", pcb.PID, prevState, pcb.State)
+}

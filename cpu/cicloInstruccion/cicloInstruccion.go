@@ -17,11 +17,22 @@ import (
 
 func Delimitador(instActual string) []string {
 	delimitador := " "
-	instruccionDecodificada := strings.Split(instActual, delimitador)
+	i:=0
+
+	instruccionDecodificadaConComillas := strings.Split(instActual, delimitador)
+	instruccionDecodificada := instruccionDecodificadaConComillas
+
+	
+	largoInstruccion := len (instruccionDecodificadaConComillas) 
+	for i < largoInstruccion {
+	instruccionDecodificada[i]= strings.Trim(instruccionDecodificadaConComillas[i], `"` )
+	i++
+	}
+	
 	return instruccionDecodificada
 }
 
-func Fetch(currentPCB pcb.T_PCB) string {
+func Fetch(currentPCB *pcb.T_PCB) string {
 	//CPU pasa a memoria el PID y el PC, y memoria le devuelve la instrucción
 	//(después de identificar en el diccionario la key:PID,
 	//va a buscar en la lista de instrucciones de ese proceso, la instrucción en la posición
@@ -102,7 +113,7 @@ func Fetch(currentPCB pcb.T_PCB) string {
 	return instruccion1
 }
 
-func DecodeAndExecute(currentPCB pcb.T_PCB) {
+func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 	// ? Semaforo?
 	instActual := Fetch(currentPCB)
 	instruccionDecodificada := Delimitador(instActual)
@@ -122,19 +133,23 @@ func DecodeAndExecute(currentPCB pcb.T_PCB) {
 	reg1Uint8 := Convertir[uint8](tipoReg1, reg1)
 	reg1Uint32 := Convertir[uint32](tipoReg1, reg1)
 
-	currentPCB.PC++
-	fmt.Println("PC AUMENTADO BRO")
+	//currentPCB.PC++
+	//fmt.Println("PC AUMENTADO BRO")
 
 	log.Printf("PID: %d - Ejecutando: %s - %s", currentPCB.PID, instruccionDecodificada[0], instruccionDecodificada[1:])
-
+	fmt.Println("LA instruccion es" ,instruccionDecodificada[0])
+	fmt.Println("Los parametros son" ,instruccionDecodificada[1:])
+	
 	switch instruccionDecodificada[0] {
 		case "IO_GEN_SLEEP": 
 		//operaciones.IO_GEN_SLEEP(instruccionActual.parametro1, instruccionActual.parametro2)
 		case "JNZ":
 			if tipoReg1 == "uint8" {
 				operaciones.JNZ(reg1Uint8, Convertir[uint8](tipoReg1, instruccionDecodificada[2]))
+				currentPCB.PC++
 				} else {
 					operaciones.JNZ(reg1Uint32, Convertir[uint32](tipoReg1, instruccionDecodificada[2]))
+					currentPCB.PC++
 				}
 			
 		case "SET":
@@ -142,8 +157,14 @@ func DecodeAndExecute(currentPCB pcb.T_PCB) {
 
 			if tipoReg1 == "uint8" {
 				operaciones.SET(&reg1Uint8, Convertir[uint8](tipoReg1, instruccionDecodificada[2]))
+				currentPCB.PC++
+				fmt.Println(currentPCB.PC)
+				fmt.Println("PC AUMENTADO BRO1")
 			} else {
 				operaciones.SET(&reg1Uint32, Convertir[uint32](tipoReg1, instruccionDecodificada[2]))
+				currentPCB.PC++
+				fmt.Println("PC AUMENTADO BRO2")
+				fmt.Println(currentPCB.PC)
 			}
 			
 		case "SUM":
@@ -154,12 +175,20 @@ func DecodeAndExecute(currentPCB pcb.T_PCB) {
 			
 			if (tipoReg1 == "uint8" && tipoReg2 == "uint8")  {
 				operaciones.SUM(&reg1Uint8, reg2Uint8)
+				currentPCB.PC++
+				fmt.Println("PC AUMENTADO BRO3")
 			} else if (tipoReg1 == "uint32" && tipoReg2 == "uint32"){
 				operaciones.SUM(&reg1Uint32, reg2Uint32)
+				currentPCB.PC++
+				fmt.Println("PC AUMENTADO BRO")
 			} else if (tipoReg1 == "uint32" && tipoReg2 == "uint8"){
 				operaciones.SUM(&reg1Uint32, reg2Uint8)
+				currentPCB.PC++
+				fmt.Println("PC AUMENTADO BRO")
 			} else {
 				operaciones.SUM(&reg2Uint8, reg2Uint32)
+				currentPCB.PC++
+				fmt.Println("PC AUMENTADO BRO")
 			}
 				
 		case "SUB":
@@ -170,12 +199,24 @@ func DecodeAndExecute(currentPCB pcb.T_PCB) {
 			
 			if (tipoReg1 == "uint8" && tipoReg2 == "uint8")  {
 				operaciones.SUB(&reg1Uint8, reg2Uint8)
+				currentPCB.PC++
+				fmt.Println("PC AUMENTADO BRO44")
+
 			} else if (tipoReg1 == "uint32" && tipoReg2 == "uint32"){
 				operaciones.SUB(&reg1Uint32, reg2Uint32)
+				currentPCB.PC++
+				fmt.Println("PC AUMENTADO BRO33")
+
 			} else if (tipoReg1 == "uint32" && tipoReg2 == "uint8"){
 				operaciones.SUB(&reg1Uint32, reg2Uint8)
+				currentPCB.PC++
+				fmt.Println("PC AUMENTADO BRO77")
+
 			} else {
 				operaciones.SUB(&reg2Uint8, reg2Uint32)
+				currentPCB.PC++
+				fmt.Println("PC AUMENTADO BRO99")
+
 			}
 		//Placeholder
 		case "EXIT":

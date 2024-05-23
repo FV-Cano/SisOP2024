@@ -39,10 +39,12 @@ func PCB_recv(w http.ResponseWriter, r *http.Request) {
 	for !pcb.EvictionFlag {
 		fmt.Println("EntrasteSSS?")		
 		fmt.Println("SeguisteSSS? aguante taylor swift")
-		cicloInstruccion.DecodeAndExecute(received_pcb)
+		cicloInstruccion.DecodeAndExecute(&received_pcb)
 		fmt.Println("SE DECODIFICO MIJO?")
 		// Check interrupt (Al ser asincrónico no puedo hacer el check, espero a que el handler ejecute y luego cambio el valor de la flag de interrupción)
 		fmt.Println("AGUANTE TAYLOR SWIFT")
+		fmt.Println("LOs registros de la cpu son" ,received_pcb.CPU_reg)
+
 	}
 
 	fmt.Println("SALIOOOOOOOO")

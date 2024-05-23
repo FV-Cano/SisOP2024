@@ -1,7 +1,10 @@
 package operaciones
 
 import (
+	"fmt"
 	"log"
+
+	//"github.com/sisoputnfrba/tp-golang/cpu/globals"
 )
 
 type T_Registers struct {
@@ -25,6 +28,7 @@ func JNZ[T Uint](registro T,  parametro T) {
 
 // para llamarla SET(&registro, valor)
 func SET[T Uint](registro *T, valor T) {
+	fmt.Printf("LLEGASTESSSSSS AL SETTTT")
 	*registro = valor
 }
 

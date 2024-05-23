@@ -123,6 +123,13 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 
 	parametros := currentPCB.CPU_reg
 	fmt.Println("DALE QUE LLEGO: ", parametros)
+
+
+	if (instruccionDecodificada[0] == "EXIT"){
+
+		currentPCB.EvictionReason = "EXIT"
+		pcb.EvictionFlag = true } else {
+
 	fmt.Println("ABER: ", instruccionDecodificada[1])
 	
 	reg1 := parametros[instruccionDecodificada[1]]
@@ -132,6 +139,8 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 	
 	reg1Uint8 := Convertir[uint8](tipoReg1, reg1)
 	reg1Uint32 := Convertir[uint32](tipoReg1, reg1)
+
+ 
 
 	//currentPCB.PC++
 	//fmt.Println("PC AUMENTADO BRO")
@@ -170,8 +179,8 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		case "SUM":
 			reg2 := parametros[instruccionDecodificada[2]]
 			tipoReg2 := reflect.TypeOf(reg2).String()
-			reg2Uint8 := reg2.(uint8)
-			reg2Uint32 := reg2.(uint32)
+			reg2Uint8 := Convertir[uint8](tipoReg2,reg2)
+			reg2Uint32 := Convertir[uint32](tipoReg2,reg2)
 			
 			if (tipoReg1 == "uint8" && tipoReg2 == "uint8")  {
 				operaciones.SUM(&reg1Uint8, reg2Uint8)
@@ -194,8 +203,8 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		case "SUB":
 			reg2 := parametros[instruccionDecodificada[2]]
 			tipoReg2 := reflect.TypeOf(reg2).String()
-			reg2Uint8 := reg2.(uint8)
-			reg2Uint32 := reg2.(uint32)
+			reg2Uint8 := Convertir[uint8](tipoReg2,reg2)
+			reg2Uint32 := Convertir[uint32](tipoReg2,reg2)
 			
 			if (tipoReg1 == "uint8" && tipoReg2 == "uint8")  {
 				operaciones.SUB(&reg1Uint8, reg2Uint8)
@@ -219,9 +228,7 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 
 			}
 		//Placeholder
-		case "EXIT":
-			currentPCB.EvictionReason = "EXIT"
-			pcb.EvictionFlag = true
+		}
 	}
 }
 

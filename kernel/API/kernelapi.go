@@ -93,7 +93,7 @@ func ProcessInit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Obtengo las instrucciones del proceso
-	url := fmt.Sprintf("http://%s:%d/instrucciones/", globals.Configkernel.IP_memory, globals.Configkernel.Port_memory)
+	url := fmt.Sprintf("http://%s:%d/instrucciones", globals.Configkernel.IP_memory, globals.Configkernel.Port_memory)
 
 	bodyInst, err := json.Marshal(GetInstructions_BRQ{
 		Path: pathInstString,

@@ -26,7 +26,7 @@ func Fetch(currentPCB pcb.T_PCB) string {
 	//(después de identificar en el diccionario la key:PID,
 	//va a buscar en la lista de instrucciones de ese proceso, la instrucción en la posición
 	//pc y nos va a devolver esa instrucción)
-	// GET /instrucciones/{pid}/{pc}
+	// GET /instrucciones
 	fmt.Println("LABURASTESSSS?")
 	
 	semaphores.PCBMutex.Lock()
@@ -35,10 +35,40 @@ func Fetch(currentPCB pcb.T_PCB) string {
 	semaphores.PCBMutex.Unlock()
 	
 	cliente := &http.Client{}
-	url := fmt.Sprintf("http://%s:%d/instrucciones/%d/%d", globals.Configcpu.IP_memory,globals.Configcpu.Port_memory, pid, pc)
+	url := fmt.Sprintf("http://%s:%d/instrucciones", globals.Configcpu.IP_memory,globals.Configcpu.Port_memory)
 	
-	fmt.Println("Hasta ahora tenemos: ", pid, pc)
+	fmt.Println("Hasta ahora tenemos: ", url)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return "errorisimo"
+	}
+	q := req.URL.Query()
+	q.Add("pid", strconv.Itoa(int(pid)))
+	q.Add("pc", strconv.Itoa(int(pc)))
+	req.URL.RawQuery = q.Encode()
 
+	fmt.Println("Hola que taaal: ", q)
+
+	req.Header.Set("Content-Type", "application/json")
+	respuesta, err := cliente.Do(req)
+	if err != nil {
+		return "horror"
+	}
+
+	fmt.Println("El cliente laburó: ", respuesta.StatusCode)
+
+	// Verificar el código de estado de la respuesta
+	if respuesta.StatusCode != http.StatusOK {
+		return "herror"
+	}
+
+	instruccion, err := io.ReadAll(respuesta.Body)
+	if err != nil {
+		return "orror"
+	}
+
+	fmt.Println(string(instruccion))
+/*
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return "error"
@@ -50,7 +80,7 @@ func Fetch(currentPCB pcb.T_PCB) string {
 		return "error"
 	}
 
-	fmt.Println("El cliente laburó: ", respuesta.Body)
+	fmt.Println("El cliente laburó: ", respuesta.StatusCode)
 
 	// Verificar el código de estado de la respuesta
 	if respuesta.StatusCode != http.StatusOK {
@@ -61,15 +91,15 @@ func Fetch(currentPCB pcb.T_PCB) string {
 	if err != nil {
 		return "error REBELDE"
 	}
-	fmt.Println("RECIBIO EL CUERPO")
+	fmt.Println("RECIBIO EL CUERPO")*/
 	
-	instruccion := string(instruccionEnBytes)
+	instruccion1 := string(instruccion)
 	
 	fmt.Println("SE PASO A STRING LA INSTRUCCION")
 	
 	log.Printf("PID: %d - FETCH - Program Counter: %d", pid, pc)
 
-	return instruccion
+	return instruccion1
 }
 
 func DecodeAndExecute(currentPCB pcb.T_PCB) {
@@ -80,41 +110,35 @@ func DecodeAndExecute(currentPCB pcb.T_PCB) {
 	fmt.Println("Intruc actual: ", instActual)
 	fmt.Println("Intruc decod: ", instruccionDecodificada)
 
-	semaphores.PCBMutex.Lock()
-	fmt.Println("DALE QUE LLEGO")
 	parametros := currentPCB.CPU_reg
-	defer semaphores.PCBMutex.Unlock()
-
+	fmt.Println("DALE QUE LLEGO: ", parametros)
+	fmt.Println("ABER: ", instruccionDecodificada[1])
 	
-	reg1 := parametros[instruccionDecodificada[1]]
-	fmt.Println("C DECODIFICO")
+	reg1 := &parametros[instruccionDecodificada[1]]
+	fmt.Println("C DECODIFICO: ", reg1)
 	
 	tipoReg1 := reflect.TypeOf(reg1).String()
 	reg1Uint8 := reg1.(uint8)
 	reg1Uint32 := reg1.(uint32)
 
-	semaphores.PCBMutex.Lock()
 	currentPCB.PC++
 	fmt.Println("PC AUMENTADO BRO")
-	defer semaphores.PCBMutex.Unlock()
-	fmt.Println("BRO")
+
 	log.Printf("PID: %d - Ejecutando: %s - %s", currentPCB.PID, instruccionDecodificada[0], instruccionDecodificada[1:])
 
 	switch instruccionDecodificada[0] {
 		case "IO_GEN_SLEEP": 
 		//operaciones.IO_GEN_SLEEP(instruccionActual.parametro1, instruccionActual.parametro2)
 		case "JNZ":
-			globals.OperationMutex.Lock()
-			defer globals.OperationMutex.Unlock()
 			if tipoReg1 == "uint8" {
-					operaciones.JNZ(reg1Uint8, Convertir[uint8](tipoReg1, instruccionDecodificada[2]))
-			} else {
+				operaciones.JNZ(reg1Uint8, Convertir[uint8](tipoReg1, instruccionDecodificada[2]))
+				} else {
 					operaciones.JNZ(reg1Uint32, Convertir[uint32](tipoReg1, instruccionDecodificada[2]))
-			}
+				}
 			
 		case "SET":
-			globals.OperationMutex.Lock()
-			defer globals.OperationMutex.Unlock()
+			fmt.Println("ALOHEISHON SET")
+
 			if tipoReg1 == "uint8" {
 				operaciones.SET(&reg1Uint8, Convertir[uint8](tipoReg1, instruccionDecodificada[2]))
 			} else {
@@ -127,8 +151,6 @@ func DecodeAndExecute(currentPCB pcb.T_PCB) {
 			reg2Uint8 := reg2.(uint8)
 			reg2Uint32 := reg2.(uint32)
 			
-			globals.OperationMutex.Lock()
-			defer globals.OperationMutex.Unlock()
 			if (tipoReg1 == "uint8" && tipoReg2 == "uint8")  {
 				operaciones.SUM(&reg1Uint8, reg2Uint8)
 			} else if (tipoReg1 == "uint32" && tipoReg2 == "uint32"){
@@ -145,8 +167,6 @@ func DecodeAndExecute(currentPCB pcb.T_PCB) {
 			reg2Uint8 := reg2.(uint8)
 			reg2Uint32 := reg2.(uint32)
 			
-			globals.OperationMutex.Lock()
-			defer globals.OperationMutex.Unlock()
 			if (tipoReg1 == "uint8" && tipoReg2 == "uint8")  {
 				operaciones.SUB(&reg1Uint8, reg2Uint8)
 			} else if (tipoReg1 == "uint32" && tipoReg2 == "uint32"){
@@ -158,12 +178,7 @@ func DecodeAndExecute(currentPCB pcb.T_PCB) {
 			}
 		//Placeholder
 		case "EXIT":
-			semaphores.PCBMutex.Lock()
-			defer semaphores.PCBMutex.Unlock()
 			currentPCB.EvictionReason = "EXIT"
-
-			globals.EvictionMutex.Lock()
-			defer globals.EvictionMutex.Unlock()
 			pcb.EvictionFlag = true
 	}
 }
@@ -174,23 +189,23 @@ func Convertir[T Uint](tipo string, parametro string) T {
 	if parametro == "" {
 		log.Fatal("La cadena de texto está vacía")
 	}
-	var valor uint64
-	var err error
 
 	switch tipo {
 	
 	case "uint8":
-		valor, err = strconv.ParseUint(parametro, 10, 8)
+		valor, err := strconv.ParseUint(parametro, 10, 8)
 		if err != nil {
 			log.Fatal(err)
 		}
+		log.Println("Conversion realizada UINT8")
+		return T(valor)
 	case "uint32":
-		valor, err = strconv.ParseUint(parametro, 10, 32)
+		valor, err := strconv.ParseUint(parametro, 10, 32)
 		if err != nil {
 			log.Fatal(err)
 		}
+		log.Println("Conversion realizada UINT32")
+		return T(valor)
 	}
-
-	log.Println("Conversion realizada")
-	return T(valor)
+	return T(0)
 }

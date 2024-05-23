@@ -37,8 +37,8 @@ func main() {
 func RegisteredModuleRoutes() http.Handler {
 	moduleHandler := &server.ModuleHandler{
 		RouteHandlers: map[string]http.HandlerFunc{
-			"POST /instrucciones/":     		 memoria_api.CargarInstrucciones,
-			"GET  /instrucciones/{pid}/{pc}": 	 memoria_api.InstruccionActual,
+			"GET /instrucciones": 		 memoria_api.InstruccionActual,
+			"POST /instrucciones":    	 memoria_api.CargarInstrucciones,
 		},
 	}
 	return moduleHandler

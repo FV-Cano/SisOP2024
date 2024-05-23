@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/sisoputnfrba/tp-golang/cpu/cicloInstruccion"
-	"github.com/sisoputnfrba/tp-golang/cpu/globals"
 	"github.com/sisoputnfrba/tp-golang/utils/pcb"
 )
 
@@ -33,19 +32,16 @@ func PCB_recv(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Received PCB: %v\n", received_pcb)
 
 	// Sección donde trabajo el pcb recibido (me interesa usar un hilo?)
-	globals.EvictionMutex.Lock()
+
 	fmt.Println("A ver muchachos si nos organizamos un poco")
-	defer globals.EvictionMutex.Unlock()
+	
 	fmt.Println("EL MUTEX SE LIBERO POR 1VEZ")
 	for !pcb.EvictionFlag {
-		fmt.Println("EntrasteSSS?")
-		globals.EvictionMutex.Unlock()
-		fmt.Println("SeguisteSSS?")
-
+		fmt.Println("EntrasteSSS?")		
+		fmt.Println("SeguisteSSS? aguante taylor swift")
 		cicloInstruccion.DecodeAndExecute(received_pcb)
 		fmt.Println("SE DECODIFICO MIJO?")
 		// Check interrupt (Al ser asincrónico no puedo hacer el check, espero a que el handler ejecute y luego cambio el valor de la flag de interrupción)
-		globals.EvictionMutex.Lock()
 		fmt.Println("AGUANTE TAYLOR SWIFT")
 	}
 

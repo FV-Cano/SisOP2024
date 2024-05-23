@@ -33,20 +33,32 @@ func InstruccionActual(w http.ResponseWriter, r *http.Request) {
 	// Acá lo que hacemos es, según el PID que nos indican buscar la lista de instrucciones
 	// que tiene asociada (una vez que encontramos esa lista tenemos que devolver el
 	// elemento según el PC)
-	fmt.Println("HOLAAAA")
 
-	pid := r.PathValue("pid")
-	pc := r.PathValue("pc")
+	//pid := r.PathValue("pid")
+	//pc := r.PathValue("pc")
 
-	fmt.Println("A VER LABURÁ: ", BuscarInstruccionMap(PasarAInt(pc), PasarAInt(pid)))
+	// fmt.Println("A VER LABURÁ: ", BuscarInstruccionMap(PasarAInt(pc), PasarAInt(pid)))
 
+	/* respuesta, err := json.Marshal((BuscarInstruccionMap(PasarAInt(pc), PasarAInt(pid))))
+	if err != nil {
+		http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
+		return
+	} */
+
+	//-----
+
+	queryParams := r.URL.Query()
+	pid := queryParams.Get("pid")
+	pc := queryParams.Get("pc")
+		
 	respuesta, err := json.Marshal((BuscarInstruccionMap(PasarAInt(pc), PasarAInt(pid))))
 	if err != nil {
 		http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
 		return
 	}
 	
-
+	//-----
+	
 	log.Printf("La instruccion buscada fue: %s", BuscarInstruccionMap(PasarAInt(pc), PasarAInt(pid)))
 
 	w.WriteHeader(http.StatusOK)

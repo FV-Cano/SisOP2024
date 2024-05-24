@@ -54,6 +54,7 @@ func RegisteredModuleRoutes() http.Handler {
 			"GET /process": 			kernel_api.ProcessList,
 			"POST /io-handshake": 		kernel_api.GetIOInterface,
 			"POST /io-gen-interface": 	kernel_api.Resp_ExisteInterfazGen,
+			"POST /tiempoBloq":			kernel_api.Resp_TiempoEspera,
 		},
 	}
 	return moduleHandler

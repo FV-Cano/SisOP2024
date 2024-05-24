@@ -406,3 +406,67 @@ func Resp_ExisteInterfazGen (w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(jsonResp)
 }
+
+func Resp_TiempoEspera (w http.ResponseWriter, r *http.Request) {
+	var received_data int
+
+	err := json.NewDecoder(r.Body).Decode(&received_data)
+	if err != nil {
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
+	}
+
+	// Enviar data a IO
+
+	jsonData, err := json.Marshal(received_data)
+	if err != nil {
+		http.Error(w, "Failed to encode interface", http.StatusInternalServerError)
+		return
+	}
+
+	// * La IP está hardcodeada, posible cambio
+	url := fmt.Sprintf("http://%s:%d/tiempoBloq", globals.InterfaceIP, globals.IO_Interface.InterfacePort)
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		http.Error(w, "Failed to send interface", http.StatusInternalServerError)
+		return
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		http.Error(w, "Unexpected response status", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+// Me veo forzado a poner esta variable porque por alguna razón no puedo declarar una pcb dentro de la función
+var genPCB pcb.T_PCB
+
+func SolicitarGenSleep(pcb pcb.T_PCB) {
+	// Encode data
+	jsonData, err := json.Marshal(pcb)
+	if err != nil {
+		log.Fatalf("Failed to encode PCB: %v", err)
+	}
+
+	// Send data
+	url := fmt.Sprintf("http://%s:%d/io-gen-sleep", globals.InterfaceIP, globals.IO_Interface.InterfacePort)
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		log.Fatalf("Failed to send PCB: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		log.Fatalf("Unexpected response status: %s", resp.Status)
+	}
+
+	// Response treatment
+	err = json.NewDecoder(resp.Body).Decode(&genPCB)
+	if err != nil {
+		log.Fatalf("Failed to decode PCB response: %v", err)
+	}
+
+	genPCB.State = "READY"
+	slice.Push(&globals.STS, genPCB)
+}

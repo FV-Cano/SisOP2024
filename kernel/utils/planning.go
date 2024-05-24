@@ -153,9 +153,8 @@ func EvictionManagement() {
 	switch evictionReason {
 	case "BLOCKED_IO":
 		globals.ChangeState(&globals.CurrentJob, "BLOCKED")
+		go kernel_api.SolicitarGenSleep(globals.CurrentJob)
 		// Cabe la posibilidad de que este envío tenga que ser una goroutine paralela
-		
-
 	case "TIMEOUT":
 		globals.ChangeState(&globals.CurrentJob, "READY")
 		

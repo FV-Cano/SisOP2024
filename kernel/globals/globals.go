@@ -76,6 +76,8 @@ type IOInterface struct {
 	InterfaceType string `json:"interfaceType"`
 	InterfacePort int    `json:"interfacePort"`
 }
+
+var InterfaceIP = "127.0.0.1"
 	
 var IO_Interface IOInterface
 var BlockedJob_by_IO pcb.T_PCB

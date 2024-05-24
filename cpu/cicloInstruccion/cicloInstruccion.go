@@ -155,9 +155,8 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 			if cond {
 				currentPCB.EvictionReason = "BLOCKED_IO"
 				pcb.EvictionFlag = true
-				solicitarIOGenSleep(tiempo_esp)
+				comunicarTiempoEspera(tiempo_esp)
 			} 
-		//operaciones.IO_GEN_SLEEP(instruccionActual.parametro1, instruccionActual.parametro2)
 		case "JNZ":
 			if tipoReg1 == "uint8" {
 				operaciones.JNZ(reg1Uint8, Convertir[uint8](tipoReg1, instruccionDecodificada[2]))
@@ -286,13 +285,13 @@ func existeInterfazGen() (bool, error) {
 	return response, nil
 }
 
-func solicitarIOGenSleep(tiempo_esp int) error {
+func comunicarTiempoEspera(tiempo_esp int) error {
 	jsonData, err := json.Marshal(tiempo_esp)
 	if err != nil {
 		return fmt.Errorf("failed to encode interface: %v", err)
 	}
 	
-	url := fmt.Sprintf("http://%s:%d/io-gen-sleep", globals.Configcpu.IP_kernel, globals.Configcpu.Port_kernel)
+	url := fmt.Sprintf("http://%s:%d/tiempoBloq", globals.Configcpu.IP_kernel, globals.Configcpu.Port_kernel)
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		return fmt.Errorf("POST request failed. Failed to send interface: %v", err)

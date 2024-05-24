@@ -16,7 +16,7 @@ import (
 type GetInstructions_BRQ struct {
 	Path string `json:"path"`
 	Pid  uint32 `json:"pid"`
-	Pc   uint32  `json:"pc"`
+	Pc   uint32 `json:"pc"`
 }
 
 func AbrirArchivo(filePath string) *os.File {
@@ -24,28 +24,10 @@ func AbrirArchivo(filePath string) *os.File {
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Print("Se leyó el archivo")
 	return file
 }
 
 func InstruccionActual(w http.ResponseWriter, r *http.Request) {
-	// Traer query path (PID y PC)
-	// Acá lo que hacemos es, según el PID que nos indican buscar la lista de instrucciones
-	// que tiene asociada (una vez que encontramos esa lista tenemos que devolver el
-	// elemento según el PC)
-
-	//pid := r.PathValue("pid")
-	//pc := r.PathValue("pc")
-
-	// fmt.Println("A VER LABURÁ: ", BuscarInstruccionMap(PasarAInt(pc), PasarAInt(pid)))
-
-	/* respuesta, err := json.Marshal((BuscarInstruccionMap(PasarAInt(pc), PasarAInt(pid))))
-	if err != nil {
-		http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
-		return
-	} */
-
-	//-----
 
 	queryParams := r.URL.Query()
 	pid := queryParams.Get("pid")
@@ -57,8 +39,6 @@ func InstruccionActual(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	
-	//-----
-	
 	log.Printf("La instruccion buscada fue: %s", BuscarInstruccionMap(PasarAInt(pc), PasarAInt(pid)))
 
 	w.WriteHeader(http.StatusOK)
@@ -66,25 +46,18 @@ func InstruccionActual(w http.ResponseWriter, r *http.Request) {
 }
 
 func BuscarInstruccionMap(pc int, pid int) string {
-	//globals.InstructionsMutex.Lock()
-	//defer globals.InstructionsMutex.Unlock()
-
 	resultado := globals.InstruccionesProceso[pid][pc]
 	return resultado
 }
 
 func PasarAInt(cadena string) int {
 	num, err := strconv.Atoi(cadena)
-
 	if err != nil {
-		fmt.Println("Error:", err)
-	} else {
-		fmt.Println("Número:", num)
+		fmt.Println("Error: ", err)
 	}
 	return num
 }
 
-// Esta funcion de abajo no sabemos si la necesitamos
 func CargarInstrucciones(w http.ResponseWriter, r *http.Request) {
 	var request GetInstructions_BRQ
 	err := json.NewDecoder(r.Body).Decode(&request)

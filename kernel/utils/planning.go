@@ -1,15 +1,14 @@
 package kernelutils
 
 import (
-	"bytes"
 	"fmt"
 	"log"
-	"net/http"
 	"time"
 
 	kernel_api "github.com/sisoputnfrba/tp-golang/kernel/API"
 	"github.com/sisoputnfrba/tp-golang/kernel/globals"
 	"github.com/sisoputnfrba/tp-golang/utils/pcb"
+	"github.com/sisoputnfrba/tp-golang/utils/semaphores"
 	"github.com/sisoputnfrba/tp-golang/utils/slice"
 )
 
@@ -23,7 +22,7 @@ func Plan() {
 			globals.PlanBinary <- true
 			<- globals.MultiprogrammingCounter
 			globals.JobExecBinary <- true
-			log.Println("Planificandoooo")
+			log.Println("FIFO Planificandoooo")
 			FIFO_Plan()
 			<- globals.PlanBinary
 			
@@ -33,7 +32,12 @@ func Plan() {
 		quantum = globals.Configkernel.Quantum * int(time.Millisecond)
 		log.Println("ROUND ROBIN algorithm")
 		for {
+			globals.PlanBinary <- true
+			<- globals.MultiprogrammingCounter
+			globals.JobExecBinary <- true
+			log.Println("RR Planificandoooo")
 			RR_Plan()
+			<- globals.PlanBinary
 		}
 		// RR
 	case "VRR":
@@ -62,27 +66,42 @@ type T_Quantum struct {
   - [ ] Recibir respuesta de CPU
 */
 func RR_Plan() {
+	// 1. Tomo el primer proceso de la lista y lo quito de la misma
 	globals.CurrentJob = slice.Shift(&globals.STS)
-	
+
+	// 2. Cambio su estado a EXEC
 	globals.ChangeState(&globals.CurrentJob, "EXEC")
 
-	go startTimer()                 // ? Puedo arrancar el timer antes de enviar la pcb?
+	// 3. Envío el PCB al CPU
+	go startTimer()       // ? Puedo arrancar el timer antes de enviar la pcb?
 	kernel_api.PCB_Send() // <-- Envía proceso y espera respuesta (la respuesta teóricamente actualiza la variable enviada como parámetro)s
 
-	// Esperar a que el proceso termine o sea desalojado por el timer
+	// 4. Esperar a que el proceso termine o sea desalojado por el timer
+	
+	// 5. Manejo de desalojo
+	EvictionManagement()
+	<- globals.JobExecBinary
 }
 
 func startTimer() {
 	quantumTime := time.Duration(quantum)
 	time.Sleep(quantumTime)
+	
 	quantumInterrupt()
 }
 
 func quantumInterrupt() {
+	semaphores.EvictionChange.L.Lock()
 	pcb.EvictionFlag = true
-	interruptionCode := pcb.QUANTUM
+	semaphores.EvictionChange.L.Unlock()
 
-	// Interrumpir proceso actual, response = OK message
+	semaphores.EvictionChange.Signal()
+	
+	fmt.Print("C PUSO EN TRU")
+		fmt.Println("ABER MOSTRAMELON VERSION QUANTUM: ", pcb.EvictionFlag)
+		//interruptionCode := pcb.QUANTUM
+
+	/* // Interrumpir proceso actual, response = OK message
 	url := fmt.Sprintf("http://%s:%d/interrupt", globals.Configkernel.IP_cpu, globals.Configkernel.Port_cpu)
 
 	// Json payload
@@ -99,7 +118,7 @@ func quantumInterrupt() {
 	if err != nil {
 		fmt.Println("Error sending HTTP request: ", err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() */
 
 	log.Printf("PID: %d - Desalojado por fin de quantum\n", globals.CurrentJob.PID)
 }
@@ -111,12 +130,11 @@ func quantumInterrupt() {
 
   - [x] Enviar CE a CPU
 
-  - [ ] Recibir respuesta de CPU
+  - [x] Recibir respuesta de CPU
 
-  - [ ] Agregar semáforos
+  - [x] Agregar semáforos
 */
 func FIFO_Plan() {
-
 	// 1. Tomo el primer proceso de la lista y lo quito de la misma
 	globals.CurrentJob = slice.Shift(&globals.STS)
 	
@@ -129,9 +147,6 @@ func FIFO_Plan() {
 	// 4. Manejo de desalojo
 	EvictionManagement()
 	<- globals.JobExecBinary
-	
-	// 5. Logueo el estado del proceso
-	// log.Printf("Proceso %d: %s\n", globals.CurrentJob.PID, globals.CurrentJob.State)
 }
 
 /*
@@ -156,7 +171,8 @@ func EvictionManagement() {
 
 	case "TIMEOUT":
 		globals.ChangeState(&globals.CurrentJob, "READY")
-		
+		globals.STS = append(globals.STS, globals.CurrentJob)
+
 		var pids []uint32
 		for _, job := range globals.STS {
 			pids = append(pids, job.PID)

@@ -69,6 +69,8 @@ func ProcessInit(w http.ResponseWriter, r *http.Request) {
 							"EBX": uint32(0),
 							"ECX": uint32(0),
 							"EDX": uint32(0),
+							"SI": uint32(0),
+							"DI": uint32(0),
 						},
 		State: 			"READY", // TODO: La idea es que el estado sea NEW cuando implementemos el LTS
 		EvictionReason: "",

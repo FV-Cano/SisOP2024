@@ -21,6 +21,7 @@ type interruptionRequest struct {
 */
 func PCB_recv(w http.ResponseWriter, r *http.Request) {
 	var received_pcb pcb.T_PCB
+	fmt.Println("Se recibió una nueva pcb")
 
 	// Decode PCB
 	err := json.NewDecoder(r.Body).Decode(&received_pcb)
@@ -32,24 +33,18 @@ func PCB_recv(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Received PCB: %v\n", received_pcb)
 
 	// Sección donde trabajo el pcb recibido (me interesa usar un hilo?)
-
-	fmt.Println("A ver muchachos si nos organizamos un poco")
 	
-	fmt.Println("EL MUTEX SE LIBERO POR 1VEZ")
 	for !pcb.EvictionFlag {
-		fmt.Println("EntrasteSSS?")		
-		fmt.Println("SeguisteSSS? aguante taylor swift")
+		fmt.Println("ABER MOSTRAMELON: ", pcb.EvictionFlag)
+		fmt.Println("A DECODIFICARR LOCO")
 		cicloInstruccion.DecodeAndExecute(&received_pcb)
-		fmt.Println("SE DECODIFICO MIJO?")
 		// Check interrupt (Al ser asincrónico no puedo hacer el check, espero a que el handler ejecute y luego cambio el valor de la flag de interrupción)
-		fmt.Println("AGUANTE TAYLOR SWIFT")
-		fmt.Println("LOs registros de la cpu son" ,received_pcb.CPU_reg)
-
+		fmt.Println("Los registros de la cpu son", received_pcb.CPU_reg)
 	}
 
-	fmt.Println("SALIOOOOOOOO")
 	pcb.EvictionFlag = false
 	fmt.Println("C PUSO FOLS")
+	
 	// Encode PCB
 	jsonResp, err := json.Marshal(received_pcb)
 	if err != nil {

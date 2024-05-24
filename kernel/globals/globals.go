@@ -48,13 +48,6 @@ var (
 
 var CurrentJob pcb.T_PCB
 
-type IOInterface struct {
-	InterfaceType string `json:"interfaceType"`
-	InterfacePort int    `json:"interfacePort"`
-}
-
-var IO_Interface IOInterface
-
 type T_ConfigKernel struct {
 	Port 				int 		`json:"port"`
 	IP_memory 			string 		`json:"ip_memory"`
@@ -78,3 +71,11 @@ func ChangeState(pcb *pcb.T_PCB, newState string) {
 	pcb.State = newState
 	log.Printf("PID: %d - Estado anterior: %s - Estado actual: %s \n", pcb.PID, prevState, pcb.State)
 }
+		
+type IOInterface struct {
+	InterfaceType string `json:"interfaceType"`
+	InterfacePort int    `json:"interfacePort"`
+}
+	
+var IO_Interface IOInterface
+var BlockedJob_by_IO pcb.T_PCB

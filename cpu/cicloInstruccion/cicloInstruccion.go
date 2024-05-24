@@ -1,6 +1,8 @@
 package cicloInstruccion
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -141,7 +143,20 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 	fmt.Println("Los parametros son" ,instruccionDecodificada[1:])
 	
 	switch instruccionDecodificada[0] {
-		case "IO_GEN_SLEEP": 
+		case "IO_GEN_SLEEP":
+			tiempo_esp, err := strconv.Atoi(instruccionDecodificada[2])
+			if err != nil {
+				log.Fatal("Error al convertir el tiempo de espera a entero")
+			}
+			cond, err := existeInterfazGen()
+			if err != nil {
+				log.Fatal("Error al verificar la existencia de la interfaz genérica")
+			}
+			if cond {
+				currentPCB.EvictionReason = "BLOCKED_IO"
+				pcb.EvictionFlag = true
+				solicitarIOGenSleep(tiempo_esp)
+			} 
 		//operaciones.IO_GEN_SLEEP(instruccionActual.parametro1, instruccionActual.parametro2)
 		case "JNZ":
 			if tipoReg1 == "uint8" {
@@ -244,4 +259,48 @@ func Convertir[T Uint](tipo string, parametro interface {}) T {
 		return T(valor)
 	}
 	return T(0)
+}
+
+func existeInterfazGen() (bool, error) {
+	jsonData, err := json.Marshal("GENERICA")
+	if err != nil {
+		return false, fmt.Errorf("failed to encode interface: %v", err)
+	}
+	
+	url := fmt.Sprintf("http://%s:%d/io-gen-interface", globals.Configcpu.IP_kernel, globals.Configcpu.Port_kernel)
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return false, fmt.Errorf("POST request failed. Failed to send interface: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return false, fmt.Errorf("unexpected response status: %s", resp.Status)
+	}
+
+	var response bool
+	err = json.NewDecoder(resp.Body).Decode(&response)
+	if err != nil {
+		return false, fmt.Errorf("failed to decode response: %v", err)
+	}
+
+	return response, nil
+}
+
+func solicitarIOGenSleep(tiempo_esp int) error {
+	jsonData, err := json.Marshal(tiempo_esp)
+	if err != nil {
+		return fmt.Errorf("failed to encode interface: %v", err)
+	}
+	
+	url := fmt.Sprintf("http://%s:%d/io-gen-sleep", globals.Configcpu.IP_kernel, globals.Configcpu.Port_kernel)
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return fmt.Errorf("POST request failed. Failed to send interface: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected response status: %s", resp.Status)
+	}
+
+	return nil
 }

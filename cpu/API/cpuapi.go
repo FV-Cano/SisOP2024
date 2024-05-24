@@ -80,3 +80,20 @@ func HandleInterruption(w http.ResponseWriter, r *http.Request) {
 			// Cambiar motivo de desalojo a "Quantum"
 	}
 }
+
+// TODO: Borrar
+/* func InterfaceType(w http.ResponseWriter, r *http.Request) {
+	var request struct {
+		InterfaceType string
+		InterfacePort int
+	}
+	err := json.NewDecoder(r.Body).Decode(&request)
+	if err != nil {
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
+	}
+
+	globals.InterfaceType = request.InterfaceType
+
+	w.WriteHeader(http.StatusOK)
+} */

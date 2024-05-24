@@ -3,7 +3,6 @@ package operaciones
 import (
 	"fmt"
 	"log"
-
 	//"github.com/sisoputnfrba/tp-golang/cpu/globals"
 )
 
@@ -15,9 +14,6 @@ type T_Registers struct {
 
 type Uint interface {~uint8 | ~uint32}
 
-func IO_GEN_SLEEP(cantidadUnidadesTrabajo int, cantTiempoDeTrabajo int) {
-	
-}
 
 func JNZ[T Uint](registro T,  parametro T) {
 	if 	registro != 0 {

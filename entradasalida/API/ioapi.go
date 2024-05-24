@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/sisoputnfrba/tp-golang/cpu/operaciones"
 	"github.com/sisoputnfrba/tp-golang/entradasalida/globals"
@@ -65,4 +66,12 @@ func HandshakeKernel() error {
 	log.Println("Handshake con Kernel exitoso")
 
 	return nil
+}
+
+func IO_GEN_SLEEP(cantUnidades int) {
+	sleepTime := cantUnidades * globals.ConfigIO.Unit_work_time
+	// LOG de operación a realizar
+	log.Printf("Bloqueado por %d segundos\n", sleepTime)
+
+	time.Sleep(time.Duration(sleepTime) * time.Second)
 }

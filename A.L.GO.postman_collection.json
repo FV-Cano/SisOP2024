@@ -3,7 +3,8 @@
 		"_postman_id": "d14ea708-9aaf-47f4-a26f-fecbc829407f",
 		"name": "A.L.GO",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-		"_exporter_id": "34635270"
+		"_exporter_id": "34635270",
+		"_collection_link": "https://cloudy-equinox-997718.postman.co/workspace/My-Workspace~9b52a18d-3c37-47af-8ec8-3270129db32c/collection/34635270-d14ea708-9aaf-47f4-a26f-fecbc829407f?action=share&source=collection_link&creator=34635270"
 	},
 	"item": [
 		{
@@ -16,7 +17,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"path\": \"/0.txt\"\n}",
+							"raw": "{\n    \"path\": \"/1.txt\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -143,6 +144,78 @@
 					"response": []
 				}
 			]
+		},
+		{
+			"name": "Memoria",
+			"item": [
+				{
+					"name": "Cargar instrucciones",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:8002/instrucciones",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8002",
+							"path": [
+								"instrucciones"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Obtener instrucción",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://127.0.0.1:8002/instrucciones?pid=1&pc=0",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8002",
+							"path": [
+								"instrucciones"
+							],
+							"query": [
+								{
+									"key": "pid",
+									"value": "1"
+								},
+								{
+									"key": "pc",
+									"value": "0"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "I/O",
+			"item": []
 		}
 	]
 }

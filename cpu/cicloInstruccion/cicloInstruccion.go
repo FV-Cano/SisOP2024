@@ -84,8 +84,8 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 	instruccionDecodificada := Delimitador(instActual)
 	
 	if (instruccionDecodificada[0] == "EXIT"){
-		pcb.EvictionFlag = true
 		currentPCB.EvictionReason = "EXIT"
+		pcb.EvictionFlag = true
 
 		log.Printf("PID: %d - Ejecutando: %s", currentPCB.PID, instruccionDecodificada[0])
 	} else {
@@ -98,15 +98,19 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 			if err != nil {
 				log.Fatal("Error al convertir el tiempo de espera a entero")
 			}
-			cond, err := existeInterfazGen()
+			cond, err := HallarInterfaz(instruccionDecodificada[1], "GENERICA")
 			if err != nil {
 				log.Fatal("Error al verificar la existencia de la interfaz genérica")
 			}
 			if cond {
 				currentPCB.EvictionReason = "BLOCKED_IO"
-				pcb.EvictionFlag = true
-				comunicarTiempoEspera(tiempo_esp)
-			} 
+				ComunicarTiempoEspera(instruccionDecodificada[1], tiempo_esp)
+			} else {
+				currentPCB.EvictionReason = "NOT_FOUND_IO"
+			}
+			pcb.EvictionFlag = true
+			currentPCB.PC++ // ? Ver si aumenta siempre
+
 		case "JNZ":
 			if currentPCB.CPU_reg[instruccionDecodificada[1]] != 0 {
 				currentPCB.PC = ConvertirUint32(instruccionDecodificada[2])
@@ -181,13 +185,24 @@ func Convertir[T Uint](tipo string, parametro interface {}) T {
 	return T(0)
 }
 
-func existeInterfazGen() (bool, error) {
-	jsonData, err := json.Marshal("GENERICA")
+type SearchInterface struct {
+	Name string `json:"name"`
+	Type string `json:"type"`
+}
+func HallarInterfaz(nombre string, tipo string) (bool, error) {
+	interf := SearchInterface{
+		Name: nombre, 
+		Type: tipo,
+	}
+	
+	log.Println( "Interfaz a buscar: ", interf)
+
+	jsonData, err := json.Marshal(interf)
 	if err != nil {
 		return false, fmt.Errorf("failed to encode interface: %v", err)
 	}
 	
-	url := fmt.Sprintf("http://%s:%d/io-gen-interface", globals.Configcpu.IP_kernel, globals.Configcpu.Port_kernel)
+	url := fmt.Sprintf("http://%s:%d/io-interface", globals.Configcpu.IP_kernel, globals.Configcpu.Port_kernel)
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		return false, fmt.Errorf("POST request failed. Failed to send interface: %v", err)
@@ -206,13 +221,19 @@ func existeInterfazGen() (bool, error) {
 	return response, nil
 }
 
-func comunicarTiempoEspera(tiempo_esp int) error {
-	jsonData, err := json.Marshal(tiempo_esp)
+type Interfac_Time struct {
+	Name 	string 	`json:"name"`
+	WTime 	int 	`json:"wtime"`
+}
+func ComunicarTiempoEspera(nombre string, tiempo_esp int) error {
+	int_time := Interfac_Time{Name: nombre, WTime: tiempo_esp}
+
+	jsonData, err := json.Marshal(int_time)
 	if err != nil {
 		return fmt.Errorf("failed to encode interface: %v", err)
 	}
 	
-	url := fmt.Sprintf("http://%s:%d/tiempoBloq", globals.Configcpu.IP_kernel, globals.Configcpu.Port_kernel)
+	url := fmt.Sprintf("http://%s:%d/tiempo-bloq", globals.Configcpu.IP_kernel, globals.Configcpu.Port_kernel)
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		return fmt.Errorf("POST request failed. Failed to send interface: %v", err)

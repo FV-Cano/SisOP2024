@@ -1,8 +1,7 @@
 package globals
 
-import "github.com/sisoputnfrba/tp-golang/utils/pcb"
-
 type T_ConfigIO struct {
+	Ip 			       string `json:"ip"`
 	Port               int    `json:"port"`
 	Type               string `json:"type"`
 	Unit_work_time     int    `json:"unit_work_time"`
@@ -16,5 +15,3 @@ type T_ConfigIO struct {
 }
 
 var ConfigIO 		T_ConfigIO
-var TiempoEspera 	int
-var SleepPCB		pcb.T_PCB

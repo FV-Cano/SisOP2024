@@ -6,26 +6,16 @@ import (
 	"log"
 	"sync"
 
+	"github.com/sisoputnfrba/tp-golang/utils/device"
 	"github.com/sisoputnfrba/tp-golang/utils/pcb"
 )
 
 var (
-	NextPID 			uint32 		= 0
-	Processes 			= []pcb.T_PCB{
-		{PID: 90, PC: 0, Quantum: 0, CPU_reg: map[string]interface{}{"AX": uint8(0), "BX": uint8(0), "CX": uint8(0), "DX": uint8(0), "EAX": uint32(0), "EBX": uint32(0), "ECX": uint32(0), "EDX": uint32(0),
-						}, State: "READY", EvictionReason: ""},
-		{PID: 91, PC: 0, Quantum: 0, CPU_reg: map[string]interface{}{"AX": uint8(0), "BX": uint8(0), "CX": uint8(0), "DX": uint8(0), "EAX": uint32(0), "EBX": uint32(0), "ECX": uint32(0), "EDX": uint32(0),
-						}, State: "BLOCKED", EvictionReason: ""},
-		{PID: 92, PC: 0, Quantum: 0, CPU_reg: map[string]interface{}{"AX": uint8(0),"BX": uint8(0),
-		"CX": uint8(0),"DX": uint8(0),"EAX": uint32(0),"EBX": uint32(0),"ECX": uint32(0),"EDX": uint32(0),
-						}, State: "READY", EvictionReason: ""},
-		{PID: 93, PC: 0, Quantum: 0, CPU_reg: map[string]interface{}{"AX": uint8(0), "BX": uint8(0), "CX": uint8(0), "DX": uint8(0), "EAX": uint32(0), "EBX": uint32(0), "ECX": uint32(0), "EDX": uint32(0),
-						}, State: "EXIT", EvictionReason: ""},
-		{PID: 94, PC: 0, Quantum: 0, CPU_reg: map[string]interface{}{"AX": uint8(0),"BX": uint8(0),"CX": uint8(0),"DX": uint8(0),"EAX": uint32(0),"EBX": uint32(0),"ECX": uint32(0),"EDX": uint32(0),
-						}, State: "READY", EvictionReason: ""},
-	}
+	NextPID 			uint32 = 0
+	Processes 			[]pcb.T_PCB
 	LTS 				[]pcb.T_PCB
 	STS 				[]pcb.T_PCB
+	Interfaces 			[]device.T_IOInterface
 )
 
 // Global semaphores
@@ -35,6 +25,7 @@ var (
 		ProcessesMutex 			sync.Mutex
 		STSMutex 				sync.Mutex
 		LTSMutex 				sync.Mutex
+		ITimeSem				sync.Mutex
 	// * Binarios
 		PlanBinary  			= make (chan bool, 1)
 		JobExecBinary			= make (chan bool, 1)
@@ -72,12 +63,4 @@ func ChangeState(pcb *pcb.T_PCB, newState string) {
 	log.Printf("PID: %d - Estado anterior: %s - Estado actual: %s \n", pcb.PID, prevState, pcb.State)
 }
 		
-type IOInterface struct {
-	InterfaceType string `json:"interfaceType"`
-	InterfacePort int    `json:"interfacePort"`
-}
-
-var InterfaceIP = "127.0.0.1"
-	
-var IO_Interface IOInterface
 var BlockedJob_by_IO pcb.T_PCB

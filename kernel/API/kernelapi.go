@@ -9,6 +9,7 @@ import (
 	"strconv"
 
 	"github.com/sisoputnfrba/tp-golang/kernel/globals"
+	"github.com/sisoputnfrba/tp-golang/utils/device"
 	"github.com/sisoputnfrba/tp-golang/utils/pcb"
 	"github.com/sisoputnfrba/tp-golang/utils/slice"
 )
@@ -365,18 +366,20 @@ func GetPIDFromString(pidString string) (uint32, error) {
 }
 
 // ----------------- IO -----------------
-
 func GetIOInterface(w http.ResponseWriter, r *http.Request) {
-	// Decode body
+	var interf device.T_IOInterface
 	
-	err := json.NewDecoder(r.Body).Decode(&globals.IO_Interface)
+	// Decode body
+	err := json.NewDecoder(r.Body).Decode(&interf)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	// log received interface
-	log.Printf("Interface received, type: %s, port: %d\n", globals.IO_Interface.InterfaceType, globals.IO_Interface.InterfacePort)
+	// Add interface to global list
+	globals.Interfaces = append(globals.Interfaces, interf)
+
+	log.Printf("Interface received, type: %s, port: %d\n", interf.InterfaceType, interf.InterfacePort)
 
 	w.WriteHeader(http.StatusOK)
 }
@@ -410,18 +413,27 @@ func GetIOInterface(w http.ResponseWriter, r *http.Request) {
 		return
 	} */
 
-func Resp_ExisteInterfazGen (w http.ResponseWriter, r *http.Request) {
-
-	var received_data string
-
+type SearchInterface struct {
+	Name string `json:"name"`
+	Type string `json:"type"`
+}
+func ExisteInterfaz(w http.ResponseWriter, r *http.Request) {
+	
+	var received_data SearchInterface
 	err := json.NewDecoder(r.Body).Decode(&received_data)
 	if err != nil {
 		http.Error(w, "Bad request", http.StatusBadRequest)
-		return
 	}
+	
+	log.Printf("Received data: %s, %s\n", received_data.Name, received_data.Type)
 
+	aux, err := SearchDeviceByName(received_data.Name)
+	if err != nil {
+		http.Error(w, "Device not found", http.StatusNotFound)
+	}
+	
 	var response bool
-	if received_data == globals.IO_Interface.InterfaceType {
+	if aux.InterfaceType == received_data.Type {
 		response = true
 	} else {
 		response = false
@@ -430,7 +442,6 @@ func Resp_ExisteInterfazGen (w http.ResponseWriter, r *http.Request) {
 	jsonResp, err := json.Marshal(response)
 	if err != nil {
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
-		return
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -438,25 +449,48 @@ func Resp_ExisteInterfazGen (w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonResp)
 }
 
-func Resp_TiempoEspera (w http.ResponseWriter, r *http.Request) {
-	var received_data int
+func SearchDeviceByName(deviceName string) (device.T_IOInterface, error) {
+	for _, interf := range globals.Interfaces {
+		if interf.InterfaceName == deviceName  {
+			fmt.Println("Interfaz encontrada: ", interf)
+			return interf, nil
+		}
+	}
+	return device.T_IOInterface{}, fmt.Errorf("device not found")
+}
 
+type Interfac_Time struct {
+	Name 	string 	`json:"name"`
+	WTime 	int 	`json:"wtime"`
+}
+
+var genIntTime Interfac_Time
+
+func Resp_TiempoEspera (w http.ResponseWriter, r *http.Request) {
+	var received_data Interfac_Time
+	
 	err := json.NewDecoder(r.Body).Decode(&received_data)
 	if err != nil {
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
 	}
 
+	//globals.ITimeSem.Lock()
+	genIntTime = received_data
+
+	w.WriteHeader(http.StatusOK)
+}
+	// TODO: Borrar
 	// Enviar data a IO
 
-	jsonData, err := json.Marshal(received_data)
+	/* jsonData, err := json.Marshal(received_data)
 	if err != nil {
 		http.Error(w, "Failed to encode interface", http.StatusInternalServerError)
 		return
 	}
 
 	// * La IP está hardcodeada, posible cambio
-	url := fmt.Sprintf("http://%s:%d/tiempoBloq", globals.InterfaceIP, globals.IO_Interface.InterfacePort)
+	url := fmt.Sprintf("http://%s:%d/tiempo-bloq", globals.Configkernel.IP_IO, globals.Configkernel.Port_IO)
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		http.Error(w, "Failed to send interface", http.StatusInternalServerError)
@@ -468,21 +502,40 @@ func Resp_TiempoEspera (w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-}
+	w.WriteHeader(http.StatusOK) */
+
 
 // Me veo forzado a poner esta variable porque por alguna razón no puedo declarar una pcb dentro de la función
 var genPCB pcb.T_PCB
 
+type GenSleep struct {
+	Pcb	 		pcb.T_PCB
+	Inter 		device.T_IOInterface
+	TimeToSleep int
+}
 func SolicitarGenSleep(pcb pcb.T_PCB) {
+	newInter, err := SearchDeviceByName(genIntTime.Name)
+	if err != nil {
+		log.Fatalf("Device not found: %v", err)
+	}
+	
+	genSleep := GenSleep{
+		Pcb: pcb,
+		Inter: newInter, 
+		TimeToSleep: genIntTime.WTime,
+	}
+	
+	//globals.ITimeSem.Unlock()
+
+
 	// Encode data
-	jsonData, err := json.Marshal(pcb)
+	jsonData, err := json.Marshal(genSleep)
 	if err != nil {
 		log.Fatalf("Failed to encode PCB: %v", err)
 	}
 
 	// Send data
-	url := fmt.Sprintf("http://%s:%d/io-gen-sleep", globals.InterfaceIP, globals.IO_Interface.InterfacePort)
+	url := fmt.Sprintf("http://%s:%d/io-gen-sleep", newInter.InterfaceIP, newInter.InterfacePort)
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		log.Fatalf("Failed to send PCB: %v", err)
@@ -499,5 +552,8 @@ func SolicitarGenSleep(pcb pcb.T_PCB) {
 	}
 
 	genPCB.State = "READY"
+
+	fmt.Println("El proceso ", genPCB, " ha terminado de dormir")
+
 	slice.Push(&globals.STS, genPCB)
 }

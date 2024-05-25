@@ -108,15 +108,29 @@ func HandleInterruption(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if request.Pid == globals.CurrentJob.PID && globals.CurrentJob.EvictionReason != "EXIT" {
+	evictionReasons := map[string]struct{}{
+		"EXIT":       {},
+		"BLOCKED_IO": {},
+	}
+	
+	if _, ok := evictionReasons[globals.CurrentJob.EvictionReason]; !ok && request.Pid == globals.CurrentJob.PID {
 		switch request.InterruptionReason {
 			case "QUANTUM":
 				pcb.EvictionFlag = true
 				globals.CurrentJob.EvictionReason = "TIMEOUT"
 		}
-	} else {
-		fmt.Println("Se ignora la interrupción")
 	}
+
+
+/* 	if request.Pid == globals.CurrentJob.PID && globals.CurrentJob.EvictionReason != "EXIT" && globals.CurrentJob.EvictionReason != "BLOCKED_IO"{
+		switch request.InterruptionReason {
+		case "QUANTUM":
+			pcb.EvictionFlag = true
+			globals.CurrentJob.EvictionReason = "TIMEOUT"
+	}
+	} else {
+		//fmt.Println("Se ignora la interrupción para el PID: ", request.Pid) // TODO: Borrar
+	} */
 
 	w.WriteHeader(http.StatusOK)
 }

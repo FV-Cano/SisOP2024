@@ -10,6 +10,7 @@ import (
 
 	kernel_api "github.com/sisoputnfrba/tp-golang/kernel/API"
 	"github.com/sisoputnfrba/tp-golang/kernel/globals"
+	"github.com/sisoputnfrba/tp-golang/utils/pcb"
 	"github.com/sisoputnfrba/tp-golang/utils/slice"
 )
 
@@ -20,11 +21,11 @@ func Plan() {
 	case "FIFO":
 		log.Println("FIFO algorithm")
 		for {
-			globals.PlanBinary <- true
 			<- globals.MultiprogrammingCounter
-			globals.JobExecBinary <- true
+			globals.PlanBinary <- true
 			log.Println("FIFO Planificandoooo")
 			FIFO_Plan()
+			<- globals.JobExecBinary
 			<- globals.PlanBinary
 			
 		}
@@ -33,11 +34,11 @@ func Plan() {
 		quantum = globals.Configkernel.Quantum * int(time.Millisecond)
 		log.Println("ROUND ROBIN algorithm")
 		for {
-			globals.PlanBinary <- true
 			<- globals.MultiprogrammingCounter
-			globals.JobExecBinary <- true
+			globals.PlanBinary <- true
 			log.Println("RR Planificandoooo")
 			RR_Plan()
+			<- globals.JobExecBinary
 			<- globals.PlanBinary
 		}
 		// RR
@@ -55,12 +56,6 @@ type T_Quantum struct {
 
 /**
   - RR_Plan
-
-  - [X] Tomar proceso de lista de procesos
-  - [X] Enviar CE a CPU
-  - [X] Ejecutar Quantum -> // [X] Mandar interrupción a CPU por endpoint interrupt si termina el quantum
-  - [X] Esperar respuesta de CPU (Bloqueado)
-  - [X] Recibir respuesta de CPU
 */
 func RR_Plan() {
 	// 1. Tomo el primer proceso de la lista y lo quito de la misma
@@ -71,44 +66,37 @@ func RR_Plan() {
 
 	// 3. Envío el PCB al CPU
 	go startTimer()      // ? Puedo arrancar el timer antes de enviar la pcb?
-	kernel_api.PCB_Send() // <-- Envía proceso y espera respuesta (la respuesta teóricamente actualiza la variable enviada como parámetros)
+	kernel_api.PCB_Send() // <-- Envía proceso y espera respuesta
 
+	// 4. Esperar a que el proceso termine o sea desalojado por el timer
 	<- globals.PcbReceived
 
 	fmt.Println("REGISTROS: ", globals.CurrentJob.CPU_reg)
 	fmt.Println("EVICTION REASON: ", globals.CurrentJob.EvictionReason)
 
-	// 4. Esperar a que el proceso termine o sea desalojado por el timer
-
 	// 5. Manejo de desalojo
 	EvictionManagement()
-	<- globals.JobExecBinary
 }
 
 func startTimer() {
 	quantumTime := time.Duration(quantum)
+	auxPcb := globals.CurrentJob
 	time.Sleep(quantumTime)
 	
-	quantumInterrupt()
+	quantumInterrupt(auxPcb)
 }
 
-func quantumInterrupt() {
+func quantumInterrupt(pcb pcb.T_PCB) {
 	// Interrumpir proceso actual, response = OK message
-	SendInterrupt("QUANTUM", globals.CurrentJob.PID)
+	SendInterrupt("QUANTUM", pcb.PID)
 	
 	if globals.CurrentJob.EvictionReason == "TIMEOUT" {
-		log.Printf("PID: %d - Desalojado por fin de quantum\n", globals.CurrentJob.PID)		
+		log.Printf("PID: %d - Desalojado por fin de quantum\n", globals.CurrentJob.PID)
 	}
 }
 
 /**
   - FIFO_Plan
-
-  - [X] Tomar proceso de lista de procesos
-  - [X] Enviar CE a CPU
-  - [X] Recibir respuesta de CPU
-  - [X] Esperar respuesta de CPU (Bloqueado)
-  - [X] Agregar semáforos
 */
 func FIFO_Plan() {
 	// 1. Tomo el primer proceso de la lista y lo quito de la misma
@@ -124,7 +112,7 @@ func FIFO_Plan() {
 
 	// 4. Manejo de desalojo
 	EvictionManagement()
-	<- globals.JobExecBinary
+	globals.JobExecBinary <- true
 }
 
 /**
@@ -141,12 +129,18 @@ func EvictionManagement() {
 	switch evictionReason {
 	case "BLOCKED_IO":
 		globals.ChangeState(&globals.CurrentJob, "BLOCKED")
-		go kernel_api.SolicitarGenSleep(globals.CurrentJob)
+		go func(){
+			kernel_api.SolicitarGenSleep(globals.CurrentJob)
+			globals.MultiprogrammingCounter <- int(globals.CurrentJob.PID)
+		}()
+		globals.JobExecBinary <- true
+
 		// Cabe la posibilidad de que este envío tenga que ser una goroutine paralela
 	case "TIMEOUT":
 		globals.ChangeState(&globals.CurrentJob, "READY")
 		globals.STS = append(globals.STS, globals.CurrentJob)
 		globals.MultiprogrammingCounter <- int(globals.CurrentJob.PID)
+		globals.JobExecBinary <- true
 		
 		/* var pids []uint32
 		for _, job := range globals.STS {
@@ -154,8 +148,15 @@ func EvictionManagement() {
 		}
 		log.Printf("Cola ready %d\n", pids) */
 
+	case "NOT_FOUND_IO":
+		globals.ChangeState(&globals.CurrentJob, "READY")
+		globals.STS = append(globals.STS, globals.CurrentJob)
+		globals.MultiprogrammingCounter <- int(globals.CurrentJob.PID)
+		globals.JobExecBinary <- true
+
 	case "EXIT":
 		globals.ChangeState(&globals.CurrentJob, "TERMINATED") // ? Cambiar a EXIT?
+		globals.JobExecBinary <- true
 
 		// <- globals.MultiprogrammingCounter
 
@@ -166,9 +167,8 @@ func EvictionManagement() {
 
 	default:
 		log.Fatalf("'%s' no es una razón de desalojo válida", evictionReason)
-	}
+	}	
 }
-
 
 type InterruptionRequest struct {
 	InterruptionReason string `json:"InterruptionReason"`

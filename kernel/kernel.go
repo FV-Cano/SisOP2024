@@ -53,8 +53,8 @@ func RegisteredModuleRoutes() http.Handler {
 			"DELETE /plani": 			kernel_api.PlanificationStop,
 			"GET /process": 			kernel_api.ProcessList,
 			"POST /io-handshake": 		kernel_api.GetIOInterface,
-			"POST /io-gen-interface": 	kernel_api.Resp_ExisteInterfazGen,
-			"POST /tiempoBloq":			kernel_api.Resp_TiempoEspera,
+			"POST /io-interface": 		kernel_api.ExisteInterfaz,
+			"POST /tiempo-bloq":		kernel_api.Resp_TiempoEspera,
 			"POST /dispatch":			kernel_api.PCB_recv,
 		},
 	}

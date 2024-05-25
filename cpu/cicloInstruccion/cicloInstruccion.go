@@ -95,37 +95,17 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 			//operaciones.IO_GEN_SLEEP(instruccionActual.parametro1, instruccionActual.parametro2)
 
 		case "JNZ":
-			// Primero, hacemos un type assertion para extraer el valor float64 de la interfaz
-	
-			valido8, ok8 := currentPCB.CPU_reg[instruccionDecodificada[1]].(uint8)
-			if ok8 {
-				if(uint8(valido8) != uint8(0)) {
-					currentPCB.PC = ConvertirUint32(instruccionDecodificada[2])
-				} else {
-					currentPCB.PC++
-				}
-			}
-			valido32, ok32 := currentPCB.CPU_reg[instruccionDecodificada[1]].(uint32)
-			if ok32 {
-				if(uint32(valido32) != uint32(0)) {
-					currentPCB.PC = ConvertirUint32(instruccionDecodificada[2])
-				} else {
-					currentPCB.PC++
-				}
-			}
-			valido64, ok64 := currentPCB.CPU_reg[instruccionDecodificada[1]].(float64)
-			if ok64 {
-				if(uint32(valido64) != uint32(0)) {
-					currentPCB.PC = ConvertirUint32(instruccionDecodificada[2])
-				} else {
-					currentPCB.PC++
-				}
+			if currentPCB.CPU_reg[instruccionDecodificada[1]] != 0 {
+				currentPCB.PC = ConvertirUint32(instruccionDecodificada[2])
+			} else {
+				currentPCB.PC++
 			}
 			
 		case "SET":
+			tipoReg := pcb.TipoReg(instruccionDecodificada[1])
 			valor := instruccionDecodificada[2]
 			
-			if (reflect.TypeOf(currentPCB.CPU_reg[instruccionDecodificada[1]]).String() == "uint32") {
+			if (tipoReg == "uint32") {
 				currentPCB.CPU_reg[instruccionDecodificada[1]] = ConvertirUint32(valor)
 			} else {
 				currentPCB.CPU_reg[instruccionDecodificada[1]] = ConvertirUint8(valor)
@@ -133,26 +113,34 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 			currentPCB.PC++
 			
 		case "SUM":
+			tipoReg1 := pcb.TipoReg(instruccionDecodificada[1])
 			valorReg2 := currentPCB.CPU_reg[instruccionDecodificada[2]]
+			
+			tipoActualReg1 := reflect.TypeOf(currentPCB.CPU_reg[instruccionDecodificada[1]]).String()
+			tipoActualReg2 := reflect.TypeOf(valorReg2).String()
 
-			if (reflect.TypeOf(currentPCB.CPU_reg[instruccionDecodificada[1]]).String() == "uint32") {
-				currentPCB.CPU_reg[instruccionDecodificada[1]] = Convertir[uint32]("uint32", currentPCB.CPU_reg[instruccionDecodificada[1]]) + Convertir[uint32]("uint32", valorReg2)
+			if (tipoReg1 == "uint32") {
+				currentPCB.CPU_reg[instruccionDecodificada[1]] = Convertir[uint32](tipoActualReg1, currentPCB.CPU_reg[instruccionDecodificada[1]]) + Convertir[uint32](tipoActualReg2, valorReg2)
 
 			} else {
-				currentPCB.CPU_reg[instruccionDecodificada[1]] = Convertir[uint8]("uint8", currentPCB.CPU_reg[instruccionDecodificada[1]]) + Convertir[uint8]("uint8", valorReg2)
+				currentPCB.CPU_reg[instruccionDecodificada[1]] = Convertir[uint8](tipoActualReg1, currentPCB.CPU_reg[instruccionDecodificada[1]]) + Convertir[uint8](tipoActualReg2, valorReg2)
 			}
 			currentPCB.PC++
 				
 		case "SUB":
 			//SUB (Registro Destino, Registro Origen): Resta al Registro Destino 
 			//el Registro Origen y deja el resultado en el Registro Destino.
+			tipoReg1 := pcb.TipoReg(instruccionDecodificada[1])
 			valorReg2 := currentPCB.CPU_reg[instruccionDecodificada[2]]
 			
-			if (reflect.TypeOf(currentPCB.CPU_reg[instruccionDecodificada[1]]).String() == "uint32") {
-				currentPCB.CPU_reg[instruccionDecodificada[1]] = Convertir[uint32]("uint32", currentPCB.CPU_reg[instruccionDecodificada[1]]) - Convertir[uint32]("uint32", valorReg2)
+			tipoActualReg1 := reflect.TypeOf(currentPCB.CPU_reg[instruccionDecodificada[1]]).String()
+			tipoActualReg2 := reflect.TypeOf(valorReg2).String()
+
+			if (tipoReg1 == "uint32") {
+				currentPCB.CPU_reg[instruccionDecodificada[1]] = Convertir[uint32](tipoActualReg1, currentPCB.CPU_reg[instruccionDecodificada[1]]) - Convertir[uint32](tipoActualReg2, valorReg2)
 
 			} else {
-				currentPCB.CPU_reg[instruccionDecodificada[1]] = Convertir[uint8]("uint8", currentPCB.CPU_reg[instruccionDecodificada[1]]) - Convertir[uint8]("uint8", valorReg2)
+				currentPCB.CPU_reg[instruccionDecodificada[1]] = Convertir[uint8](tipoActualReg1, currentPCB.CPU_reg[instruccionDecodificada[1]]) - Convertir[uint8](tipoActualReg2, valorReg2)
 			}
 			currentPCB.PC++
 	}
@@ -172,6 +160,9 @@ func Convertir[T Uint](tipo string, parametro interface {}) T {
 			return T(valor)
 		case "uint32":
 			valor := parametro.(uint32)
+			return T(valor)
+		case "float64":
+			valor := parametro.(float64)
 			return T(valor)
 	}
 	return T(0)

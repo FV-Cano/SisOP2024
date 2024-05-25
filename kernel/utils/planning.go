@@ -56,15 +56,11 @@ type T_Quantum struct {
 /**
   - RR_Plan
 
-  - [x] Tomar proceso de lista de procesos
-
-  - [x] Enviar CE a CPU
-
-  - [x] Ejecutar Quantum -> // [x] Mandar interrupción a CPU por endpoint interrupt si termina el quantum
-
-  - [ ] Esperar respuesta de CPU (Bloqueado)
-
-  - [ ] Recibir respuesta de CPU
+  - [X] Tomar proceso de lista de procesos
+  - [X] Enviar CE a CPU
+  - [X] Ejecutar Quantum -> // [X] Mandar interrupción a CPU por endpoint interrupt si termina el quantum
+  - [X] Esperar respuesta de CPU (Bloqueado)
+  - [X] Recibir respuesta de CPU
 */
 func RR_Plan() {
 	// 1. Tomo el primer proceso de la lista y lo quito de la misma
@@ -108,13 +104,11 @@ func quantumInterrupt() {
 /**
   - FIFO_Plan
 
-  - [x] Tomar proceso de lista de procesos
-
-  - [x] Enviar CE a CPU
-
-  - [x] Recibir respuesta de CPU
-
-  - [x] Agregar semáforos
+  - [X] Tomar proceso de lista de procesos
+  - [X] Enviar CE a CPU
+  - [X] Recibir respuesta de CPU
+  - [X] Esperar respuesta de CPU (Bloqueado)
+  - [X] Agregar semáforos
 */
 func FIFO_Plan() {
 	// 1. Tomo el primer proceso de la lista y lo quito de la misma
@@ -126,6 +120,8 @@ func FIFO_Plan() {
 	// 3. Envío el PCB al CPU
 	kernel_api.PCB_Send()
 	
+	<- globals.PcbReceived
+
 	// 4. Manejo de desalojo
 	EvictionManagement()
 	<- globals.JobExecBinary
@@ -135,11 +131,8 @@ func FIFO_Plan() {
   - EvictionManagement
 
   - [ ] Implementar caso de desalojo por bloqueo
-
-  - [ ] Implementar caso de desalojo por timeout
-
+  - [X] Implementar caso de desalojo por timeout
   - [x] Implementar caso de desalojo por finalización
-
 *
 */
 func EvictionManagement() {
@@ -154,11 +147,11 @@ func EvictionManagement() {
 		globals.STS = append(globals.STS, globals.CurrentJob)
 		globals.MultiprogrammingCounter <- int(globals.CurrentJob.PID)
 		
-		var pids []uint32
+		/* var pids []uint32
 		for _, job := range globals.STS {
 			pids = append(pids, job.PID)
 		}
-		log.Printf("Cola ready %d\n", pids)
+		log.Printf("Cola ready %d\n", pids) */
 
 	case "EXIT":
 		globals.ChangeState(&globals.CurrentJob, "TERMINATED") // ? Cambiar a EXIT?

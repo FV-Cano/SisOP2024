@@ -2,6 +2,6 @@
     "port": 8002,
     "memory_size": 4096,
     "page_size": 16,
-    "instructions_path": "/home/utnso/Desktop/tp-2024-1c-GO-DieGO-GO-/algo-pruebas",
+    "instructions_path": "/home/cano/Documents/Repositories/tp-2024-1c-GO-DieGO-GO-/algo-pruebas",
     "delay_response": 1000
 }

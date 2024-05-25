@@ -76,6 +76,7 @@ func RR_Plan() {
 
 	// 5. Manejo de desalojo
 	EvictionManagement()
+	//globals.JobExecBinary <- true
 }
 
 func startTimer() {
@@ -112,7 +113,7 @@ func FIFO_Plan() {
 
 	// 4. Manejo de desalojo
 	EvictionManagement()
-	globals.JobExecBinary <- true
+	//globals.JobExecBinary <- true
 }
 
 /**
@@ -134,6 +135,7 @@ func EvictionManagement() {
 			globals.MultiprogrammingCounter <- int(globals.CurrentJob.PID)
 		}()
 		globals.JobExecBinary <- true
+		
 
 		// Cabe la posibilidad de que este envío tenga que ser una goroutine paralela
 	case "TIMEOUT":
@@ -157,7 +159,6 @@ func EvictionManagement() {
 	case "EXIT":
 		globals.ChangeState(&globals.CurrentJob, "TERMINATED") // ? Cambiar a EXIT?
 		globals.JobExecBinary <- true
-
 		// <- globals.MultiprogrammingCounter
 
 		// * VERIFICAR SI SE DEBE AGREGAR A LA LISTA LTS

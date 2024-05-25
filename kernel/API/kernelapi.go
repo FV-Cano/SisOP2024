@@ -69,6 +69,8 @@ func ProcessInit(w http.ResponseWriter, r *http.Request) {
 							"EBX": uint32(0),
 							"ECX": uint32(0),
 							"EDX": uint32(0),
+							"SI": uint32(0),
+							"DI": uint32(0),
 						},
 		State: 			"READY", // TODO: La idea es que el estado sea NEW cuando implementemos el LTS
 		EvictionReason: "",
@@ -234,7 +236,6 @@ func ProcessList(w http.ResponseWriter, r *http.Request) {
 /**
  * PCB_Send: Envía un PCB al CPU y recibe la respuesta
 
- * @param pcb: PCB a enviar
  * @return error: Error en caso de que falle el envío
 */
 func PCB_Send() error {
@@ -269,6 +270,36 @@ func PCB_Send() error {
 	}
 
 	return nil
+}
+
+/**
+ * PCB_recv: Recibe un PCB, lo "procesa" y lo devuelve
+ * Cumple con la funcionalidad principal de CPU.
+	* Procesar = Fetch -> Decode -> Execute
+*/
+func PCB_recv(w http.ResponseWriter, r *http.Request) {
+	var received_pcb pcb.T_PCB
+
+	// Decode PCB
+	err := json.NewDecoder(r.Body).Decode(&received_pcb)
+	if err != nil {
+		http.Error(w, "Failed to decode PCB", http.StatusBadRequest)
+		return
+	}
+		
+	globals.CurrentJob = received_pcb
+	globals.PcbReceived <- true
+
+	// Encode PCB
+	jsonResp, err := json.Marshal(received_pcb)
+	if err != nil {
+		http.Error((w), "Failed to encode PCB response", http.StatusInternalServerError)
+	}
+
+	// Send back PCB
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonResp)	
 }
 
 /**

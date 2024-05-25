@@ -12,23 +12,21 @@ import (
 	"strings"
 
 	"github.com/sisoputnfrba/tp-golang/cpu/globals"
-	"github.com/sisoputnfrba/tp-golang/cpu/operaciones"
 	"github.com/sisoputnfrba/tp-golang/utils/pcb"
 	"github.com/sisoputnfrba/tp-golang/utils/semaphores"
 )
 
 func Delimitador(instActual string) []string {
 	delimitador := " "
-	i:=0
+	i := 0
 
 	instruccionDecodificadaConComillas := strings.Split(instActual, delimitador)
 	instruccionDecodificada := instruccionDecodificadaConComillas
 
-	
 	largoInstruccion := len (instruccionDecodificadaConComillas) 
 	for i < largoInstruccion {
-	instruccionDecodificada[i]= strings.Trim(instruccionDecodificadaConComillas[i], `"` )
-	i++
+		instruccionDecodificada[i] = strings.Trim(instruccionDecodificadaConComillas[i], `"`)
+		i++
 	}
 	
 	return instruccionDecodificada
@@ -39,9 +37,7 @@ func Fetch(currentPCB *pcb.T_PCB) string {
 	//(después de identificar en el diccionario la key:PID,
 	//va a buscar en la lista de instrucciones de ese proceso, la instrucción en la posición
 	//pc y nos va a devolver esa instrucción)
-	// GET /instrucciones
-	fmt.Println("LABURASTESSSS?")
-	
+	// GET /instrucciones	
 	semaphores.PCBMutex.Lock()
 	pid := currentPCB.PID
 	pc := currentPCB.PC
@@ -50,98 +46,52 @@ func Fetch(currentPCB *pcb.T_PCB) string {
 	cliente := &http.Client{}
 	url := fmt.Sprintf("http://%s:%d/instrucciones", globals.Configcpu.IP_memory,globals.Configcpu.Port_memory)
 	
-	fmt.Println("Hasta ahora tenemos: ", url)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return "errorisimo"
+		log.Fatal("Error al hacer el request")
 	}
 	q := req.URL.Query()
 	q.Add("pid", strconv.Itoa(int(pid)))
 	q.Add("pc", strconv.Itoa(int(pc)))
 	req.URL.RawQuery = q.Encode()
 
-	fmt.Println("Hola que taaal: ", q)
-
 	req.Header.Set("Content-Type", "application/json")
 	respuesta, err := cliente.Do(req)
 	if err != nil {
-		return "horror"
+		log.Fatal("Error al hacer el request")
 	}
 
-	fmt.Println("El cliente laburó: ", respuesta.StatusCode)
-
-	// Verificar el código de estado de la respuesta
 	if respuesta.StatusCode != http.StatusOK {
-		return "herror"
+		log.Fatal("Error en el estado de la respuesta")
 	}
 
 	instruccion, err := io.ReadAll(respuesta.Body)
 	if err != nil {
-		return "orror"
+		log.Fatal("Error al leer el cuerpo de la respuesta")
 	}
 
 	fmt.Println(string(instruccion))
-/*
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return "error"
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-	respuesta, err := cliente.Do(req)
-	if err != nil {
-		return "error"
-	}
-
-	fmt.Println("El cliente laburó: ", respuesta.StatusCode)
-
-	// Verificar el código de estado de la respuesta
-	if respuesta.StatusCode != http.StatusOK {
-		return "error DE STATUS"
-	}
-
-	instruccionEnBytes, err := io.ReadAll(respuesta.Body)
-	if err != nil {
-		return "error REBELDE"
-	}
-	fmt.Println("RECIBIO EL CUERPO")*/
 	
 	instruccion1 := string(instruccion)
-	
-	fmt.Println("SE PASO A STRING LA INSTRUCCION")
-	
+		
 	log.Printf("PID: %d - FETCH - Program Counter: %d", pid, pc)
 
 	return instruccion1
 }
 
 func DecodeAndExecute(currentPCB *pcb.T_PCB) {
-	// ? Semaforo?
 	instActual := Fetch(currentPCB)
 	instruccionDecodificada := Delimitador(instActual)
-
-	fmt.Println("Intruc actual: ", instActual)
-	fmt.Println("Intruc decod: ", instruccionDecodificada)
-
-	parametros := currentPCB.CPU_reg
-	fmt.Println("DALE QUE LLEGO: ", parametros)
-	fmt.Println("ABER: ", instruccionDecodificada[1])
 	
-	reg1 := parametros[instruccionDecodificada[1]]
-	fmt.Println("C DECODIFICO: ", reg1)
-	
-	tipoReg1 := reflect.TypeOf(reg1).String()
-	
-	reg1Uint8 := Convertir[uint8](tipoReg1, reg1)
-	reg1Uint32 := Convertir[uint32](tipoReg1, reg1)
+	if (instruccionDecodificada[0] == "EXIT"){
+		pcb.EvictionFlag = true
+		currentPCB.EvictionReason = "EXIT"
 
-	//currentPCB.PC++
-	//fmt.Println("PC AUMENTADO BRO")
+		log.Printf("PID: %d - Ejecutando: %s", currentPCB.PID, instruccionDecodificada[0])
+	} else {
+		log.Printf("PID: %d - Ejecutando: %s - %s", currentPCB.PID, instruccionDecodificada[0], instruccionDecodificada[1:])
+	}
 
-	log.Printf("PID: %d - Ejecutando: %s - %s", currentPCB.PID, instruccionDecodificada[0], instruccionDecodificada[1:])
-	fmt.Println("LA instruccion es" ,instruccionDecodificada[0])
-	fmt.Println("Los parametros son" ,instruccionDecodificada[1:])
-	
 	switch instruccionDecodificada[0] {
 		case "IO_GEN_SLEEP":
 			tiempo_esp, err := strconv.Atoi(instruccionDecodificada[2])
@@ -158,85 +108,56 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 				comunicarTiempoEspera(tiempo_esp)
 			} 
 		case "JNZ":
-			if tipoReg1 == "uint8" {
-				operaciones.JNZ(reg1Uint8, Convertir[uint8](tipoReg1, instruccionDecodificada[2]))
+			if currentPCB.CPU_reg[instruccionDecodificada[1]] != 0 {
+				currentPCB.PC = ConvertirUint32(instruccionDecodificada[2])
+			} else {
 				currentPCB.PC++
-				} else {
-					operaciones.JNZ(reg1Uint32, Convertir[uint32](tipoReg1, instruccionDecodificada[2]))
-					currentPCB.PC++
-				}
+			}
 			
 		case "SET":
-			fmt.Println("ALOHEISHON SET")
-
-			if tipoReg1 == "uint8" {
-				operaciones.SET(&reg1Uint8, Convertir[uint8](tipoReg1, instruccionDecodificada[2]))
-				currentPCB.PC++
-				fmt.Println(currentPCB.PC)
-				fmt.Println("PC AUMENTADO BRO1")
+			tipoReg := pcb.TipoReg(instruccionDecodificada[1])
+			valor := instruccionDecodificada[2]
+			
+			if (tipoReg == "uint32") {
+				currentPCB.CPU_reg[instruccionDecodificada[1]] = ConvertirUint32(valor)
 			} else {
-				operaciones.SET(&reg1Uint32, Convertir[uint32](tipoReg1, instruccionDecodificada[2]))
-				currentPCB.PC++
-				fmt.Println("PC AUMENTADO BRO2")
-				fmt.Println(currentPCB.PC)
+				currentPCB.CPU_reg[instruccionDecodificada[1]] = ConvertirUint8(valor)
 			}
+			currentPCB.PC++
 			
 		case "SUM":
-			reg2 := parametros[instruccionDecodificada[2]]
-			tipoReg2 := reflect.TypeOf(reg2).String()
-			reg2Uint8 := reg2.(uint8)
-			reg2Uint32 := reg2.(uint32)
+			tipoReg1 := pcb.TipoReg(instruccionDecodificada[1])
+			valorReg2 := currentPCB.CPU_reg[instruccionDecodificada[2]]
 			
-			if (tipoReg1 == "uint8" && tipoReg2 == "uint8")  {
-				operaciones.SUM(&reg1Uint8, reg2Uint8)
-				currentPCB.PC++
-				fmt.Println("PC AUMENTADO BRO3")
-			} else if (tipoReg1 == "uint32" && tipoReg2 == "uint32"){
-				operaciones.SUM(&reg1Uint32, reg2Uint32)
-				currentPCB.PC++
-				fmt.Println("PC AUMENTADO BRO")
-			} else if (tipoReg1 == "uint32" && tipoReg2 == "uint8"){
-				operaciones.SUM(&reg1Uint32, reg2Uint8)
-				currentPCB.PC++
-				fmt.Println("PC AUMENTADO BRO")
+			tipoActualReg1 := reflect.TypeOf(currentPCB.CPU_reg[instruccionDecodificada[1]]).String()
+			tipoActualReg2 := reflect.TypeOf(valorReg2).String()
+
+			if (tipoReg1 == "uint32") {
+				currentPCB.CPU_reg[instruccionDecodificada[1]] = Convertir[uint32](tipoActualReg1, currentPCB.CPU_reg[instruccionDecodificada[1]]) + Convertir[uint32](tipoActualReg2, valorReg2)
+
 			} else {
-				operaciones.SUM(&reg2Uint8, reg2Uint32)
-				currentPCB.PC++
-				fmt.Println("PC AUMENTADO BRO")
+				currentPCB.CPU_reg[instruccionDecodificada[1]] = Convertir[uint8](tipoActualReg1, currentPCB.CPU_reg[instruccionDecodificada[1]]) + Convertir[uint8](tipoActualReg2, valorReg2)
 			}
+			currentPCB.PC++
 				
 		case "SUB":
-			reg2 := parametros[instruccionDecodificada[2]]
-			tipoReg2 := reflect.TypeOf(reg2).String()
-			reg2Uint8 := reg2.(uint8)
-			reg2Uint32 := reg2.(uint32)
+			//SUB (Registro Destino, Registro Origen): Resta al Registro Destino 
+			//el Registro Origen y deja el resultado en el Registro Destino.
+			tipoReg1 := pcb.TipoReg(instruccionDecodificada[1])
+			valorReg2 := currentPCB.CPU_reg[instruccionDecodificada[2]]
 			
-			if (tipoReg1 == "uint8" && tipoReg2 == "uint8")  {
-				operaciones.SUB(&reg1Uint8, reg2Uint8)
-				currentPCB.PC++
-				fmt.Println("PC AUMENTADO BRO44")
+			tipoActualReg1 := reflect.TypeOf(currentPCB.CPU_reg[instruccionDecodificada[1]]).String()
+			tipoActualReg2 := reflect.TypeOf(valorReg2).String()
 
-			} else if (tipoReg1 == "uint32" && tipoReg2 == "uint32"){
-				operaciones.SUB(&reg1Uint32, reg2Uint32)
-				currentPCB.PC++
-				fmt.Println("PC AUMENTADO BRO33")
-
-			} else if (tipoReg1 == "uint32" && tipoReg2 == "uint8"){
-				operaciones.SUB(&reg1Uint32, reg2Uint8)
-				currentPCB.PC++
-				fmt.Println("PC AUMENTADO BRO77")
+			if (tipoReg1 == "uint32") {
+				currentPCB.CPU_reg[instruccionDecodificada[1]] = Convertir[uint32](tipoActualReg1, currentPCB.CPU_reg[instruccionDecodificada[1]]) - Convertir[uint32](tipoActualReg2, valorReg2)
 
 			} else {
-				operaciones.SUB(&reg2Uint8, reg2Uint32)
-				currentPCB.PC++
-				fmt.Println("PC AUMENTADO BRO99")
-
+				currentPCB.CPU_reg[instruccionDecodificada[1]] = Convertir[uint8](tipoActualReg1, currentPCB.CPU_reg[instruccionDecodificada[1]]) - Convertir[uint8](tipoActualReg2, valorReg2)
 			}
-		//Placeholder
-		case "EXIT":
-			currentPCB.EvictionReason = "EXIT"
-			pcb.EvictionFlag = true
+			currentPCB.PC++
 	}
+
 }
 
 type Uint interface {~uint8 | ~uint32}
@@ -247,15 +168,15 @@ func Convertir[T Uint](tipo string, parametro interface {}) T {
 	}
 
 	switch tipo {
-	
-	case "uint8":
-		valor := parametro.(uint8)
-		log.Println("Conversion realizada UINT8")
-		return T(valor)
-	case "uint32":
-		valor := parametro.(uint32)
-		log.Println("Conversion realizada UINT32")
-		return T(valor)
+		case "uint8":
+			valor := parametro.(uint8)
+			return T(valor)
+		case "uint32":
+			valor := parametro.(uint32)
+			return T(valor)
+		case "float64":
+			valor := parametro.(float64)
+			return T(valor)
 	}
 	return T(0)
 }
@@ -302,4 +223,20 @@ func comunicarTiempoEspera(tiempo_esp int) error {
 	}
 
 	return nil
+}
+
+func ConvertirUint8(parametro string) uint8 {
+	parametroConvertido, err := strconv.Atoi(parametro)
+	if err != nil {
+		log.Fatal("Error al convertir el parametro a uint8")
+	}
+	return uint8(parametroConvertido)
+}
+
+func ConvertirUint32(parametro string) uint32 {
+	parametroConvertido, err := strconv.Atoi(parametro)
+	if err != nil {
+		log.Fatal("Error al convertir el parametro a uint32")
+	}
+	return uint32(parametroConvertido)
 }

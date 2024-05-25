@@ -2,6 +2,7 @@ package kernelutils
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -9,7 +10,6 @@ import (
 
 	kernel_api "github.com/sisoputnfrba/tp-golang/kernel/API"
 	"github.com/sisoputnfrba/tp-golang/kernel/globals"
-	"github.com/sisoputnfrba/tp-golang/utils/pcb"
 	"github.com/sisoputnfrba/tp-golang/utils/slice"
 )
 
@@ -23,7 +23,7 @@ func Plan() {
 			globals.PlanBinary <- true
 			<- globals.MultiprogrammingCounter
 			globals.JobExecBinary <- true
-			log.Println("Planificandoooo")
+			log.Println("FIFO Planificandoooo")
 			FIFO_Plan()
 			<- globals.PlanBinary
 			
@@ -33,7 +33,12 @@ func Plan() {
 		quantum = globals.Configkernel.Quantum * int(time.Millisecond)
 		log.Println("ROUND ROBIN algorithm")
 		for {
+			globals.PlanBinary <- true
+			<- globals.MultiprogrammingCounter
+			globals.JobExecBinary <- true
+			log.Println("RR Planificandoooo")
 			RR_Plan()
+			<- globals.PlanBinary
 		}
 		// RR
 	case "VRR":
@@ -51,72 +56,61 @@ type T_Quantum struct {
 /**
   - RR_Plan
 
-  - [x] Tomar proceso de lista de procesos
-
-  - [x] Enviar CE a CPU
-
-  - [x] Ejecutar Quantum -> // [x] Mandar interrupción a CPU por endpoint interrupt si termina el quantum
-
-  - [ ] Esperar respuesta de CPU (Bloqueado)
-
-  - [ ] Recibir respuesta de CPU
+  - [X] Tomar proceso de lista de procesos
+  - [X] Enviar CE a CPU
+  - [X] Ejecutar Quantum -> // [X] Mandar interrupción a CPU por endpoint interrupt si termina el quantum
+  - [X] Esperar respuesta de CPU (Bloqueado)
+  - [X] Recibir respuesta de CPU
 */
 func RR_Plan() {
+	// 1. Tomo el primer proceso de la lista y lo quito de la misma
 	globals.CurrentJob = slice.Shift(&globals.STS)
-	
+
+	// 2. Cambio su estado a EXEC
 	globals.ChangeState(&globals.CurrentJob, "EXEC")
 
-	go startTimer()                 // ? Puedo arrancar el timer antes de enviar la pcb?
-	kernel_api.PCB_Send() // <-- Envía proceso y espera respuesta (la respuesta teóricamente actualiza la variable enviada como parámetro)s
+	// 3. Envío el PCB al CPU
+	go startTimer()      // ? Puedo arrancar el timer antes de enviar la pcb?
+	kernel_api.PCB_Send() // <-- Envía proceso y espera respuesta (la respuesta teóricamente actualiza la variable enviada como parámetros)
 
-	// Esperar a que el proceso termine o sea desalojado por el timer
+	<- globals.PcbReceived
+
+	fmt.Println("REGISTROS: ", globals.CurrentJob.CPU_reg)
+	fmt.Println("EVICTION REASON: ", globals.CurrentJob.EvictionReason)
+
+	// 4. Esperar a que el proceso termine o sea desalojado por el timer
+
+	// 5. Manejo de desalojo
+	EvictionManagement()
+	<- globals.JobExecBinary
 }
 
 func startTimer() {
 	quantumTime := time.Duration(quantum)
 	time.Sleep(quantumTime)
+	
 	quantumInterrupt()
 }
 
 func quantumInterrupt() {
-	pcb.EvictionFlag = true
-	interruptionCode := pcb.QUANTUM
-
 	// Interrumpir proceso actual, response = OK message
-	url := fmt.Sprintf("http://%s:%d/interrupt", globals.Configkernel.IP_cpu, globals.Configkernel.Port_cpu)
-
-	// Json payload
-	jsonStr := fmt.Sprintf("interruption code: %d", interruptionCode)
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer([]byte(jsonStr)))
-	if err != nil {
-		log.Fatalf("Error al crear request: %v", err)
+	SendInterrupt("QUANTUM", globals.CurrentJob.PID)
+	
+	if globals.CurrentJob.EvictionReason == "TIMEOUT" {
+		log.Printf("PID: %d - Desalojado por fin de quantum\n", globals.CurrentJob.PID)		
 	}
-
-	req.Header.Set("Content-Type", "application/json")
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println("Error sending HTTP request: ", err)
-	}
-	defer resp.Body.Close()
-
-	log.Printf("PID: %d - Desalojado por fin de quantum\n", globals.CurrentJob.PID)
 }
 
 /**
   - FIFO_Plan
 
-  - [x] Tomar proceso de lista de procesos
-
-  - [x] Enviar CE a CPU
-
-  - [ ] Recibir respuesta de CPU
-
-  - [ ] Agregar semáforos
+  - [X] Tomar proceso de lista de procesos
+  - [X] Enviar CE a CPU
+  - [X] Recibir respuesta de CPU
+  - [X] Esperar respuesta de CPU (Bloqueado)
+  - [X] Agregar semáforos
 */
 func FIFO_Plan() {
-
 	// 1. Tomo el primer proceso de la lista y lo quito de la misma
 	globals.CurrentJob = slice.Shift(&globals.STS)
 	
@@ -126,25 +120,19 @@ func FIFO_Plan() {
 	// 3. Envío el PCB al CPU
 	kernel_api.PCB_Send()
 	
+	<- globals.PcbReceived
+
 	// 4. Manejo de desalojo
 	EvictionManagement()
 	<- globals.JobExecBinary
-	
-	// 5. Logueo el estado del proceso
-	// log.Printf("Proceso %d: %s\n", globals.CurrentJob.PID, globals.CurrentJob.State)
 }
 
-/*
-*
-
+/**
   - EvictionManagement
 
   - [ ] Implementar caso de desalojo por bloqueo
-
-  - [ ] Implementar caso de desalojo por timeout
-
+  - [X] Implementar caso de desalojo por timeout
   - [x] Implementar caso de desalojo por finalización
-
 *
 */
 func EvictionManagement() {
@@ -157,12 +145,14 @@ func EvictionManagement() {
 		// Cabe la posibilidad de que este envío tenga que ser una goroutine paralela
 	case "TIMEOUT":
 		globals.ChangeState(&globals.CurrentJob, "READY")
+		globals.STS = append(globals.STS, globals.CurrentJob)
+		globals.MultiprogrammingCounter <- int(globals.CurrentJob.PID)
 		
-		var pids []uint32
+		/* var pids []uint32
 		for _, job := range globals.STS {
 			pids = append(pids, job.PID)
 		}
-		log.Printf("Cola ready [%d]\n", pids)
+		log.Printf("Cola ready %d\n", pids) */
 
 	case "EXIT":
 		globals.ChangeState(&globals.CurrentJob, "TERMINATED") // ? Cambiar a EXIT?
@@ -174,9 +164,37 @@ func EvictionManagement() {
 
 		log.Printf("Finaliza el proceso %d - Motivo: %s\n", globals.CurrentJob.PID, evictionReason)
 
-	case "":
-		// ? Es necesario?
 	default:
 		log.Fatalf("'%s' no es una razón de desalojo válida", evictionReason)
+	}
+}
+
+
+type InterruptionRequest struct {
+	InterruptionReason string `json:"InterruptionReason"`
+	Pid uint32 `json:"pid"`
+}
+
+func SendInterrupt(reason string, pid uint32) {
+	url := fmt.Sprintf("http://%s:%d/interrupt", globals.Configkernel.IP_cpu, globals.Configkernel.Port_cpu)
+
+	bodyInt, err := json.Marshal(InterruptionRequest{
+		InterruptionReason: reason,
+		Pid: pid,
+	})
+	if err != nil {
+		return
+	}
+	
+	enviarInterrupcion, err := http.NewRequest("POST", url, bytes.NewBuffer(bodyInt))
+	if err != nil {
+		log.Fatalf("POST request failed (No se puede enviar interrupción): %v", err)
+	}
+	
+	cliente := &http.Client{}
+	enviarInterrupcion.Header.Set("Content-Type", "application/json")
+	recibirRta, err := cliente.Do(enviarInterrupcion)
+	if (err != nil || recibirRta.StatusCode != http.StatusOK) {
+		log.Fatal("Error al interrupir proceso", err)
 	}
 }

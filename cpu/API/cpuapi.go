@@ -1,17 +1,53 @@
 package cpu_api
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/sisoputnfrba/tp-golang/cpu/cicloInstruccion"
+	"github.com/sisoputnfrba/tp-golang/cpu/globals"
 	"github.com/sisoputnfrba/tp-golang/utils/pcb"
 )
 
-type interruptionRequest struct {
-	InterruptionCode int `json:"interruptCode"`
+/**
+ * PCB_Send: Envía un PCB al Kernel y recibe la respuesta
+
+ * @return error: Error en caso de que falle el envío
+ */
+func PCB_Send(pcb *pcb.T_PCB) error {
+	//Encode data
+	jsonData, err := json.Marshal(pcb)
+	if err != nil {
+		return fmt.Errorf("failed to encode PCB: %v", err)
+	}
+
+	client := &http.Client{
+		Timeout: 0,
+	}
+
+	// Send data
+	url := fmt.Sprintf("http://%s:%d/dispatch", globals.Configcpu.IP_kernel, globals.Configcpu.Port_kernel)
+	resp, err := client.Post(url, "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return fmt.Errorf("POST request failed. Failed to send PCB: %v", err)
+	}
+
+	// Wait for response
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected response status: %s", resp.Status)
+	}
+
+	// Decode response and update value
+	err = json.NewDecoder(resp.Body).Decode(&pcb) // ? Semaforo?
+	if err != nil {
+		return fmt.Errorf("failed to decode PCB response: %v", err)
+	}
+
+	return nil
 }
 
 /**
@@ -28,45 +64,42 @@ func PCB_recv(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to decode PCB", http.StatusBadRequest)
 		return
 	}
-	
-	log.Printf("Received PCB: %v\n", received_pcb)
 
-	// Sección donde trabajo el pcb recibido (me interesa usar un hilo?)
-
-	fmt.Println("A ver muchachos si nos organizamos un poco")
-	
-	fmt.Println("EL MUTEX SE LIBERO POR 1VEZ")
+	globals.CurrentJob = received_pcb
+		
 	for !pcb.EvictionFlag {
-		fmt.Println("EntrasteSSS?")		
-		fmt.Println("SeguisteSSS? aguante taylor swift")
-		cicloInstruccion.DecodeAndExecute(&received_pcb)
-		fmt.Println("SE DECODIFICO MIJO?")
-		// Check interrupt (Al ser asincrónico no puedo hacer el check, espero a que el handler ejecute y luego cambio el valor de la flag de interrupción)
-		fmt.Println("AGUANTE TAYLOR SWIFT")
-		fmt.Println("LOs registros de la cpu son" ,received_pcb.CPU_reg)
+		cicloInstruccion.DecodeAndExecute(&globals.CurrentJob)
 
+		fmt.Println("Los registros de la cpu son", globals.CurrentJob.CPU_reg)
 	}
 
-	fmt.Println("SALIOOOOOOOO")
+	fmt.Println("ABER MOSTRAMELON: ", pcb.EvictionFlag)
 	pcb.EvictionFlag = false
-	fmt.Println("C PUSO FOLS")
+	fmt.Println("C PUSO FOLS ", pcb.EvictionFlag)
+	
 	// Encode PCB
-	jsonResp, err := json.Marshal(received_pcb)
+	jsonResp, err := json.Marshal(globals.CurrentJob)
 	if err != nil {
 		http.Error((w), "Failed to encode PCB response", http.StatusInternalServerError)
 	}
 
+	PCB_Send(&globals.CurrentJob)
+
 	// Send back PCB
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(jsonResp)	
+	w.Write(jsonResp)
 }
 
+type InterruptionRequest struct {
+	InterruptionReason string `json:"InterruptionReason"`
+	Pid uint32 `json:"pid"`
+}
 /**
  * HandleInterruption: Maneja las interrupciones de CPU	
 */
 func HandleInterruption(w http.ResponseWriter, r *http.Request) {
-	var request interruptionRequest
+	var request InterruptionRequest
 	
 	// Decode json payload
 	err := json.NewDecoder(r.Body).Decode(&request)
@@ -75,10 +108,17 @@ func HandleInterruption(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	switch request.InterruptionCode {
-		case pcb.QUANTUM:
-			// Cambiar motivo de desalojo a "Quantum"
+	if request.Pid == globals.CurrentJob.PID && globals.CurrentJob.EvictionReason != "EXIT" {
+		switch request.InterruptionReason {
+			case "QUANTUM":
+				pcb.EvictionFlag = true
+				globals.CurrentJob.EvictionReason = "TIMEOUT"
+		}
+	} else {
+		fmt.Println("Se ignora la interrupción")
 	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 // TODO: Borrar

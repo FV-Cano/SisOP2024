@@ -15,8 +15,6 @@ type T_CPU struct {
 	Port_kernel        	int    `json:"port_kernel"`
 	Number_felling_tlb 	int    `json:"number_felling_tlb"`
 	Algorithm_tlb      	string `json:"algorithm_tlb"`
-	IP_kernel          	string `json:"ip_kernel"`
-	Port_kernel        	int    `json:"port_kernel"`
 }
 
 var CurrentJob pcb.T_PCB

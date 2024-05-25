@@ -1,15 +1,23 @@
 package globals
 
-import "sync"
+import (
+	"sync"
+
+	"github.com/sisoputnfrba/tp-golang/utils/pcb"
+)
 
 var Configcpu *T_CPU
 type T_CPU struct {
 	Port               	int    `json:"port"`
 	IP_memory          	string `json:"ip_memory"`
 	Port_memory        	int    `json:"port_memory"`
+	IP_kernel          	string `json:"ip_kernel"`
+	Port_kernel        	int    `json:"port_kernel"`
 	Number_felling_tlb 	int    `json:"number_felling_tlb"`
 	Algorithm_tlb      	string `json:"algorithm_tlb"`
 }
+
+var CurrentJob pcb.T_PCB
 
 // Global semaphores
 var (

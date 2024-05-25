@@ -11,12 +11,4 @@ package pcb
 		EvictionReason 	string  					`json:"eviction_reason"`
 	}
 
-	// Canal global de finalización de proceso
-	var Finished chan bool
-
 	var EvictionFlag bool = false
-
-	// Interruption codes:
-	const (
-		QUANTUM = 0
-	)

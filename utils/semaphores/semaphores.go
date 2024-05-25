@@ -6,11 +6,11 @@ import "sync"
 var (
 	// * Mutex
 		PCBMutex 			sync.Mutex
+		CurrentJobMutex 	sync.Mutex
 	// * Binario
-		//Binary  			= make (chan bool, 1)
+		EndProcessBinary  	= make (chan bool, 1)
+		ExitChan 			= make (chan bool, 1)
+		TimerChan 			= make (chan bool, 1)
 	// * Contadores
-		//Contador = make (chan int, 10)
-	// * Hibridos
-		MutexEviction        sync.Mutex
-		EvictionChange       = sync.NewCond(&MutexEviction)
+		//Contador 			= make (chan int, 10)
 )

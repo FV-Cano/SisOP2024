@@ -1,14 +1,15 @@
 package kernelutils
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"time"
 
 	kernel_api "github.com/sisoputnfrba/tp-golang/kernel/API"
 	"github.com/sisoputnfrba/tp-golang/kernel/globals"
-	"github.com/sisoputnfrba/tp-golang/utils/pcb"
-	"github.com/sisoputnfrba/tp-golang/utils/semaphores"
 	"github.com/sisoputnfrba/tp-golang/utils/slice"
 )
 
@@ -73,11 +74,16 @@ func RR_Plan() {
 	globals.ChangeState(&globals.CurrentJob, "EXEC")
 
 	// 3. Envío el PCB al CPU
-	go startTimer()       // ? Puedo arrancar el timer antes de enviar la pcb?
-	kernel_api.PCB_Send() // <-- Envía proceso y espera respuesta (la respuesta teóricamente actualiza la variable enviada como parámetro)s
+	go startTimer()      // ? Puedo arrancar el timer antes de enviar la pcb?
+	kernel_api.PCB_Send() // <-- Envía proceso y espera respuesta (la respuesta teóricamente actualiza la variable enviada como parámetros)
+
+	<- globals.PcbReceived
+
+	fmt.Println("REGISTROS: ", globals.CurrentJob.CPU_reg)
+	fmt.Println("EVICTION REASON: ", globals.CurrentJob.EvictionReason)
 
 	// 4. Esperar a que el proceso termine o sea desalojado por el timer
-	
+
 	// 5. Manejo de desalojo
 	EvictionManagement()
 	<- globals.JobExecBinary
@@ -91,36 +97,12 @@ func startTimer() {
 }
 
 func quantumInterrupt() {
-	semaphores.EvictionChange.L.Lock()
-	pcb.EvictionFlag = true
-	semaphores.EvictionChange.L.Unlock()
-
-	semaphores.EvictionChange.Signal()
+	// Interrumpir proceso actual, response = OK message
+	SendInterrupt("QUANTUM", globals.CurrentJob.PID)
 	
-	fmt.Print("C PUSO EN TRU")
-		fmt.Println("ABER MOSTRAMELON VERSION QUANTUM: ", pcb.EvictionFlag)
-		//interruptionCode := pcb.QUANTUM
-
-	/* // Interrumpir proceso actual, response = OK message
-	url := fmt.Sprintf("http://%s:%d/interrupt", globals.Configkernel.IP_cpu, globals.Configkernel.Port_cpu)
-
-	// Json payload
-	jsonStr := fmt.Sprintf("interruption code: %d", interruptionCode)
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer([]byte(jsonStr)))
-	if err != nil {
-		log.Fatalf("Error al crear request: %v", err)
+	if globals.CurrentJob.EvictionReason == "TIMEOUT" {
+		log.Printf("PID: %d - Desalojado por fin de quantum\n", globals.CurrentJob.PID)		
 	}
-
-	req.Header.Set("Content-Type", "application/json")
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println("Error sending HTTP request: ", err)
-	}
-	defer resp.Body.Close() */
-
-	log.Printf("PID: %d - Desalojado por fin de quantum\n", globals.CurrentJob.PID)
 }
 
 /**
@@ -149,9 +131,7 @@ func FIFO_Plan() {
 	<- globals.JobExecBinary
 }
 
-/*
-*
-
+/**
   - EvictionManagement
 
   - [ ] Implementar caso de desalojo por bloqueo
@@ -172,12 +152,13 @@ func EvictionManagement() {
 	case "TIMEOUT":
 		globals.ChangeState(&globals.CurrentJob, "READY")
 		globals.STS = append(globals.STS, globals.CurrentJob)
-
+		globals.MultiprogrammingCounter <- int(globals.CurrentJob.PID)
+		
 		var pids []uint32
 		for _, job := range globals.STS {
 			pids = append(pids, job.PID)
 		}
-		log.Printf("Cola ready [%d]\n", pids)
+		log.Printf("Cola ready %d\n", pids)
 
 	case "EXIT":
 		globals.ChangeState(&globals.CurrentJob, "TERMINATED") // ? Cambiar a EXIT?
@@ -189,9 +170,37 @@ func EvictionManagement() {
 
 		log.Printf("Finaliza el proceso %d - Motivo: %s\n", globals.CurrentJob.PID, evictionReason)
 
-	case "":
-		// ? Es necesario?
 	default:
 		log.Fatalf("'%s' no es una razón de desalojo válida", evictionReason)
+	}
+}
+
+
+type InterruptionRequest struct {
+	InterruptionReason string `json:"InterruptionReason"`
+	Pid uint32 `json:"pid"`
+}
+
+func SendInterrupt(reason string, pid uint32) {
+	url := fmt.Sprintf("http://%s:%d/interrupt", globals.Configkernel.IP_cpu, globals.Configkernel.Port_cpu)
+
+	bodyInt, err := json.Marshal(InterruptionRequest{
+		InterruptionReason: reason,
+		Pid: pid,
+	})
+	if err != nil {
+		return
+	}
+	
+	enviarInterrupcion, err := http.NewRequest("POST", url, bytes.NewBuffer(bodyInt))
+	if err != nil {
+		log.Fatalf("POST request failed (No se puede enviar interrupción): %v", err)
+	}
+	
+	cliente := &http.Client{}
+	enviarInterrupcion.Header.Set("Content-Type", "application/json")
+	recibirRta, err := cliente.Do(enviarInterrupcion)
+	if (err != nil || recibirRta.StatusCode != http.StatusOK) {
+		log.Fatal("Error al interrupir proceso", err)
 	}
 }

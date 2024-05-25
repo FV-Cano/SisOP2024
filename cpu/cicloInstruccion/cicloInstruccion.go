@@ -78,27 +78,25 @@ func Fetch(currentPCB *pcb.T_PCB) string {
 }
 
 func DecodeAndExecute(currentPCB *pcb.T_PCB) {
-	// ? Semaforo?
-	fmt.Println("YA ENTRE AL DEC Y EX")
 	instActual := Fetch(currentPCB)
-	fmt.Println("hice el fetch uwu")
 	instruccionDecodificada := Delimitador(instActual)
-	fmt.Println("AHORA SI SE VIENE LO BUENO")
 	
 	if (instruccionDecodificada[0] == "EXIT"){
-		currentPCB.EvictionReason = "EXIT"
 		pcb.EvictionFlag = true
+		currentPCB.EvictionReason = "EXIT"
+
 		log.Printf("PID: %d - Ejecutando: %s", currentPCB.PID, instruccionDecodificada[0])
 	} else {
 		log.Printf("PID: %d - Ejecutando: %s - %s", currentPCB.PID, instruccionDecodificada[0], instruccionDecodificada[1:])
 	}
-	
+
 	switch instruccionDecodificada[0] {
 		case "IO_GEN_SLEEP": 
 			//operaciones.IO_GEN_SLEEP(instruccionActual.parametro1, instruccionActual.parametro2)
 
 		case "JNZ":
 			// Primero, hacemos un type assertion para extraer el valor float64 de la interfaz
+	
 			valido8, ok8 := currentPCB.CPU_reg[instruccionDecodificada[1]].(uint8)
 			if ok8 {
 				if(uint8(valido8) != uint8(0)) {
@@ -149,7 +147,7 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 			//SUB (Registro Destino, Registro Origen): Resta al Registro Destino 
 			//el Registro Origen y deja el resultado en el Registro Destino.
 			valorReg2 := currentPCB.CPU_reg[instruccionDecodificada[2]]
-
+			
 			if (reflect.TypeOf(currentPCB.CPU_reg[instruccionDecodificada[1]]).String() == "uint32") {
 				currentPCB.CPU_reg[instruccionDecodificada[1]] = Convertir[uint32]("uint32", currentPCB.CPU_reg[instruccionDecodificada[1]]) - Convertir[uint32]("uint32", valorReg2)
 
@@ -158,6 +156,7 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 			}
 			currentPCB.PC++
 	}
+
 }
 
 type Uint interface {~uint8 | ~uint32}

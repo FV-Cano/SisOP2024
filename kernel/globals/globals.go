@@ -35,13 +35,10 @@ var (
 		ProcessesMutex 			sync.Mutex
 		STSMutex 				sync.Mutex
 		LTSMutex 				sync.Mutex
-		EvictionMutex 			sync.Mutex
 	// * Binarios
 		PlanBinary  			= make (chan bool, 1)
 		JobExecBinary			= make (chan bool, 1)
 		PcbReceived				= make (chan bool, 1)
-		InterruptCheck			= make (chan bool, 1)
-		InterruptChecked		= make (chan bool, 1)
 	// * Contadores
 		// Chequea si hay procesos en la cola de listos, lo usamos en EvictionManagement y en ProcessInit
 		MultiprogrammingCounter = make (chan int, 10)

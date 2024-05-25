@@ -364,6 +364,8 @@ func GetPIDFromString(pidString string) (uint32, error) {
 	return uint32(pid64), error
 }
 
+// ----------------- IO -----------------
+
 func GetIOInterface(w http.ResponseWriter, r *http.Request) {
 	// Decode body
 	
@@ -377,4 +379,125 @@ func GetIOInterface(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Interface received, type: %s, port: %d\n", globals.IO_Interface.InterfaceType, globals.IO_Interface.InterfacePort)
 
 	w.WriteHeader(http.StatusOK)
+}
+
+// TODO: Borrar
+// Comunicarle a CPU dispositivos de IO disponibles
+	/*
+		Nota: La comunicación IO --handshake--> Kernel --> CPU es la única forma que se me ocurrió para que CPU sepa qué dispositivos de IO están disponibles.
+		- CPU no puede comunicarse con IO directamente para preguntar
+		- CPU no puede comunicarse directamente con kernel, solo lo hace en respuesta a peticiones
+		- Si bien podría hacer IO --handshake--> Kernel (variable global común a todos los módulos), no me parece correcto porque rompe la idea de que cada módulo es independiente y conoce únicamente la información justa (De igual manera, idea sujeta a cambios) 
+	*/
+
+	/* // Encode data
+	jsonData, err := json.Marshal(globals.IO_Interface)
+	if err != nil {
+		http.Error(w, "Failed to encode interface", http.StatusInternalServerError)
+		return
+	}
+
+	// Send data
+	url := fmt.Sprintf("http://%s:%d/io-data", globals.Configkernel.IP_cpu, globals.Configkernel.Port_cpu)
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		http.Error(w, "Failed to send interface", http.StatusInternalServerError)
+		return
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		http.Error(w, "Unexpected response status", http.StatusInternalServerError)
+		return
+	} */
+
+func Resp_ExisteInterfazGen (w http.ResponseWriter, r *http.Request) {
+
+	var received_data string
+
+	err := json.NewDecoder(r.Body).Decode(&received_data)
+	if err != nil {
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
+	}
+
+	var response bool
+	if received_data == globals.IO_Interface.InterfaceType {
+		response = true
+	} else {
+		response = false
+	}
+
+	jsonResp, err := json.Marshal(response)
+	if err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonResp)
+}
+
+func Resp_TiempoEspera (w http.ResponseWriter, r *http.Request) {
+	var received_data int
+
+	err := json.NewDecoder(r.Body).Decode(&received_data)
+	if err != nil {
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
+	}
+
+	// Enviar data a IO
+
+	jsonData, err := json.Marshal(received_data)
+	if err != nil {
+		http.Error(w, "Failed to encode interface", http.StatusInternalServerError)
+		return
+	}
+
+	// * La IP está hardcodeada, posible cambio
+	url := fmt.Sprintf("http://%s:%d/tiempoBloq", globals.InterfaceIP, globals.IO_Interface.InterfacePort)
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		http.Error(w, "Failed to send interface", http.StatusInternalServerError)
+		return
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		http.Error(w, "Unexpected response status", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+// Me veo forzado a poner esta variable porque por alguna razón no puedo declarar una pcb dentro de la función
+var genPCB pcb.T_PCB
+
+func SolicitarGenSleep(pcb pcb.T_PCB) {
+	// Encode data
+	jsonData, err := json.Marshal(pcb)
+	if err != nil {
+		log.Fatalf("Failed to encode PCB: %v", err)
+	}
+
+	// Send data
+	url := fmt.Sprintf("http://%s:%d/io-gen-sleep", globals.InterfaceIP, globals.IO_Interface.InterfacePort)
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		log.Fatalf("Failed to send PCB: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		log.Fatalf("Unexpected response status: %s", resp.Status)
+	}
+
+	// Response treatment
+	err = json.NewDecoder(resp.Body).Decode(&genPCB)
+	if err != nil {
+		log.Fatalf("Failed to decode PCB response: %v", err)
+	}
+
+	genPCB.State = "READY"
+	slice.Push(&globals.STS, genPCB)
 }

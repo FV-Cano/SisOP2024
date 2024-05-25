@@ -120,3 +120,20 @@ func HandleInterruption(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 }
+
+// TODO: Borrar
+/* func InterfaceType(w http.ResponseWriter, r *http.Request) {
+	var request struct {
+		InterfaceType string
+		InterfacePort int
+	}
+	err := json.NewDecoder(r.Body).Decode(&request)
+	if err != nil {
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
+	}
+
+	globals.InterfaceType = request.InterfaceType
+
+	w.WriteHeader(http.StatusOK)
+} */

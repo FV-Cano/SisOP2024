@@ -6,33 +6,13 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
-	"github.com/sisoputnfrba/tp-golang/cpu/operaciones"
 	"github.com/sisoputnfrba/tp-golang/entradasalida/globals"
 )
 
 type CantUnidadesTrabajo struct {
 	Unidades int `json:"cantUnidades"`
-}
-
-func RecibirPeticionKernel(w http.ResponseWriter, r *http.Request) {
-	decoder := json.NewDecoder(r.Body)
-	var cantUnidadesTrabajo CantUnidadesTrabajo
-	err := decoder.Decode(&cantUnidadesTrabajo)
-	if err != nil {
-		log.Printf("Error al decodificar mensaje: %s\n", err.Error())
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Error al decodificar mensaje"))
-		return
-	}
-
-	log.Println("Me llego una petición de Kernel")
-	log.Printf("%+v\n", cantUnidadesTrabajo)
-
-	operaciones.IO_GEN_SLEEP(cantUnidadesTrabajo.Unidades, globals.ConfigIO.Unit_work_time)
-
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Espera finalizada"))
 }
 
 type IOInterface struct {
@@ -65,4 +45,48 @@ func HandshakeKernel() error {
 	log.Println("Handshake con Kernel exitoso")
 
 	return nil
+}
+
+func IO_GEN_SLEEP() {
+	sleepTime := globals.TiempoEspera * globals.ConfigIO.Unit_work_time
+	log.Printf("PID: %d - Operacion: <IO_GEN_SLEEP>", globals.SleepPCB.PID)
+	log.Printf("Bloqueado por %d segundos\n", sleepTime)
+
+	time.Sleep(time.Duration(sleepTime) * time.Second)
+}
+
+func Resp_TiempoEsperaIO (w http.ResponseWriter, r *http.Request) {
+	var aux int
+	err := json.NewDecoder(r.Body).Decode(&aux)
+	if err != nil {
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
+	}
+	// * Posible implementación de semáforo
+	globals.TiempoEspera = aux
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func IOGenSleep(w http.ResponseWriter, r *http.Request) {
+	err := json.NewDecoder(r.Body).Decode(&globals.SleepPCB)
+	if err != nil {
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
+	}
+
+	IO_GEN_SLEEP()
+
+	log.Println("Fin de bloqueo")
+
+	jsonData, err := json.Marshal(globals.SleepPCB)
+	if err != nil {
+		http.Error(w, "Failed to encode PCB response", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonData)
+
+	w.WriteHeader(http.StatusOK)
 }

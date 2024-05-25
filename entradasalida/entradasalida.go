@@ -41,7 +41,8 @@ func main() {
 func RegisteredModuleRoutes() http.Handler {
 	moduleHandler := &server.ModuleHandler{
 		RouteHandlers: map[string]http.HandlerFunc{
-			"endpoint": IO_api.RecibirPeticionKernel,
+			"POST /tiempoBloq": 	IO_api.Resp_TiempoEsperaIO,
+			"POST /io-gen-sleep": 	IO_api.IOGenSleep,
 		},
 	}
 	return moduleHandler

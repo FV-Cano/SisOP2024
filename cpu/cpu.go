@@ -37,8 +37,8 @@ func main() {
 func RegisteredModuleRoutes() http.Handler {
 	moduleHandler := &server.ModuleHandler{
 		RouteHandlers: map[string]http.HandlerFunc{
-			"POST /dispatch": cpu_api.PCB_recv,
-			"POST /interrupt": cpu_api.HandleInterruption,
+			"POST /dispatch": 	cpu_api.PCB_recv,
+			"POST /interrupt": 	cpu_api.HandleInterruption,
 		},
 	}
 	return moduleHandler

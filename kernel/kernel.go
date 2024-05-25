@@ -7,7 +7,6 @@ import (
 	kernel_api "github.com/sisoputnfrba/tp-golang/kernel/API"
 	"github.com/sisoputnfrba/tp-golang/kernel/globals"
 	kernelutils "github.com/sisoputnfrba/tp-golang/kernel/utils"
-	"github.com/sisoputnfrba/tp-golang/utils/client-Functions"
 	cfg "github.com/sisoputnfrba/tp-golang/utils/config"
 	logger "github.com/sisoputnfrba/tp-golang/utils/log"
 	"github.com/sisoputnfrba/tp-golang/utils/server-Functions"
@@ -35,9 +34,6 @@ func main() {
 	// Iniciar servidor
 	go server.ServerStart(globals.Configkernel.Port, kernelRoutes)
 
-	client.EnviarMensaje(globals.Configkernel.IP_memory, globals.Configkernel.Port_memory, "Saludo memoria desde Kernel")
-	client.EnviarMensaje(globals.Configkernel.IP_cpu, globals.Configkernel.Port_cpu, "Saludo cpu desde Kernel")
-
 	// * Planificación
 	go kernelutils.Plan()
 
@@ -50,14 +46,16 @@ func UNUSED(x ...interface{}){}
 func RegisteredModuleRoutes() http.Handler {
 	moduleHandler := &server.ModuleHandler{
 		RouteHandlers: map[string]http.HandlerFunc{
-			"PUT /process": kernel_api.ProcessInit,
-			"DELETE /process/{pid}": kernel_api.ProcessDelete,
-			"GET /process/{pid}": kernel_api.ProcessState,
-			"PUT /plani": kernel_api.PlanificationStart,
-			"DELETE /plani": kernel_api.PlanificationStop,
-			"GET /process": kernel_api.ProcessList,
-			"POST /dispatch": kernel_api.PCB_recv,
-			"POST /io-handshake": kernel_api.GetIOInterface,
+			"PUT /process": 			kernel_api.ProcessInit,
+			"DELETE /process/{pid}": 	kernel_api.ProcessDelete,
+			"GET /process/{pid}": 		kernel_api.ProcessState,
+			"PUT /plani": 				kernel_api.PlanificationStart,
+			"DELETE /plani": 			kernel_api.PlanificationStop,
+			"GET /process": 			kernel_api.ProcessList,
+			"POST /io-handshake": 		kernel_api.GetIOInterface,
+			"POST /io-gen-interface": 	kernel_api.Resp_ExisteInterfazGen,
+			"POST /tiempoBloq":			kernel_api.Resp_TiempoEspera,
+			"POST /dispatch":			kernel_api.PCB_recv,
 		},
 	}
 	return moduleHandler

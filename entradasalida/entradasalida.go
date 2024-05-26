@@ -2,27 +2,18 @@ package main
 
 import (
 	"log"
+	"net/http"
+	"os"
 
-	client "github.com/sisoputnfrba/tp-golang/utils/client-Functions"
+	IO_api "github.com/sisoputnfrba/tp-golang/entradasalida/API"
+	"github.com/sisoputnfrba/tp-golang/entradasalida/globals"
 	logger "github.com/sisoputnfrba/tp-golang/utils/log"
+	"github.com/sisoputnfrba/tp-golang/utils/server-Functions"
 
 	cfg "github.com/sisoputnfrba/tp-golang/utils/config"
 )
 
-type T_ConfigIO struct {
-	Port               int    `json:"port"`
-	Type               string `json:"type"`
-	Unit_work_time     int    `json:"unit_work_time"`
-	Ip_kernel          string `json:"ip_kernel"`
-	Port_kernel        int    `json:"port_kernel"`
-	Ip_memory          string `json:"ip_memory"`
-	Port_memory        int    `json:"port_memory"`
-	Dialfs_path        string `json:"dialfs_path"`
-	Dialfs_block_size  int    `json:"dialfs_block_size"`
-	Dialfs_block_count int    `json:"dialfs_block_count"`
-}
-
-var configio T_ConfigIO
+// una funcion que codifique las unidades de trabajo en un json
 
 func main() {
 	// Iniciar loggers
@@ -30,12 +21,28 @@ func main() {
 	logger.LogfileCreate("io_debug.log")
 
 	// Inicializar config
-	err := cfg.ConfigInit("config-io.json", &configio)
+	err := cfg.ConfigInit(os.Args[2], &globals.ConfigIO)
 	if err != nil {
 		log.Fatalf("Error al cargar la configuracion %v", err)
 	}
 	log.Printf("Configuración IO cargada")
 
-	client.EnviarMensaje(configio.Ip_kernel, configio.Port_kernel, "Saludo kernel desde IO")
-	client.EnviarMensaje(configio.Ip_memory, configio.Port_memory, "Saludo memoria desde IO")
+	IORoutes := RegisteredModuleRoutes()
+
+	go server.ServerStart(globals.ConfigIO.Port, IORoutes)
+
+	// Handshake con kernel
+	log.Println("Handshake con Kernel")
+	IO_api.HandshakeKernel(os.Args[1])
+
+	select {}
+}
+
+func RegisteredModuleRoutes() http.Handler {
+	moduleHandler := &server.ModuleHandler{
+		RouteHandlers: map[string]http.HandlerFunc{
+			"POST /io-gen-sleep": 	IO_api.IOGenSleep,
+		},
+	}
+	return moduleHandler
 }

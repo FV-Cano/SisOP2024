@@ -2,22 +2,14 @@ package main
 
 import (
 	"log"
+	"net/http"
 
-	client "github.com/sisoputnfrba/tp-golang/utils/client-Functions"
+	cpu_api "github.com/sisoputnfrba/tp-golang/cpu/API"
+	"github.com/sisoputnfrba/tp-golang/cpu/globals"
 	cfg "github.com/sisoputnfrba/tp-golang/utils/config"
 	logger "github.com/sisoputnfrba/tp-golang/utils/log"
 	server "github.com/sisoputnfrba/tp-golang/utils/server-Functions"
 )
-
-type T_CPU struct {
-	Port               int    `json:"port"`
-	IP_memory          string `json:"ip_memory"`
-	Port_memory        int    `json:"port_memory"`
-	Number_felling_tlb int    `json:"number_felling_tlb"`
-	Algorithm_tlb      string `json:"algorithm_tlb"`
-}
-
-var configcpu T_CPU
 
 func main() {
 	// Iniciar loggers
@@ -25,20 +17,29 @@ func main() {
 	logger.LogfileCreate("cpu_debug.log")
 
 	// *** CONFIGURACION ***
-	err := cfg.ConfigInit("config-cpu.json", &configcpu)
+	err := cfg.ConfigInit("config-cpu.json", &globals.Configcpu)
 	if err != nil {
 		log.Fatalf("Error al cargar la configuracion %v", err)
 	}
 	log.Println("Configuracion CPU cargada")
 
+	// Handlers
+	cpuRoutes := RegisteredModuleRoutes()
+
 	// *** SERVIDOR ***
-	go server.ServerStart(configcpu.Port)
+	go server.ServerStart(globals.Configcpu.Port, cpuRoutes)
 
 	// *** CLIENTE ***
 	
-	log.Println("Enviando mensaje al servidor")
-
-	client.EnviarMensaje(configcpu.IP_memory, configcpu.Port_memory, "Saludo memoria desde CPU")
-
 	select {}
+}
+
+func RegisteredModuleRoutes() http.Handler {
+	moduleHandler := &server.ModuleHandler{
+		RouteHandlers: map[string]http.HandlerFunc{
+			"POST /dispatch": 	cpu_api.PCB_recv,
+			"POST /interrupt": 	cpu_api.HandleInterruption,
+		},
+	}
+	return moduleHandler
 }

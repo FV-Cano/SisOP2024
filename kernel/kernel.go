@@ -12,8 +12,6 @@ import (
 	"github.com/sisoputnfrba/tp-golang/utils/server-Functions"
 )
 
-// ? Handshake IO?
-
 func main() {
 	// Iniciar loggers
 	logger.ConfigurarLogger("kernel.log")
@@ -29,7 +27,7 @@ func main() {
 	// Handlers
 	kernelRoutes := RegisteredModuleRoutes()
 
-	globals.PlanBinary <- false // ? Default false?
+	globals.PlanBinary <- false
 
 	// Iniciar servidor
 	go server.ServerStart(globals.Configkernel.Port, kernelRoutes)
@@ -55,11 +53,9 @@ func RegisteredModuleRoutes() http.Handler {
 			"POST /io-handshake": 		kernel_api.GetIOInterface,
 			"POST /io-interface": 		kernel_api.ExisteInterfaz,
 			"POST /tiempo-bloq":		kernel_api.Resp_TiempoEspera,
-			"POST /dispatch":			kernel_api.PCB_recv,
 		},
 	}
 	return moduleHandler
 }
 
 // TODO: Probar finalizar proceso y estado proceso
-// ?: Preguntar utilización de APIs externas

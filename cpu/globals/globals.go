@@ -24,6 +24,7 @@ var (
 	// * Mutex
 		EvictionMutex 					sync.Mutex
 		OperationMutex 					sync.Mutex
+		PCBMutex 						sync.Mutex
 	// * Binario
 		PlanBinary  					= make (chan bool, 1)
 	// * Contadores

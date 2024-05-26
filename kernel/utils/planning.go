@@ -23,7 +23,7 @@ func Plan() {
 		for {
 			<- globals.MultiprogrammingCounter
 			globals.PlanBinary <- true
-			log.Println("FIFO Planificandoooo")
+			//log.Println("FIFO Planificandoooo")
 			FIFO_Plan()
 			<- globals.JobExecBinary
 			<- globals.PlanBinary
@@ -36,7 +36,7 @@ func Plan() {
 		for {
 			<- globals.MultiprogrammingCounter
 			globals.PlanBinary <- true
-			log.Println("RR Planificandoooo")
+			//log.Println("RR Planificandoooo")
 			RR_Plan()
 			<- globals.JobExecBinary
 			<- globals.PlanBinary
@@ -65,18 +65,17 @@ func RR_Plan() {
 	globals.ChangeState(&globals.CurrentJob, "EXEC")
 
 	// 3. Envío el PCB al CPU
-	go startTimer()      // ? Puedo arrancar el timer antes de enviar la pcb?
+	go startTimer()
 	kernel_api.PCB_Send() // <-- Envía proceso y espera respuesta
 
 	// 4. Esperar a que el proceso termine o sea desalojado por el timer
 	<- globals.PcbReceived
 
-	fmt.Println("REGISTROS: ", globals.CurrentJob.CPU_reg)
-	fmt.Println("EVICTION REASON: ", globals.CurrentJob.EvictionReason)
+	// fmt.Println("REGISTROS: ", globals.CurrentJob.CPU_reg)
+	// fmt.Println("EVICTION REASON: ", globals.CurrentJob.EvictionReason)
 
 	// 5. Manejo de desalojo
 	EvictionManagement()
-	//globals.JobExecBinary <- true
 }
 
 func startTimer() {
@@ -101,6 +100,7 @@ func quantumInterrupt(pcb pcb.T_PCB) {
 */
 func FIFO_Plan() {
 	// 1. Tomo el primer proceso de la lista y lo quito de la misma
+
 	globals.CurrentJob = slice.Shift(&globals.STS)
 	
 	// 2. Cambio su estado a EXEC
@@ -113,14 +113,13 @@ func FIFO_Plan() {
 
 	// 4. Manejo de desalojo
 	EvictionManagement()
-	//globals.JobExecBinary <- true
 }
 
 /**
   - EvictionManagement
 
   - [ ] Implementar caso de desalojo por bloqueo
-  - [X] Implementar caso de desalojo por timeout
+  - [x] Implementar caso de desalojo por timeout
   - [x] Implementar caso de desalojo por finalización
 *
 */
@@ -130,14 +129,13 @@ func EvictionManagement() {
 	switch evictionReason {
 	case "BLOCKED_IO":
 		globals.ChangeState(&globals.CurrentJob, "BLOCKED")
+		enganiaPichanga := globals.CurrentJob
 		go func(){
-			kernel_api.SolicitarGenSleep(globals.CurrentJob)
+			kernel_api.SolicitarGenSleep(enganiaPichanga)
 			globals.MultiprogrammingCounter <- int(globals.CurrentJob.PID)
 		}()
 		globals.JobExecBinary <- true
 		
-
-		// Cabe la posibilidad de que este envío tenga que ser una goroutine paralela
 	case "TIMEOUT":
 		globals.ChangeState(&globals.CurrentJob, "READY")
 		globals.STS = append(globals.STS, globals.CurrentJob)
@@ -159,7 +157,6 @@ func EvictionManagement() {
 	case "EXIT":
 		globals.ChangeState(&globals.CurrentJob, "TERMINATED") // ? Cambiar a EXIT?
 		globals.JobExecBinary <- true
-		// <- globals.MultiprogrammingCounter
 
 		// * VERIFICAR SI SE DEBE AGREGAR A LA LISTA LTS
 		// slice.Push(&globals.LTS, process)

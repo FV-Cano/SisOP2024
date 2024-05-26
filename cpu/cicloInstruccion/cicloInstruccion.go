@@ -13,9 +13,13 @@ import (
 
 	"github.com/sisoputnfrba/tp-golang/cpu/globals"
 	"github.com/sisoputnfrba/tp-golang/utils/pcb"
-	"github.com/sisoputnfrba/tp-golang/utils/semaphores"
 )
 
+/**
+ * Delimitador: Función que separa la instrucción en sus partes
+ * @param instActual: Instrucción a separar
+ * @return instruccionDecodificada: Instrucción separada
+**/
 func Delimitador(instActual string) []string {
 	delimitador := " "
 	i := 0
@@ -33,15 +37,15 @@ func Delimitador(instActual string) []string {
 }
 
 func Fetch(currentPCB *pcb.T_PCB) string {
-	//CPU pasa a memoria el PID y el PC, y memoria le devuelve la instrucción
-	//(después de identificar en el diccionario la key:PID,
-	//va a buscar en la lista de instrucciones de ese proceso, la instrucción en la posición
-	//pc y nos va a devolver esa instrucción)
+	// CPU pasa a memoria el PID y el PC, y memoria le devuelve la instrucción
+	// (después de identificar en el diccionario la key: PID,
+	// va a buscar en la lista de instrucciones de ese proceso, la instrucción en la posición
+	// pc y nos va a devolver esa instrucción)
 	// GET /instrucciones	
-	semaphores.PCBMutex.Lock()
+	globals.PCBMutex.Lock()
 	pid := currentPCB.PID
 	pc := currentPCB.PC
-	semaphores.PCBMutex.Unlock()
+	globals.PCBMutex.Unlock()
 	
 	cliente := &http.Client{}
 	url := fmt.Sprintf("http://%s:%d/instrucciones", globals.Configcpu.IP_memory,globals.Configcpu.Port_memory)
@@ -69,8 +73,6 @@ func Fetch(currentPCB *pcb.T_PCB) string {
 	if err != nil {
 		log.Fatal("Error al leer el cuerpo de la respuesta")
 	}
-
-	fmt.Println(string(instruccion))
 	
 	instruccion1 := string(instruccion)
 		
@@ -100,7 +102,7 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 			}
 			cond, err := HallarInterfaz(instruccionDecodificada[1], "GENERICA")
 			if err != nil {
-				log.Fatal("Error al verificar la existencia de la interfaz genérica")
+				log.Print("Error al verificar la existencia de la interfaz genérica")
 			}
 			if cond {
 				currentPCB.EvictionReason = "BLOCKED_IO"

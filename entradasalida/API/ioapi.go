@@ -53,19 +53,6 @@ func IO_GEN_SLEEP(sleepTime int, pcb pcb.T_PCB) {
 	time.Sleep(time.Duration(sleepTimeTotal) * time.Second)
 }
 
-/* func Resp_TiempoEsperaIO (w http.ResponseWriter, r *http.Request) {
-	var aux int
-	err := json.NewDecoder(r.Body).Decode(&aux)
-	if err != nil {
-		http.Error(w, "Bad request", http.StatusBadRequest)
-		return
-	}
-	// * Posible implementación de semáforo
-	globals.TiempoEspera = aux
-
-	w.WriteHeader(http.StatusOK)
-} */
-
 type GenSleep struct {
 	Pcb	 		pcb.T_PCB
 	Inter 		device.T_IOInterface
@@ -81,8 +68,6 @@ func IOGenSleep(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println("A ver qué me mandarooon: ", genSleep.Pcb)
-
 	IO_GEN_SLEEP(genSleep.TimeToSleep, genSleep.Pcb)
 	log.Println("Fin de bloqueo")
 
@@ -91,8 +76,6 @@ func IOGenSleep(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to encode PCB response", http.StatusInternalServerError)
 		return
 	}
-
-	fmt.Println("Te mando esto master: ", genSleep.Pcb)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)

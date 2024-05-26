@@ -109,7 +109,7 @@ func ProcessInit(w http.ResponseWriter, r *http.Request) {
 	
 	requerirInstrucciones, err := http.NewRequest("POST", url, bytes.NewBuffer(bodyInst))
 	if err != nil {
-		log.Fatalf("POST request failed (No se pueden cargar instrucciones): %v", err)
+		log.Printf("POST request failed (No se pueden cargar instrucciones): %v", err)
 	}
 	
 	cliente := &http.Client{}
@@ -269,15 +269,12 @@ func PCB_Send() error {
 	if err != nil {
 		return fmt.Errorf("failed to decode PCB response: %v", err)
 	}
+	globals.PcbReceived <- true
+
 
 	return nil
 }
 
-/**
- * PCB_recv: Recibe un PCB, lo "procesa" y lo devuelve
- * Cumple con la funcionalidad principal de CPU.
-	* Procesar = Fetch -> Decode -> Execute
-*/
 func PCB_recv(w http.ResponseWriter, r *http.Request) {
 	var received_pcb pcb.T_PCB
 
@@ -355,9 +352,9 @@ func RemoveByID(pid uint32) error {
 }
 
 /**
- * GetPIDFromQueryPath: Obtiene el PID de un path de query
+ * GetPIDFromQueryPath: Convierte un PID en formato string a uint32
 
- * @param path: Path de query
+ * @param pidString: PID en formato string
  * @return uint32: PID extraído
 */
 func GetPIDFromString(pidString string) (uint32, error) {
@@ -369,56 +366,23 @@ func GetPIDFromString(pidString string) (uint32, error) {
 func GetIOInterface(w http.ResponseWriter, r *http.Request) {
 	var interf device.T_IOInterface
 	
-	// Decode body
 	err := json.NewDecoder(r.Body).Decode(&interf)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	// Add interface to global list
 	globals.Interfaces = append(globals.Interfaces, interf)
 
 	log.Printf("Interface received, type: %s, port: %d\n", interf.InterfaceType, interf.InterfacePort)
 
 	w.WriteHeader(http.StatusOK)
 }
-
-// TODO: Borrar
-// Comunicarle a CPU dispositivos de IO disponibles
-	/*
-		Nota: La comunicación IO --handshake--> Kernel --> CPU es la única forma que se me ocurrió para que CPU sepa qué dispositivos de IO están disponibles.
-		- CPU no puede comunicarse con IO directamente para preguntar
-		- CPU no puede comunicarse directamente con kernel, solo lo hace en respuesta a peticiones
-		- Si bien podría hacer IO --handshake--> Kernel (variable global común a todos los módulos), no me parece correcto porque rompe la idea de que cada módulo es independiente y conoce únicamente la información justa (De igual manera, idea sujeta a cambios) 
-	*/
-
-	/* // Encode data
-	jsonData, err := json.Marshal(globals.IO_Interface)
-	if err != nil {
-		http.Error(w, "Failed to encode interface", http.StatusInternalServerError)
-		return
-	}
-
-	// Send data
-	url := fmt.Sprintf("http://%s:%d/io-data", globals.Configkernel.IP_cpu, globals.Configkernel.Port_cpu)
-	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
-	if err != nil {
-		http.Error(w, "Failed to send interface", http.StatusInternalServerError)
-		return
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		http.Error(w, "Unexpected response status", http.StatusInternalServerError)
-		return
-	} */
-
 type SearchInterface struct {
 	Name string `json:"name"`
 	Type string `json:"type"`
 }
 func ExisteInterfaz(w http.ResponseWriter, r *http.Request) {
-	
 	var received_data SearchInterface
 	err := json.NewDecoder(r.Body).Decode(&received_data)
 	if err != nil {
@@ -444,7 +408,6 @@ func ExisteInterfaz(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 	}
 
-	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(jsonResp)
 }
@@ -480,30 +443,6 @@ func Resp_TiempoEspera (w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 }
-	// TODO: Borrar
-	// Enviar data a IO
-
-	/* jsonData, err := json.Marshal(received_data)
-	if err != nil {
-		http.Error(w, "Failed to encode interface", http.StatusInternalServerError)
-		return
-	}
-
-	// * La IP está hardcodeada, posible cambio
-	url := fmt.Sprintf("http://%s:%d/tiempo-bloq", globals.Configkernel.IP_IO, globals.Configkernel.Port_IO)
-	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
-	if err != nil {
-		http.Error(w, "Failed to send interface", http.StatusInternalServerError)
-		return
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		http.Error(w, "Unexpected response status", http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK) */
-
 
 // Me veo forzado a poner esta variable porque por alguna razón no puedo declarar una pcb dentro de la función
 var genPCB pcb.T_PCB
@@ -516,7 +455,7 @@ type GenSleep struct {
 func SolicitarGenSleep(pcb pcb.T_PCB) {
 	newInter, err := SearchDeviceByName(genIntTime.Name)
 	if err != nil {
-		log.Fatalf("Device not found: %v", err)
+		log.Printf("Device not found: %v", err)
 	}
 	
 	genSleep := GenSleep{
@@ -525,35 +464,26 @@ func SolicitarGenSleep(pcb pcb.T_PCB) {
 		TimeToSleep: genIntTime.WTime,
 	}
 	
-	//globals.ITimeSem.Unlock()
-
-
-	// Encode data
 	jsonData, err := json.Marshal(genSleep)
 	if err != nil {
-		log.Fatalf("Failed to encode PCB: %v", err)
+		log.Printf("Failed to encode PCB: %v", err)
 	}
 
-	// Send data
 	url := fmt.Sprintf("http://%s:%d/io-gen-sleep", newInter.InterfaceIP, newInter.InterfacePort)
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
-		log.Fatalf("Failed to send PCB: %v", err)
+		log.Printf("Failed to send PCB: %v", err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		log.Fatalf("Unexpected response status: %s", resp.Status)
+		log.Printf("Unexpected response status: %s", resp.Status)
 	}
 
-	// Response treatment
 	err = json.NewDecoder(resp.Body).Decode(&genPCB)
 	if err != nil {
-		log.Fatalf("Failed to decode PCB response: %v", err)
+		log.Printf("Failed to decode PCB response: %v", err)
 	}
 
 	genPCB.State = "READY"
-
-	fmt.Println("El proceso ", genPCB, " ha terminado de dormir")
-
 	slice.Push(&globals.STS, genPCB)
 }

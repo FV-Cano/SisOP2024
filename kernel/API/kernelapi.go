@@ -463,6 +463,8 @@ func SolicitarGenSleep(pcb pcb.T_PCB) {
 		Inter: newInter, 
 		TimeToSleep: genIntTime.WTime,
 	}
+
+	globals.EnganiaPichangaMutex.Unlock()
 	
 	jsonData, err := json.Marshal(genSleep)
 	if err != nil {

@@ -25,6 +25,7 @@ var (
 		ProcessesMutex 			sync.Mutex
 		STSMutex 				sync.Mutex
 		LTSMutex 				sync.Mutex
+		EnganiaPichangaMutex 	sync.Mutex
 	// * Binarios
 		PlanBinary  			= make (chan bool, 1)
 		JobExecBinary			= make (chan bool, 1)

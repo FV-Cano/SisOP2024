@@ -58,12 +58,13 @@ type T_Quantum struct {
   - RR_Plan
 */
 func RR_Plan() {
+	globals.EnganiaPichangaMutex.Lock()
 	// 1. Tomo el primer proceso de la lista y lo quito de la misma
 	globals.CurrentJob = slice.Shift(&globals.STS)
 
 	// 2. Cambio su estado a EXEC
 	globals.ChangeState(&globals.CurrentJob, "EXEC")
-
+	globals.EnganiaPichangaMutex.Unlock()
 	// 3. Envío el PCB al CPU
 	go startTimer()
 	kernel_api.PCB_Send() // <-- Envía proceso y espera respuesta
@@ -128,10 +129,11 @@ func EvictionManagement() {
 
 	switch evictionReason {
 	case "BLOCKED_IO":
+		globals.EnganiaPichangaMutex.Lock()
 		globals.ChangeState(&globals.CurrentJob, "BLOCKED")
-		enganiaPichanga := globals.CurrentJob
+		// enganiaPichanga := globals.CurrentJob
 		go func(){
-			kernel_api.SolicitarGenSleep(enganiaPichanga)
+			kernel_api.SolicitarGenSleep(globals.CurrentJob)
 			globals.MultiprogrammingCounter <- int(globals.CurrentJob.PID)
 		}()
 		globals.JobExecBinary <- true

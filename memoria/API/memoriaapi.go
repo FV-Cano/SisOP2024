@@ -90,6 +90,7 @@ func CargarInstrucciones(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("Instrucciones cargadas para el PID %d ", pid)
 
+
 	respuesta, err := json.Marshal((BuscarInstruccionMap(int(pc), int(pid))))
 	if err != nil {
 		http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)

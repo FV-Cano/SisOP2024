@@ -22,16 +22,22 @@ type T_ConfigMemory struct {
 	Instructions_path string `json:"instructions_path"`
 	Delay_response    int    `json:"delay_response"`
 }
-type T_PageFrame struct {
-	Data []byte
-	PID  int
-}
+
+type Frame *int
+
+var Frames *int //chequear si se vuela, por ahora lo dejamos
+
+//Tabla de páginas (donde a cada página(indice) le corresponde un frame)
+var TablaPaginas []Frame 
+
+//Diccionario para idenficiar a que proceso pertenece cada TablaPaginas
+var  Tablas_de_paginas map[int][]Frame //ver nombre
 
 var Configmemory *T_ConfigMemory
 
-var Frames *int
+// Inicializo la memoria
+var User_Memory = make([]byte,Configmemory.Memory_size) // de 0 a 15 corresponde a una página, marco compuesto por 16 bytes (posiciones)
 
-var User_Memory = make([]T_PageFrame,*Frames)
 
-var PageFrame *T_PageFrame
+
 

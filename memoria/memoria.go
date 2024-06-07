@@ -24,21 +24,8 @@ func main() {
 	log.Println("Configuracion MEMORIA cargada")
 
 	//verificar si estan bien los punteros
+	// Calculo la cantidad de frames que tendrá la memoria
 	*globals.Frames = globals.Configmemory.Memory_size / globals.Configmemory.Page_size
-
-	globals.User_Memory = make([]globals.T_PageFrame, *globals.Frames)
-
-	//Lo que hago es cargar en cada marco una estructura
-	// Esta estructura va a tener un número de pagina y su PID asociado
-	// Si quiero saber en que marco está una página, recorro todos los marcos
-	// y devuelvo el subíndice (correspondiente a un marco) cuando encuentre la pag
-
-	for i := range *globals.Frames {
-		globals.User_Memory[i] = globals.T_PageFrame{
-			Data: make([]byte, globals.Configmemory.Page_size),
-			PID:  -1, // -1 indica que el marco está libre
-		}
-	}
 
 	// Handlers
 	// Iniciar servidor
@@ -51,11 +38,14 @@ func main() {
 
 }
 
+
+
 func RegisteredModuleRoutes() http.Handler {
 	moduleHandler := &server.ModuleHandler{
 		RouteHandlers: map[string]http.HandlerFunc{
 			"GET /instrucciones":  memoria_api.InstruccionActual,
 			"POST /instrucciones": memoria_api.CargarInstrucciones,
+			"GET /enviarMarco": memoria_api.EnviarMarco,
 		},
 	}
 	return moduleHandler

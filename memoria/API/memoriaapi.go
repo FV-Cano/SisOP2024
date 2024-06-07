@@ -100,3 +100,26 @@ func CargarInstrucciones(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write(respuesta)
 }
+
+//--------------------------------------------------------------------------------------//
+//Busca el marco que pertenece al proceso y a la página que envía CPU, dentro del diccionario
+func BuscarMarco(pid int, pagina int) *int {
+	resultado := globals.Tablas_de_paginas[pid][pagina]
+	return resultado
+	}
+
+
+func EnviarMarco(w http.ResponseWriter, r *http.Request){
+	//Ante cada peticion de CPU, dado un pid y una página, enviar frame a CPU
+	queryParams := r.URL.Query()
+	pid := queryParams.Get("pid")
+	pagina := queryParams.Get("pagina")
+	respuesta, err := json.Marshal((BuscarMarco(PasarAInt(pid), PasarAInt(pagina))))
+	if err != nil {
+		http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(respuesta)
+}

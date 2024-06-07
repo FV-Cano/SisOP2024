@@ -13,6 +13,8 @@ import (
 	"github.com/sisoputnfrba/tp-golang/utils/server-Functions"
 )
 
+// ? Handshake IO?
+
 func main() {
 	// Iniciar loggers
 	logger.ConfigurarLogger("kernel.log")

@@ -6,6 +6,7 @@ import (
 
 	kernel_api "github.com/sisoputnfrba/tp-golang/kernel/API"
 	"github.com/sisoputnfrba/tp-golang/kernel/globals"
+	resources "github.com/sisoputnfrba/tp-golang/kernel/resources"
 	kernelutils "github.com/sisoputnfrba/tp-golang/kernel/utils"
 	cfg "github.com/sisoputnfrba/tp-golang/utils/config"
 	logger "github.com/sisoputnfrba/tp-golang/utils/log"
@@ -27,13 +28,20 @@ func main() {
 	// Handlers
 	kernelRoutes := RegisteredModuleRoutes()
 
+	// Execution Config
+	globals.MultiprogrammingCounter = make (chan int, globals.Configkernel.Multiprogramming)	// Inicializamos el contador de multiprogramación
+	resources.InitResourceMap()
+
+
 	globals.PlanBinary <- false
+
 
 	// Iniciar servidor
 	go server.ServerStart(globals.Configkernel.Port, kernelRoutes)
 
 	// * Planificación
-	go kernelutils.Plan()
+	go kernelutils.LTS_Plan()
+	go kernelutils.STS_Plan()
 
 	select {}		// Deja que la goroutine principal siga corriendo
 }

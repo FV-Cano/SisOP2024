@@ -10,18 +10,27 @@ import (
 
 	kernel_api "github.com/sisoputnfrba/tp-golang/kernel/API"
 	"github.com/sisoputnfrba/tp-golang/kernel/globals"
+	resource "github.com/sisoputnfrba/tp-golang/kernel/resources"
 	"github.com/sisoputnfrba/tp-golang/utils/pcb"
 	"github.com/sisoputnfrba/tp-golang/utils/slice"
 )
 
 var quantum int
 
-func Plan() {
+func LTS_Plan() {
+	for {
+		auxJob := slice.Shift(&globals.LTS)
+		globals.MultiprogrammingCounter <- int(auxJob.PID)
+		globals.ChangeState(&auxJob, "READY")
+		globals.STS = append(globals.STS, auxJob)
+	}
+}
+
+func STS_Plan() {
 	switch globals.Configkernel.Planning_algorithm {
 	case "FIFO":
 		log.Println("FIFO algorithm")
 		for {
-			<- globals.MultiprogrammingCounter
 			globals.PlanBinary <- true
 			//log.Println("FIFO Planificandoooo")
 			FIFO_Plan()
@@ -34,7 +43,6 @@ func Plan() {
 		quantum = globals.Configkernel.Quantum * int(time.Millisecond)
 		log.Println("ROUND ROBIN algorithm")
 		for {
-			<- globals.MultiprogrammingCounter
 			globals.PlanBinary <- true
 			//log.Println("RR Planificandoooo")
 			RR_Plan()
@@ -132,16 +140,15 @@ func EvictionManagement() {
 		enganiaPichanga := globals.CurrentJob
 		go func(){
 			kernel_api.SolicitarGenSleep(enganiaPichanga)
-			globals.MultiprogrammingCounter <- int(globals.CurrentJob.PID)
 		}()
 		globals.JobExecBinary <- true
 		
 	case "TIMEOUT":
 		globals.ChangeState(&globals.CurrentJob, "READY")
 		globals.STS = append(globals.STS, globals.CurrentJob)
-		globals.MultiprogrammingCounter <- int(globals.CurrentJob.PID)
 		globals.JobExecBinary <- true
 		
+		// ? Se puede eliminar esto?
 		/* var pids []uint32
 		for _, job := range globals.STS {
 			pids = append(pids, job.PID)
@@ -151,17 +158,26 @@ func EvictionManagement() {
 	case "NOT_FOUND_IO":
 		globals.ChangeState(&globals.CurrentJob, "READY")
 		globals.STS = append(globals.STS, globals.CurrentJob)
-		globals.MultiprogrammingCounter <- int(globals.CurrentJob.PID)
 		globals.JobExecBinary <- true
 
 	case "EXIT":
-		globals.ChangeState(&globals.CurrentJob, "TERMINATED") // ? Cambiar a EXIT?
+		globals.ChangeState(&globals.CurrentJob, "TERMINATED")
 		globals.JobExecBinary <- true
-
-		// * VERIFICAR SI SE DEBE AGREGAR A LA LISTA LTS
-		// slice.Push(&globals.LTS, process)
-
+		<- globals.MultiprogrammingCounter
 		log.Printf("Finaliza el proceso %d - Motivo: %s\n", globals.CurrentJob.PID, evictionReason)
+
+	// TODO: Falta tocar la lógica desde CPU
+	case "WAIT":
+		if resource.Exists(globals.RequestedResource) {
+			resource.RequestConsumption(globals.RequestedResource)
+		}
+		// TODO: Ver caso bloqueado por recurso, se debería desbloquear el proceso pero el PC no debería haber aumentado luego de haber bloqueado
+
+	case "SIGNAL":
+		if resource.Exists(globals.RequestedResource) {
+			resource.ReleaseConsumption(globals.RequestedResource)
+		}
+
 
 	default:
 		log.Fatalf("'%s' no es una razón de desalojo válida", evictionReason)

@@ -42,6 +42,7 @@ func RegisteredModuleRoutes() http.Handler {
 	moduleHandler := &server.ModuleHandler{
 		RouteHandlers: map[string]http.HandlerFunc{
 			"POST /io-gen-sleep": 	IO_api.IOGenSleep,
+			//"POST /io-stdin-read": 	IO_api.IOGenSleep,
 		},
 	}
 	return moduleHandler

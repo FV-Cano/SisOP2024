@@ -16,7 +16,7 @@ import (
 func Frame_rcv(currentPCB *pcb.T_PCB) int {
 	//Enviamos el PID y la PAGINA a memoria
 	pid := currentPCB.PID
-	var page int
+	var page int //int --> pagina 
 
 	cliente := &http.Client{}
 	url := fmt.Sprintf("http://%s:%d/enviarMarco", globals.Configcpu.IP_memory,globals.Configcpu.Port_memory)

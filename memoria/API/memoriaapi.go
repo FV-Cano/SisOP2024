@@ -19,6 +19,8 @@ type GetInstructions_BRQ struct {
 	Pc   uint32 `json:"pc"`
 }
 
+type BitMap []int
+
 func AbrirArchivo(filePath string) *os.File {
 	file, err := os.Open(filePath) //El paquete nos provee el método ReadFile el cual recibe como argumento el nombre de un archivo el cual se encargará de leer. Al completar la lectura, retorna un slice de bytes, de forma que si se desea leer, tiene que ser convertido primero a una cadena de tipo string
 	if err != nil {
@@ -87,9 +89,11 @@ func CargarInstrucciones(w http.ResponseWriter, r *http.Request) {
 	globals.InstructionsMutex.Lock()
 	defer globals.InstructionsMutex.Unlock()
 	globals.InstruccionesProceso[int(pid)] = instrucciones
-
 	log.Printf("Instrucciones cargadas para el PID %d ", pid)
 
+	//acá debemos inicializar vacía la tabla de páginas para el proceso
+	globals.Tablas_de_paginas[int(pid)] = []globals.Frame{}
+	log.Printf("Tabla cargada para el PID %d ", pid)
 
 	respuesta, err := json.Marshal((BuscarInstruccionMap(int(pc), int(pid))))
 	if err != nil {
@@ -101,13 +105,50 @@ func CargarInstrucciones(w http.ResponseWriter, r *http.Request) {
 	w.Write(respuesta)
 }
 
+
+
+//--------------------------------------------------------------------------------------//
+//RESIZE DE MEMORIA //falta que CPU/kernel le haga la peticion enviandole el tamaño
+func Resize(w http.ResponseWriter, r *http.Request) { //hay que hacer un patch ya que vamos a estar modificando un recurso existente (la tabla de páginas)
+	queryParams := r.URL.Query()
+	tamaño := queryParams.Get("tamaño")
+	pid := queryParams.Get("pid")
+	respuesta, err := json.Marshal(RealizarResize(PasarAInt(tamaño), PasarAInt(pid)))
+	if err != nil {
+		http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(respuesta)
+}
+
+func RealizarResize(tamaño int, pid int){
+cantPaginas := tamaño / globals.Configmemory.Page_size
+//agregar a la tabla de páginas del proceso la cantidad de páginas que se le asignaron
+globals.Tablas_de_paginas[int(pid)] = make(globals.TablaPaginas, cantPaginas)
+/*make(globals.TablaPaginas, cantPaginas) crea una nueva tabla de páginas con una cantidad específica de páginas (cantPaginas).
+Cada página en la tabla es un Frame.*/
+for cantPaginas > 0 {
+	for i := 0; i < globals.Frames; i++ {
+		if (IsNotSet(i)){
+			cantPaginas --
+			Set(i)
+			
+			//setearlo en la tabla de páginas del proceso
+			
+		} 			
+	}
+}
+
+log.Printf("Tabla de páginas del PID %d redimensionada a %d páginas", pid, cantPaginas)
+}
 //--------------------------------------------------------------------------------------//
 //Busca el marco que pertenece al proceso y a la página que envía CPU, dentro del diccionario
 func BuscarMarco(pid int, pagina int) *int {
 	resultado := globals.Tablas_de_paginas[pid][pagina]
 	return resultado
 	}
-
 
 func EnviarMarco(w http.ResponseWriter, r *http.Request){
 	//Ante cada peticion de CPU, dado un pid y una página, enviar frame a CPU
@@ -122,4 +163,26 @@ func EnviarMarco(w http.ResponseWriter, r *http.Request){
 
 	w.WriteHeader(http.StatusOK)
 	w.Write(respuesta)
+}
+
+//--------------------------------------------------------------------------------------//
+// revisar si es necesario que sea slice de bytes
+func NewBitMap(size int) BitMap {
+	NewBMAp := make(BitMap,size)
+	for i := 0; i < size; i++ {
+		NewBMAp[i] = 0
+	}
+    return NewBMAp
+}
+
+func Set(i int) {
+	globals.CurrentBitMap[i] = 1
+}
+
+func Clear(i int) {
+	globals.CurrentBitMap[i] = 0
+}
+
+func IsNotSet(i int) bool {
+  	return  globals.CurrentBitMap[i] == 0
 }

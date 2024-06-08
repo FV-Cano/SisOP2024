@@ -25,7 +25,9 @@ func main() {
 
 	//verificar si estan bien los punteros
 	// Calculo la cantidad de frames que tendrá la memoria
-	*globals.Frames = globals.Configmemory.Memory_size / globals.Configmemory.Page_size
+	globals.Frames = globals.Configmemory.Memory_size / globals.Configmemory.Page_size //ver si hay que ponerle puntero
+
+	globals.CurrentBitMap = memoria_api.NewBitMap(globals.Frames)
 
 	// Handlers
 	// Iniciar servidor
@@ -37,8 +39,6 @@ func main() {
 	select {}
 
 }
-
-
 
 func RegisteredModuleRoutes() http.Handler {
 	moduleHandler := &server.ModuleHandler{

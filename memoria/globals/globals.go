@@ -23,15 +23,16 @@ type T_ConfigMemory struct {
 	Delay_response    int    `json:"delay_response"`
 }
 
+var CurrentBitMap []int
+var Frames int
+
 type Frame *int
 
-var Frames *int //chequear si se vuela, por ahora lo dejamos
-
 //Tabla de páginas (donde a cada página(indice) le corresponde un frame)
-var TablaPaginas []Frame 
+type TablaPaginas []Frame 
 
 //Diccionario para idenficiar a que proceso pertenece cada TablaPaginas
-var  Tablas_de_paginas map[int][]Frame //ver nombre
+var  Tablas_de_paginas map[int]TablaPaginas //ver nombre
 
 var Configmemory *T_ConfigMemory
 

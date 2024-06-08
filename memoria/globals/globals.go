@@ -26,7 +26,7 @@ type T_ConfigMemory struct {
 var CurrentBitMap []int
 var Frames int
 
-type Frame *int
+type Frame int
 
 //Tabla de páginas (donde a cada página(indice) le corresponde un frame)
 type TablaPaginas []Frame 

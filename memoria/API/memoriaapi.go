@@ -113,7 +113,7 @@ func Resize(w http.ResponseWriter, r *http.Request) { //hay que hacer un patch y
 	queryParams := r.URL.Query()
 	tamaño := queryParams.Get("tamaño")
 	pid := queryParams.Get("pid")
-	respuesta, err := json.Marshal(RealizarResize(PasarAInt(tamaño), PasarAInt(pid)))
+	respuesta, err := json.Marshal(RealizarResize(PasarAInt(tamaño), PasarAInt(pid))) //devolver error out of memory
 	if err != nil {
 		http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
 		return
@@ -129,25 +129,26 @@ cantPaginas := tamaño / globals.Configmemory.Page_size
 globals.Tablas_de_paginas[int(pid)] = make(globals.TablaPaginas, cantPaginas)
 /*make(globals.TablaPaginas, cantPaginas) crea una nueva tabla de páginas con una cantidad específica de páginas (cantPaginas).
 Cada página en la tabla es un Frame.*/
-for cantPaginas > 0 {
-	for i := 0; i < globals.Frames; i++ {
-		if (IsNotSet(i)){
-			cantPaginas --
-			Set(i)
-			
-			//setearlo en la tabla de páginas del proceso
-			
-		} 			
-	}
+for pagina := 0; pagina < cantPaginas; pagina++ {
+    for i := 0; i < globals.Frames; i++ {
+        if IsNotSet(i){
+            //setear el valor del marco en la tabla de páginas del proceso
+            globals.Tablas_de_paginas[pid][pagina] = globals.Frame(i)
+			//marcar marco como ocupado
+            Set(i)
+            // Salir del bucle una vez que se ha asignado un marco a la página
+            break
+        } 			
+    }
 }
 
 log.Printf("Tabla de páginas del PID %d redimensionada a %d páginas", pid, cantPaginas)
 }
 //--------------------------------------------------------------------------------------//
 //Busca el marco que pertenece al proceso y a la página que envía CPU, dentro del diccionario
-func BuscarMarco(pid int, pagina int) *int {
+func BuscarMarco(pid int, pagina int) int {
 	resultado := globals.Tablas_de_paginas[pid][pagina]
-	return resultado
+	return int(resultado)
 	}
 
 func EnviarMarco(w http.ResponseWriter, r *http.Request){

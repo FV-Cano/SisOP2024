@@ -48,9 +48,10 @@ func Frame_rcv(currentPCB *pcb.T_PCB, direccionLogica int) int {
 	return int(bytesToInt(frame))
 }
 
-func ObtenerDireccionFisica(numeroPagina int, desplazamiento int) int { //ver de donde sale el n de pag y el desplazamiento
-
-	direccionFisica := Frame_rcv(&globals.CurrentJob)*numeroPagina + desplazamiento
+func ObtenerDireccionFisica(direccionLogica int) int { //ver de donde sale el n de pag y el desplazamiento
+	numeroPagina := direccionLogica/Frame_rcv(&globals.CurrentJob, direccionLogica)
+	desplazamiento := direccionLogica - numeroPagina*Frame_rcv(&globals.CurrentJob, direccionLogica)
+	direccionFisica := Frame_rcv(&globals.CurrentJob, direccionLogica)*numeroPagina + desplazamiento
 
 	return direccionFisica //devuelve la direccion fisica, revisar cómo tiene que interpretarla memoria, como un int?
 }

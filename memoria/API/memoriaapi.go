@@ -3,7 +3,6 @@ package memoria_api
 import (
 	"bufio"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -123,7 +122,7 @@ func Resize(w http.ResponseWriter, r *http.Request) { //hay que hacer un patch y
 }
 //TODO: Verificar si "out of memory" se representa de esta forma
 
-func RealizarResize(tamaño int, pid int) error {
+func RealizarResize(tamaño int, pid int) string {
 cantPaginasActual := len(globals.Tablas_de_paginas[int(pid)])
 	//ver cuantas paginas tiene el proceso en la tabla
 cantPaginas := tamaño / globals.Configmemory.Page_size
@@ -133,7 +132,7 @@ globals.Tablas_de_paginas[int(pid)] = make(globals.TablaPaginas, cantPaginas)
 Cada página en la tabla es un Frame.*/
 ModificarTamañoProceso(cantPaginasActual, cantPaginas, pid)
 log.Printf("Tabla de páginas del PID %d redimensionada a %d páginas", pid, cantPaginas)
-return nil
+return "OK"
 }
 
 func ModificarTamañoProceso(tamañoProcesoActual int, tamañoProcesoNuevo int, pid int) {
@@ -147,7 +146,7 @@ func ModificarTamañoProceso(tamañoProcesoActual int, tamañoProcesoNuevo int, 
 	}	
 }
 
-func AmpliarProceso(diferenciaEnPaginas int, pid int) error {
+func AmpliarProceso(diferenciaEnPaginas int, pid int) string {
 	for pagina := 0; pagina < diferenciaEnPaginas; pagina++ {
 		marcoDisponible := false
 		for i := 0; i < globals.Frames; i++ { //out of memory si no hay marcos disponibles
@@ -162,10 +161,10 @@ func AmpliarProceso(diferenciaEnPaginas int, pid int) error {
 			} 			
 		} 
 		if !marcoDisponible {
-            return errors.New("out of memory")
+            return "out of memory"
         }
 	}
-	return nil
+	return "OK"
 }
 
 func ReducirProceso(diferenciaEnPaginas int, pid int){

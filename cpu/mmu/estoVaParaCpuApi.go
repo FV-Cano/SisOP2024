@@ -11,12 +11,12 @@ import (
 
 //hago este archivo para que no se rompa nada si hago pull de cpu, pero va para cpu.api!!!
 //peticion para RESIZE de memoria (DESDE CPU A MEMORIA)
-func Resize(tamaño int){
+func Resize(tamaño int) string{
 	cliente := &http.Client{}
 	url := fmt.Sprintf("http://%s:%d/resize", globals.Configcpu.IP_memory,globals.Configcpu.Port_memory)
 	req, err := http.NewRequest("PATCH", url, nil)
 	if err != nil {
-		return
+		return "Error al hacer el request"
 	}
 	tamañoEnString := strconv.Itoa(tamaño)
 	pid := strconv.Itoa(int(globals.CurrentJob.PID))
@@ -29,16 +29,16 @@ func Resize(tamaño int){
 	req.Header.Set("Content-Type", "application/json")
 	respuesta, err := cliente.Do(req)
 	if err != nil {
-		return
+		return "Error al hacer el request"
 	}
 	// Verificar el código de estado de la respuesta
 	if respuesta.StatusCode != http.StatusOK {
-		return
+		return "Error en el estado de la respuesta"
 	}
 	bodyBytes, err := io.ReadAll(respuesta.Body)
 	if err != nil {
-		return
+		return "Error al leer el cuerpo de la respuesta"
 	}
-	fmt.Println(string(bodyBytes))
-
+	return string(bodyBytes)
 }
+//TODO: En caso de que la respuesta de la memoria sea Out of Memory, se deberá devolver el contexto de ejecución al Kernel informando de esta situación

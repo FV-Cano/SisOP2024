@@ -200,17 +200,20 @@ func EnviarMarco(w http.ResponseWriter, r *http.Request){
 	w.Write(respuesta)
 }
 //--------------------------------------------------------------------------------------//
-//FINALIZACION DE PROCESO: PETICION DESDE KERNEL
+//FINALIZACION DE PROCESO: PETICION DESDE KERNEL (PATCH)
 
-func FinalizarProceso(pid int) {
-
-
-
+func FinalizarProceso(w http.ResponseWriter, r *http.Request) {
+	queryParams := r.URL.Query()
+	pid := queryParams.Get("pid")
+	ReducirProceso(len(globals.Tablas_de_paginas[PasarAInt(pid)]), PasarAInt(pid))
+//	respuesta, err := json.Marshal() 
+//	if err != nil {
+//	http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
+//	return
+//}
+	w.WriteHeader(http.StatusOK)
+//  w.Write(respuesta)
 }
-
-
-
-
 //--------------------------------------------------------------------------------------//
 
 // revisar si es necesario que sea slice de bytes

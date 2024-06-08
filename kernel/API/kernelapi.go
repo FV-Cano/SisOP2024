@@ -216,6 +216,7 @@ type ProcessList_BRS struct {
 */
 func ProcessList(w http.ResponseWriter, r *http.Request) {
 	allProcesses := append(globals.LTS, globals.STS...)
+	allProcesses = append(allProcesses, globals.Blocked...)
 
 	// Formateo los procesos para devolverlos
 	respBody := make([]ProcessList_BRS, len(allProcesses))
@@ -348,6 +349,17 @@ func GetPIDFromString(pidString string) (uint32, error) {
 	return uint32(pid64), error
 }
 
+func RemoveFromBlocked(pid uint32) {
+	for i, pcb := range globals.Blocked {
+		if pcb.PID == pid {
+			globals.MapMutex.Lock()
+			defer globals.MapMutex.Unlock()
+			slice.RemoveAtIndex(&globals.Blocked, i)
+		}
+	}
+
+}
+
 // ----------------- IO -----------------
 func GetIOInterface(w http.ResponseWriter, r *http.Request) {
 	var interf device.T_IOInterface
@@ -438,6 +450,7 @@ type GenSleep struct {
 	Inter 		device.T_IOInterface
 	TimeToSleep int
 }
+
 func SolicitarGenSleep(pcb pcb.T_PCB) {
 	newInter, err := SearchDeviceByName(genIntTime.Name)
 	if err != nil {
@@ -470,6 +483,7 @@ func SolicitarGenSleep(pcb pcb.T_PCB) {
 		log.Printf("Failed to decode PCB response: %v", err)
 	}
 
+	RemoveFromBlocked(genPCB.PID)
 	genPCB.State = "READY"
 	slice.Push(&globals.STS, genPCB)
 }

@@ -3,6 +3,7 @@ package resource
 import (
 	"log"
 
+	kernel_api "github.com/sisoputnfrba/tp-golang/kernel/API"
 	"github.com/sisoputnfrba/tp-golang/kernel/globals"
 	"github.com/sisoputnfrba/tp-golang/utils/pcb"
 )
@@ -31,6 +32,7 @@ func QueueProcess(resource string, pcb pcb.T_PCB) {
 	defer globals.MapMutex.Unlock()
 
 	globals.ResourceMap[resource] = append(globals.ResourceMap[resource], pcb)
+	globals.Blocked = append(globals.Blocked, pcb)
 }
 
 /**
@@ -45,6 +47,8 @@ func DequeueProcess(resource string) pcb.T_PCB {
 
 	pcb := globals.ResourceMap[resource][0]
 	globals.ResourceMap[resource] = globals.ResourceMap[resource][1:]
+
+	kernel_api.RemoveFromBlocked(uint32(pcb.PID))
 	return pcb
 }
 

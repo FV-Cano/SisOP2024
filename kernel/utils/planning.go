@@ -137,6 +137,7 @@ func EvictionManagement() {
 	switch evictionReason {
 	case "BLOCKED_IO":
 		globals.ChangeState(&globals.CurrentJob, "BLOCKED")
+		slice.Push(&globals.Blocked, globals.CurrentJob)
 		enganiaPichanga := globals.CurrentJob
 		go func(){
 			kernel_api.SolicitarGenSleep(enganiaPichanga)

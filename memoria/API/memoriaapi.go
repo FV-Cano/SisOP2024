@@ -106,10 +106,8 @@ func CargarInstrucciones(w http.ResponseWriter, r *http.Request) {
 	w.Write(respuesta)
 }
 
-
-
 //--------------------------------------------------------------------------------------//
-//RESIZE DE MEMORIA //falta que CPU le haga la peticion enviandole el tamaño
+//RESIZE DE MEMORIA //CPU LE HACE LA PETICION DESDE estoVaParaCpuApi.go
 func Resize(w http.ResponseWriter, r *http.Request) { //hay que hacer un patch ya que vamos a estar modificando un recurso existente (la tabla de páginas)
 	queryParams := r.URL.Query()
 	tamaño := queryParams.Get("tamaño")
@@ -123,6 +121,7 @@ func Resize(w http.ResponseWriter, r *http.Request) { //hay que hacer un patch y
 	w.WriteHeader(http.StatusOK)
 	w.Write(respuesta)
 }
+//TODO: Verificar si "out of memory" se representa de esta forma
 
 func RealizarResize(tamaño int, pid int) error {
 cantPaginasActual := len(globals.Tablas_de_paginas[int(pid)])
@@ -178,8 +177,8 @@ func ReducirProceso(diferenciaEnPaginas int, pid int){
 		diferenciaEnPaginas--
 	}
 }
-
 //--------------------------------------------------------------------------------------//
+//ENVIAR MARCO A CPU
 //Busca el marco que pertenece al proceso y a la página que envía CPU, dentro del diccionario
 func BuscarMarco(pid int, pagina int) int {
 	resultado := globals.Tablas_de_paginas[pid][pagina]
@@ -190,8 +189,9 @@ func EnviarMarco(w http.ResponseWriter, r *http.Request){
 	//Ante cada peticion de CPU, dado un pid y una página, enviar frame a CPU
 	queryParams := r.URL.Query()
 	pid := queryParams.Get("pid")
-	pagina := queryParams.Get("pagina")
-	respuesta, err := json.Marshal((BuscarMarco(PasarAInt(pid), PasarAInt(pagina))))
+	direccionLogica := queryParams.Get("direccionLogica")
+	pagina := PasarAInt(direccionLogica) / globals.Configmemory.Page_size
+	respuesta, err := json.Marshal((BuscarMarco(PasarAInt(pid), pagina)))
 	if err != nil {
 		http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
 		return
@@ -200,8 +200,20 @@ func EnviarMarco(w http.ResponseWriter, r *http.Request){
 	w.WriteHeader(http.StatusOK)
 	w.Write(respuesta)
 }
+//--------------------------------------------------------------------------------------//
+//FINALIZACION DE PROCESO: PETICION DESDE KERNEL
+
+func FinalizarProceso(pid int) {
+
+
+
+}
+
+
+
 
 //--------------------------------------------------------------------------------------//
+
 // revisar si es necesario que sea slice de bytes
 func NewBitMap(size int) BitMap {
 	NewBMAp := make(BitMap,size)

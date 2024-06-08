@@ -13,10 +13,9 @@ import (
 	"github.com/sisoputnfrba/tp-golang/utils/pcb"
 )
 
-func Frame_rcv(currentPCB *pcb.T_PCB) int {
+func Frame_rcv(currentPCB *pcb.T_PCB, direccionLogica int) int {
 	//Enviamos el PID y la PAGINA a memoria
 	pid := currentPCB.PID
-	var page int //int --> pagina 
 
 	cliente := &http.Client{}
 	url := fmt.Sprintf("http://%s:%d/enviarMarco", globals.Configcpu.IP_memory,globals.Configcpu.Port_memory)
@@ -27,7 +26,7 @@ func Frame_rcv(currentPCB *pcb.T_PCB) int {
 	}
 	q := req.URL.Query()
 	q.Add("pid", strconv.Itoa(int(pid)))
-	q.Add("page", strconv.Itoa(page))
+	q.Add("page", strconv.Itoa(direccionLogica)) //paso la direccionLogica completa y no la página porque quien tiene el tamaño de la página es memoria
 	req.URL.RawQuery = q.Encode()
 
 	req.Header.Set("Content-Type", "application/json")

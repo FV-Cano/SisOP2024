@@ -3,6 +3,7 @@ package memoria_api
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -108,7 +109,7 @@ func CargarInstrucciones(w http.ResponseWriter, r *http.Request) {
 
 
 //--------------------------------------------------------------------------------------//
-//RESIZE DE MEMORIA //falta que CPU/kernel le haga la peticion enviandole el tamaño
+//RESIZE DE MEMORIA //falta que CPU le haga la peticion enviandole el tamaño
 func Resize(w http.ResponseWriter, r *http.Request) { //hay que hacer un patch ya que vamos a estar modificando un recurso existente (la tabla de páginas)
 	queryParams := r.URL.Query()
 	tamaño := queryParams.Get("tamaño")
@@ -123,27 +124,61 @@ func Resize(w http.ResponseWriter, r *http.Request) { //hay que hacer un patch y
 	w.Write(respuesta)
 }
 
-func RealizarResize(tamaño int, pid int){
+func RealizarResize(tamaño int, pid int) error {
+cantPaginasActual := len(globals.Tablas_de_paginas[int(pid)])
+	//ver cuantas paginas tiene el proceso en la tabla
 cantPaginas := tamaño / globals.Configmemory.Page_size
 //agregar a la tabla de páginas del proceso la cantidad de páginas que se le asignaron
 globals.Tablas_de_paginas[int(pid)] = make(globals.TablaPaginas, cantPaginas)
 /*make(globals.TablaPaginas, cantPaginas) crea una nueva tabla de páginas con una cantidad específica de páginas (cantPaginas).
 Cada página en la tabla es un Frame.*/
-for pagina := 0; pagina < cantPaginas; pagina++ {
-    for i := 0; i < globals.Frames; i++ {
-        if IsNotSet(i){
-            //setear el valor del marco en la tabla de páginas del proceso
-            globals.Tablas_de_paginas[pid][pagina] = globals.Frame(i)
-			//marcar marco como ocupado
-            Set(i)
-            // Salir del bucle una vez que se ha asignado un marco a la página
-            break
-        } 			
-    }
+ModificarTamañoProceso(cantPaginasActual, cantPaginas, pid)
+log.Printf("Tabla de páginas del PID %d redimensionada a %d páginas", pid, cantPaginas)
+return nil
 }
 
-log.Printf("Tabla de páginas del PID %d redimensionada a %d páginas", pid, cantPaginas)
+func ModificarTamañoProceso(tamañoProcesoActual int, tamañoProcesoNuevo int, pid int) {
+	if tamañoProcesoActual < tamañoProcesoNuevo { //ampliar proceso
+		var diferenciaEnPaginas = tamañoProcesoNuevo - tamañoProcesoActual
+		AmpliarProceso(diferenciaEnPaginas, pid)
+
+	} else { // reducir proceso
+		var diferenciaEnPaginas = tamañoProcesoActual - tamañoProcesoNuevo
+		ReducirProceso(diferenciaEnPaginas, pid)
+	}	
 }
+
+func AmpliarProceso(diferenciaEnPaginas int, pid int) error {
+	for pagina := 0; pagina < diferenciaEnPaginas; pagina++ {
+		marcoDisponible := false
+		for i := 0; i < globals.Frames; i++ { //out of memory si no hay marcos disponibles
+			if IsNotSet(i){
+				//setear el valor del marco en la tabla de páginas del proceso
+				globals.Tablas_de_paginas[pid][pagina] = globals.Frame(i)
+				//marcar marco como ocupado
+				Set(i)
+				marcoDisponible = true
+				// Salir del bucle una vez que se ha asignado un marco a la página
+				break
+			} 			
+		} 
+		if !marcoDisponible {
+            return errors.New("out of memory")
+        }
+	}
+	return nil
+}
+
+func ReducirProceso(diferenciaEnPaginas int, pid int){
+	for  (diferenciaEnPaginas > 0){
+		//obtener el marco que le corresponde a la página
+		marco := BuscarMarco(pid, diferenciaEnPaginas)
+		//marcar marco como desocupado
+		Clear(marco)
+		diferenciaEnPaginas--
+	}
+}
+
 //--------------------------------------------------------------------------------------//
 //Busca el marco que pertenece al proceso y a la página que envía CPU, dentro del diccionario
 func BuscarMarco(pid int, pagina int) int {

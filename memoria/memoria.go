@@ -45,7 +45,8 @@ func RegisteredModuleRoutes() http.Handler {
 		RouteHandlers: map[string]http.HandlerFunc{
 			"GET /instrucciones":  memoria_api.InstruccionActual,
 			"POST /instrucciones": memoria_api.CargarInstrucciones,
-			"GET /enviarMarco": memoria_api.EnviarMarco,
+			"GET /enviarMarco": memoria_api.EnviarMarco, //implementada en la MMU
+			"PATCH /resize": memoria_api.Resize, //falta implementar desde CPU
 		},
 	}
 	return moduleHandler

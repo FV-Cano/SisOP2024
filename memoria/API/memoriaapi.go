@@ -110,12 +110,12 @@ func CargarInstrucciones(w http.ResponseWriter, r *http.Request) {
 }
 
 //--------------------------------------------------------------------------------------//
-//AJUSTAR TAMAÑO DE UN PROCESO: CPU le hace la peticion desde estoVaParaCpuApi.go
+//AJUSTAR TAMANiO DE UN PROCESO: CPU le hace la peticion desde estoVaParaCpuApi.go
 func Resize(w http.ResponseWriter, r *http.Request) { //hay que hacer un patch ya que vamos a estar modificando un recurso existente (la tabla de páginas)
 	queryParams := r.URL.Query()
-	tamaño := queryParams.Get("tamaño")
+	tamanio := queryParams.Get("tamanio")
 	pid := queryParams.Get("pid")
-	respuesta, err := json.Marshal(RealizarResize(PasarAInt(tamaño), PasarAInt(pid))) //devolver error out of memory
+	respuesta, err := json.Marshal(RealizarResize(PasarAInt(tamanio), PasarAInt(pid))) //devolver error out of memory
 	if err != nil {
 		http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
 		return
@@ -126,28 +126,28 @@ func Resize(w http.ResponseWriter, r *http.Request) { //hay que hacer un patch y
 }
 
 
-func RealizarResize(tamaño int, pid int) string {
+func RealizarResize(tamanio int, pid int) string {
 cantPaginasActual := len(globals.Tablas_de_paginas[int(pid)])
 	//ver cuantas paginas tiene el proceso en la tabla
-cantPaginas := tamaño / globals.Configmemory.Page_size
+cantPaginas := tamanio / globals.Configmemory.Page_size
 //agregar a la tabla de páginas del proceso la cantidad de páginas que se le asignaron
 globals.Tablas_de_paginas[int(pid)] = make(globals.TablaPaginas, cantPaginas)
 /*make(globals.TablaPaginas, cantPaginas) crea una nueva tabla de páginas con una cantidad específica de páginas (cantPaginas).
 Cada página en la tabla es un Frame.*/
-ModificarTamañoProceso(cantPaginasActual, cantPaginas, pid)
+ModificarTamanioProceso(cantPaginasActual, cantPaginas, pid)
 log.Printf("Tabla de páginas del PID %d redimensionada a %d páginas", pid, cantPaginas)
 return "OK"
 }
 
-func ModificarTamañoProceso(tamañoProcesoActual int, tamañoProcesoNuevo int, pid int) {
-	if tamañoProcesoActual < tamañoProcesoNuevo { //ampliar proceso
-		var diferenciaEnPaginas = tamañoProcesoNuevo - tamañoProcesoActual
-		log.Printf("PID: %d - Tamaño Actual: %d - Tamaño a Ampliar: %d", pid, tamañoProcesoActual, tamañoProcesoNuevo) // verificar si en el último parámetro va diferenciaEnPaginas
+func ModificarTamanioProceso(tamanioProcesoActual int, tamanioProcesoNuevo int, pid int) {
+	if tamanioProcesoActual < tamanioProcesoNuevo { //ampliar proceso
+		var diferenciaEnPaginas = tamanioProcesoNuevo - tamanioProcesoActual
+		log.Printf("PID: %d - Tamanio Actual: %d - Tamanio a Ampliar: %d", pid, tamanioProcesoActual, tamanioProcesoNuevo) // verificar si en el último parámetro va diferenciaEnPaginas
 		AmpliarProceso(diferenciaEnPaginas, pid)
 
 	} else { // reducir proceso
-		var diferenciaEnPaginas = tamañoProcesoActual - tamañoProcesoNuevo
-		log.Printf("PID: %d - Tamaño Actual: %d - Tamaño a Reducir: %d", pid, tamañoProcesoActual, tamañoProcesoNuevo) // verificar si en el último parámetro va diferenciaEnPaginas
+		var diferenciaEnPaginas = tamanioProcesoActual - tamanioProcesoNuevo
+		log.Printf("PID: %d - Tamanio Actual: %d - Tamanio a Reducir: %d", pid, tamanioProcesoActual, tamanioProcesoNuevo) // verificar si en el último parámetro va diferenciaEnPaginas
 		ReducirProceso(diferenciaEnPaginas, pid)
 	}	
 }
@@ -179,6 +179,7 @@ func ReducirProceso(diferenciaEnPaginas int, pid int){
 		//obtener el marco que le corresponde a la página
 		marco := BuscarMarco(pid, diferenciaEnPaginas)
 		//marcar marco como desocupado
+		globals.Tablas_de_paginas[pid] = append(globals.Tablas_de_paginas[pid][:diferenciaEnPaginas], globals.Tablas_de_paginas[pid][diferenciaEnPaginas+1:]...)
 		Clear(marco)
 		diferenciaEnPaginas--
 	}
@@ -191,18 +192,19 @@ func BuscarMarco(pid int, pagina int) int {
 	return int(resultado)
 	}
 
+
 func EnviarMarco(w http.ResponseWriter, r *http.Request){
 	//Ante cada peticion de CPU, dado un pid y una página, enviar frame a CPU
+	
 	queryParams := r.URL.Query()
 	pid := queryParams.Get("pid")
-	direccionLogica := queryParams.Get("direccionLogica")
-	pagina := PasarAInt(direccionLogica) / globals.Configmemory.Page_size
-	respuesta, err := json.Marshal((BuscarMarco(PasarAInt(pid), pagina)))
+	pagina := queryParams.Get("pagina")
+	respuesta, err := json.Marshal(BuscarMarco(PasarAInt(pid), PasarAInt(pagina)))
 	if err != nil {
 		http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
 		return
 	}
-	log.Printf("PID: %d - Pagina %d - Marco %d", PasarAInt(pid), pagina, BuscarMarco(PasarAInt(pid), pagina))
+	log.Printf("PID: %d - Pagina %d - Marco %d", PasarAInt(pid), PasarAInt(pagina), BuscarMarco(PasarAInt(pid), PasarAInt(pagina)))
 	w.WriteHeader(http.StatusOK)
 	w.Write(respuesta)
 }
@@ -219,7 +221,7 @@ func FinalizarProceso(w http.ResponseWriter, r *http.Request) {
 //ACCESO A ESPACIO DE USUARIO: Esta petición puede venir tanto de la CPU como de un Módulo de Interfaz de I/O
 type BodyRequestLeer struct {
 	Direccion_fisica int `json:"direccion_fisica"`
-	Tamaño int `json:"tamaño"`
+	Tamanio int `json:"tamanio"`
 }
 
 func LeerMemoria(w http.ResponseWriter, r *http.Request) {
@@ -229,7 +231,7 @@ func LeerMemoria(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	respuesta, err := json.Marshal(LeerDeMemoria(request.Direccion_fisica, request.Tamaño))
+	respuesta, err := json.Marshal(LeerDeMemoria(request.Direccion_fisica, request.Tamanio))
 	if err != nil {
 		http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
 		return
@@ -240,11 +242,11 @@ func LeerMemoria(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write(respuesta)
 }
-
-func LeerDeMemoria(direccion_fisica int, tamaño int) string {
+//lista de struct
+func LeerDeMemoria(direccion_fisica int, tamanio int) string {
 	/*Ante un pedido de lectura, devolver el valor que se encuentra a partir de la dirección física pedida.*/
-	if (direccion_fisica + tamaño) < len(globals.User_Memory) { //
-	 contenido := globals.User_Memory[direccion_fisica : direccion_fisica+tamaño] //ver si hay que restar bytes o si está ok
+	if (direccion_fisica + tamanio) < len(globals.User_Memory) { //
+	 contenido := globals.User_Memory[direccion_fisica : direccion_fisica+tamanio] //ver si hay que restar bytes o si está ok
 	 return string(contenido)
 	} else{
 		return "Error: dirección fuera de rango"
@@ -281,7 +283,7 @@ func EscribirEnMemoria(direccion_fisica int, valor string, desplazamiento int) s
      En caso satisfactorio se responderá un mensaje de ‘OK’.*/
     bytesValor := []byte(valor)
     if  (len(bytesValor) > globals.Configmemory.Page_size - desplazamiento) { //TODO: validar si no le alcanza una pagina
-        return "Error: dirección o tamaño fuera de rango"
+        return "Error: dirección o tamanio fuera de rango"
     }
     copy(globals.User_Memory[direccion_fisica:], bytesValor)
     return "OK"
@@ -306,4 +308,16 @@ func Clear(i int) {
 
 func IsNotSet(i int) bool {
   	return  globals.CurrentBitMap[i] == 0
+}
+
+//--------------------------------------------------------------------------------------//
+func Page_size(w http.ResponseWriter, r *http.Request) {
+	respuesta, err := json.Marshal(globals.Configmemory.Page_size)
+	if err != nil {
+		http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(respuesta)
 }

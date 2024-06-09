@@ -255,6 +255,9 @@ func LeerDeMemoria(direccion_fisica int, tamaño int) string {
 type BodyRequestEscribir struct {
 	Direccion_fisica int `json:"direccion_fisica"`
 	Valor_a_escribir string `json:"valor_a_escribir"`
+	Desplazamiento int `json:"desplazamiento"`
+	
+
 }
 
 func EscribirMemoria(w http.ResponseWriter, r *http.Request) {
@@ -265,7 +268,7 @@ func EscribirMemoria(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respuesta, err := json.Marshal(EscribirEnMemoria(request.Direccion_fisica, request.Valor_a_escribir))
+	respuesta, err := json.Marshal(EscribirEnMemoria(request.Direccion_fisica, request.Valor_a_escribir, request.Desplazamiento))
 	if err != nil {
 		http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
 		return
@@ -275,16 +278,18 @@ func EscribirMemoria(w http.ResponseWriter, r *http.Request) {
 	w.Write(respuesta)
 }
 
-func EscribirEnMemoria(direccion_fisica int, valor string) string { //TODO: tenemos que validar que al proceso le corresponda escribir ahí o ya la validación la hizo cpu al traducir la dirección?
+func EscribirEnMemoria(direccion_fisica int, valor string, desplazamiento int) string { //TODO: tenemos que validar que al proceso le corresponda escribir ahí o ya la validación la hizo cpu al traducir la dirección?
 	/*Ante un pedido de escritura, escribir lo indicado a partir de la dirección física pedida.
-	 En caso satisfactorio se responderá un mensaje de ‘OK’.
-	*/
-	/*if(){
-		globals.User_Memory[direccion_fisica] = byte(valor)
-	return "OK"
-	} */
-	return "Error: No se pudo completar la operacion"
-	
+     En caso satisfactorio se responderá un mensaje de ‘OK’.
+    */
+    bytesValor := []byte(valor)
+    if  (direccion_fisica + len(bytesValor) > len(bytesValor) - desplazamiento) { //todo: validar si no le alcanza una pagina
+        return "Error: dirección o tamaño fuera de rango"
+    }
+
+    copy(globals.User_Memory[direccion_fisica:], bytesValor)
+
+    return "OK"
 }
 //TODO: Cada petición tendrá un tiempo de espera en milisegundos definido por archivo de configuración.
 

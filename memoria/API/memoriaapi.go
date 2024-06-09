@@ -213,13 +213,7 @@ func FinalizarProceso(w http.ResponseWriter, r *http.Request) {
 	queryParams := r.URL.Query()
 	pid := queryParams.Get("pid")
 	ReducirProceso(len(globals.Tablas_de_paginas[PasarAInt(pid)]), PasarAInt(pid))
-//	respuesta, err := json.Marshal() 
-//	if err != nil {
-//	http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
-//	return
-//}
 	w.WriteHeader(http.StatusOK)
-//  w.Write(respuesta)
 }
 //--------------------------------------------------------------------------------------//
 //ACCESO A ESPACIO DE USUARIO: Esta petición puede venir tanto de la CPU como de un Módulo de Interfaz de I/O

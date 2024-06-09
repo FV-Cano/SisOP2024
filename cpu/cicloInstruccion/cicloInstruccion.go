@@ -96,6 +96,15 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 	}
 
 	switch instruccionDecodificada[0] {
+		case "MOV_IN":
+			// MOV_IN (Registro Destino, Registro Dirección): Mueve el contenido del Registro Dirección (DL) al Registro Destino.
+
+		case "MOV_OUT":
+			// MOV_OUT (Registro Dirección, Registro Origen): Mueve el contenido del Registro Origen al Registro Dirección (DL).
+		
+		case "COPY_STRING":
+			// COPY_STRING (Longitud): Copia la cantidad de bytes indicadas por la Longitud desde el Registro SI (que apunta a un string) al Registro Destino DI (que apunta a una posicion de memoria).
+
 		case "IO_GEN_SLEEP":
 			tiempo_esp, err := strconv.Atoi(instruccionDecodificada[2])
 			if err != nil {

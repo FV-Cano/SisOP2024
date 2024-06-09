@@ -280,13 +280,12 @@ func EscribirEnMemoria(direccion_fisica int, valor string, desplazamiento int) s
 	/*Ante un pedido de escritura, escribir lo indicado a partir de la dirección física pedida.
      En caso satisfactorio se responderá un mensaje de ‘OK’.*/
     bytesValor := []byte(valor)
-    if  (direccion_fisica + len(bytesValor) > len(bytesValor) - desplazamiento) { //TODO: validar si no le alcanza una pagina
+    if  (direccion_fisica + len(bytesValor) > globals.Configmemory.Page_size - desplazamiento) { //TODO: validar si no le alcanza una pagina
         return "Error: dirección o tamaño fuera de rango"
     }
     copy(globals.User_Memory[direccion_fisica:], bytesValor)
     return "OK"
 }
-
 //--------------------------------------------------------------------------------------//
 // BITMAP AUXILIAR
 func NewBitMap(size int) BitMap {

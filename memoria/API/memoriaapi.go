@@ -106,7 +106,7 @@ func CargarInstrucciones(w http.ResponseWriter, r *http.Request) {
 }
 
 //--------------------------------------------------------------------------------------//
-//RESIZE DE MEMORIA //CPU LE HACE LA PETICION DESDE estoVaParaCpuApi.go
+//AJUSTAR TAMAÑO DE UN PROCESO: CPU le hace la peticion desde estoVaParaCpuApi.go
 func Resize(w http.ResponseWriter, r *http.Request) { //hay que hacer un patch ya que vamos a estar modificando un recurso existente (la tabla de páginas)
 	queryParams := r.URL.Query()
 	tamaño := queryParams.Get("tamaño")
@@ -120,7 +120,7 @@ func Resize(w http.ResponseWriter, r *http.Request) { //hay que hacer un patch y
 	w.WriteHeader(http.StatusOK)
 	w.Write(respuesta)
 }
-//TODO: Verificar si "out of memory" se representa de esta forma
+
 
 func RealizarResize(tamaño int, pid int) string {
 cantPaginasActual := len(globals.Tablas_de_paginas[int(pid)])
@@ -138,10 +138,12 @@ return "OK"
 func ModificarTamañoProceso(tamañoProcesoActual int, tamañoProcesoNuevo int, pid int) {
 	if tamañoProcesoActual < tamañoProcesoNuevo { //ampliar proceso
 		var diferenciaEnPaginas = tamañoProcesoNuevo - tamañoProcesoActual
+		log.Printf("PID: %d - Tamaño Actual: %d - Tamaño a Ampliar: %d", pid, tamañoProcesoActual, tamañoProcesoNuevo) // verificar si en el último parámetro va diferenciaEnPaginas
 		AmpliarProceso(diferenciaEnPaginas, pid)
 
 	} else { // reducir proceso
 		var diferenciaEnPaginas = tamañoProcesoActual - tamañoProcesoNuevo
+		log.Printf("PID: %d - Tamaño Actual: %d - Tamaño a Reducir: %d", pid, tamañoProcesoActual, tamañoProcesoNuevo) // verificar si en el último parámetro va diferenciaEnPaginas
 		ReducirProceso(diferenciaEnPaginas, pid)
 	}	
 }
@@ -165,6 +167,7 @@ func AmpliarProceso(diferenciaEnPaginas int, pid int) string {
         }
 	}
 	return "OK"
+
 }
 
 func ReducirProceso(diferenciaEnPaginas int, pid int){
@@ -177,7 +180,7 @@ func ReducirProceso(diferenciaEnPaginas int, pid int){
 	}
 }
 //--------------------------------------------------------------------------------------//
-//ENVIAR MARCO A CPU
+//ACCESO A TABLA DE PAGINAS: PETICION DESDE CPU (GET)
 //Busca el marco que pertenece al proceso y a la página que envía CPU, dentro del diccionario
 func BuscarMarco(pid int, pagina int) int {
 	resultado := globals.Tablas_de_paginas[pid][pagina]
@@ -195,7 +198,7 @@ func EnviarMarco(w http.ResponseWriter, r *http.Request){
 		http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
 		return
 	}
-
+	log.Printf("PID: %d - Pagina %d - Marco %d", PasarAInt(pid), pagina, BuscarMarco(PasarAInt(pid), pagina))
 	w.WriteHeader(http.StatusOK)
 	w.Write(respuesta)
 }
@@ -215,8 +218,78 @@ func FinalizarProceso(w http.ResponseWriter, r *http.Request) {
 //  w.Write(respuesta)
 }
 //--------------------------------------------------------------------------------------//
+//ACCESO A ESPACIO DE USUARIO: Esta petición puede venir tanto de la CPU como de un Módulo de Interfaz de I/O
 
-// revisar si es necesario que sea slice de bytes
+type BodyRequestLeer struct {
+	Direccion_fisica int `json:"direccion_fisica"`
+	Tamaño int `json:"tamaño"`
+}
+
+func LeerMemoria(w http.ResponseWriter, r *http.Request) {
+	var request BodyRequestLeer
+	err := json.NewDecoder(r.Body).Decode(&request)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	respuesta, err := json.Marshal(LeerDeMemoria(request.Direccion_fisica, request.Tamaño))
+	if err != nil {
+		http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(respuesta)
+}
+
+func LeerDeMemoria(direccion_fisica int, tamaño int) string {
+	/*Ante un pedido de lectura, devolver el valor que se encuentra a partir de la dirección física pedida.*/
+	if (direccion_fisica + tamaño) < len(globals.User_Memory) { //
+	 contenido := globals.User_Memory[direccion_fisica : direccion_fisica+tamaño] //ver si hay que restar bytes o si está ok
+	 return string(contenido)
+	} else{
+		return "Error: dirección fuera de rango"
+	}
+}
+
+type BodyRequestEscribir struct {
+	Direccion_fisica int `json:"direccion_fisica"`
+	Valor_a_escribir string `json:"valor_a_escribir"`
+}
+
+func EscribirMemoria(w http.ResponseWriter, r *http.Request) {
+	var request BodyRequestEscribir
+	err := json.NewDecoder(r.Body).Decode(&request)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	respuesta, err := json.Marshal(EscribirEnMemoria(request.Direccion_fisica, request.Valor_a_escribir))
+	if err != nil {
+		http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(respuesta)
+}
+
+func EscribirEnMemoria(direccion_fisica int, valor string) string { //TODO: tenemos que validar que al proceso le corresponda escribir ahí o ya la validación la hizo cpu al traducir la dirección?
+	/*Ante un pedido de escritura, escribir lo indicado a partir de la dirección física pedida.
+	 En caso satisfactorio se responderá un mensaje de ‘OK’.
+	*/
+	/*if(){
+		globals.User_Memory[direccion_fisica] = byte(valor)
+	return "OK"
+	} */
+	return "Error: No se pudo completar la operacion"
+	
+}
+//TODO: Cada petición tendrá un tiempo de espera en milisegundos definido por archivo de configuración.
+
+//--------------------------------------------------------------------------------------//
+// BITMAP AUXILIAR
 func NewBitMap(size int) BitMap {
 	NewBMAp := make(BitMap,size)
 	for i := 0; i < size; i++ {

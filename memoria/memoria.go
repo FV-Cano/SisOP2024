@@ -47,6 +47,9 @@ func RegisteredModuleRoutes() http.Handler {
 			"POST /instrucciones": memoria_api.CargarInstrucciones,
 			"GET /enviarMarco": memoria_api.EnviarMarco, //implementada en la MMU
 			"PATCH /resize": memoria_api.Resize, //falta implementar desde CPU
+			"PATCH /finalizarProceso": memoria_api.FinalizarProceso, //falta implementar desde KERNEL
+			"GET /read": memoria_api.LeerMemoria, //falta implementar desde cliente
+			"POST /write": memoria_api.EscribirMemoria, //falta implementar desde cliente
 		},
 	}
 	return moduleHandler

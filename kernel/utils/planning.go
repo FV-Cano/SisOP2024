@@ -127,7 +127,7 @@ func EvictionManagement() {
 	evictionReason := globals.CurrentJob.EvictionReason
 
 	switch evictionReason {
-	case "BLOCKED_IO":
+	case "BLOCKED_IO_GEN":
 		globals.ChangeState(&globals.CurrentJob, "BLOCKED")
 		enganiaPichanga := globals.CurrentJob
 		go func(){
@@ -136,6 +136,16 @@ func EvictionManagement() {
 		}()
 		globals.JobExecBinary <- true
 		
+	case "BLOCKED_IO_STD":
+		globals.ChangeState(&globals.CurrentJob, "BLOCKED")
+		
+		<- globals.AvailablePcb
+
+		globals.ChangeState(&globals.CurrentJob, "READY")
+		globals.STS = append(globals.STS, globals.CurrentJob) // diferente en el caso de VRR
+		globals.MultiprogrammingCounter <- int(globals.CurrentJob.PID)
+		globals.JobExecBinary <- true
+
 	case "TIMEOUT":
 		globals.ChangeState(&globals.CurrentJob, "READY")
 		globals.STS = append(globals.STS, globals.CurrentJob)

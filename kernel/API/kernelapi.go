@@ -396,11 +396,11 @@ func ExisteInterfaz(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Device not found", http.StatusNotFound)
 	}
 	
-	var response bool
+	var response device.T_IOInterface
 	if aux.InterfaceType == received_data.Type {
-		response = true
+		response = aux
 	} else {
-		response = false
+		http.Error(w, "Device type not match", http.StatusNotFound)
 	}
 
 	jsonResp, err := json.Marshal(response)
@@ -486,4 +486,74 @@ func SolicitarGenSleep(pcb pcb.T_PCB) {
 
 	genPCB.State = "READY"
 	slice.Push(&globals.STS, genPCB)
+}
+
+func IOStdinRead(w http.ResponseWriter, r *http.Request) {
+	var infoRecibida struct {
+		direccionesFisicas []T_DireccionFisica
+		interfaz device.T_IOInterface
+	}
+	
+	err := json.NewDecoder(r.Body).Decode(&infoRecibida)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Da la orden a la interfaz STDIN de leer			
+	url := fmt.Sprintf("http://%s:%d/io-stdin-read", infoRecibida.interfaz.InterfaceIP, infoRecibida.interfaz.InterfacePort)
+
+	bodyStdin, err := json.Marshal(infoRecibida.direccionesFisicas)
+	if err != nil {
+		log.Printf("Failed to encode adresses: %v", err)
+	}
+
+	response, err := http.Post(url, "application/json", bytes.NewBuffer(bodyStdin))
+	if err != nil {
+		log.Printf("Failed to send adresses: %v", err)
+	}
+
+	if response.StatusCode != http.StatusOK {
+		log.Printf("Unexpected response status: %s", response.Status)
+	}
+
+	log.Printf("Kernel mandó a leer a la interfaz: ", infoRecibida.InterfaceType, infoRecibida.InterfacePort)
+
+	globals.AvailablePcb <- true
+	w.WriteHeader(http.StatusOK)
+}
+
+func IOStdoutWrite(w http.ResponseWriter, r *http.Request) {
+	var infoRecibida struct {
+		direccionesFisicas []T_DireccionFisica
+		interfaz device.T_IOInterface
+	}
+	
+	err := json.NewDecoder(r.Body).Decode(&infoRecibida)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Da la orden a la interfaz STDOUT de mostrar por pantalla la salida			
+	url := fmt.Sprintf("http://%s:%d/io-stdout-write", infoRecibida.interfaz.InterfaceIP, infoRecibida.interfaz.InterfacePort)
+
+	bodyStdout, err := json.Marshal(infoRecibida.direccionesFisicas)
+	if err != nil {
+		log.Printf("Failed to encode adresses: %v", err)
+	}
+
+	response, err := http.Post(url, "application/json", bytes.NewBuffer(bodyStdout))
+	if err != nil {
+		log.Printf("Failed to send adresses: %v", err)
+	}
+
+	if response.StatusCode != http.StatusOK {
+		log.Printf("Unexpected response status: %s", response.Status)
+	}
+
+	log.Printf("Kernel mandó a escribir a la interfaz: ", infoRecibida.InterfaceType, infoRecibida.InterfacePort)
+
+	globals.AvailablePcb <- true
+	w.WriteHeader(http.StatusOK)
 }

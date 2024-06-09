@@ -9,6 +9,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/sisoputnfrba/tp-golang/memoria/globals"
 )
@@ -42,9 +43,12 @@ func InstruccionActual(w http.ResponseWriter, r *http.Request) {
 	}
 	
 	log.Printf("La instruccion buscada fue: %s", BuscarInstruccionMap(PasarAInt(pc), PasarAInt(pid)))
+	
+	time.Sleep(time.Duration(globals.Configmemory.Delay_response))
 
 	w.WriteHeader(http.StatusOK)
 	w.Write(respuesta)
+
 }
 
 func BuscarInstruccionMap(pc int, pid int) string {
@@ -219,7 +223,6 @@ func FinalizarProceso(w http.ResponseWriter, r *http.Request) {
 }
 //--------------------------------------------------------------------------------------//
 //ACCESO A ESPACIO DE USUARIO: Esta petición puede venir tanto de la CPU como de un Módulo de Interfaz de I/O
-
 type BodyRequestLeer struct {
 	Direccion_fisica int `json:"direccion_fisica"`
 	Tamaño int `json:"tamaño"`
@@ -237,6 +240,8 @@ func LeerMemoria(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
 		return
 	}
+	
+	time.Sleep(time.Duration(globals.Configmemory.Delay_response) * time.Millisecond) //nos dan los milisegundos o lo dejamos así?
 
 	w.WriteHeader(http.StatusOK)
 	w.Write(respuesta)
@@ -251,13 +256,10 @@ func LeerDeMemoria(direccion_fisica int, tamaño int) string {
 		return "Error: dirección fuera de rango"
 	}
 }
-
 type BodyRequestEscribir struct {
 	Direccion_fisica int `json:"direccion_fisica"`
 	Valor_a_escribir string `json:"valor_a_escribir"`
 	Desplazamiento int `json:"desplazamiento"`
-	
-
 }
 
 func EscribirMemoria(w http.ResponseWriter, r *http.Request) {
@@ -274,24 +276,22 @@ func EscribirMemoria(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	time.Sleep(time.Duration(globals.Configmemory.Delay_response) * time.Millisecond) //nos dan los milisegundos o lo dejamos así?
+
 	w.WriteHeader(http.StatusOK)
 	w.Write(respuesta)
 }
 
 func EscribirEnMemoria(direccion_fisica int, valor string, desplazamiento int) string { //TODO: tenemos que validar que al proceso le corresponda escribir ahí o ya la validación la hizo cpu al traducir la dirección?
 	/*Ante un pedido de escritura, escribir lo indicado a partir de la dirección física pedida.
-     En caso satisfactorio se responderá un mensaje de ‘OK’.
-    */
+     En caso satisfactorio se responderá un mensaje de ‘OK’.*/
     bytesValor := []byte(valor)
     if  (direccion_fisica + len(bytesValor) > len(bytesValor) - desplazamiento) { //todo: validar si no le alcanza una pagina
         return "Error: dirección o tamaño fuera de rango"
     }
-
     copy(globals.User_Memory[direccion_fisica:], bytesValor)
-
     return "OK"
 }
-//TODO: Cada petición tendrá un tiempo de espera en milisegundos definido por archivo de configuración.
 
 //--------------------------------------------------------------------------------------//
 // BITMAP AUXILIAR

@@ -112,10 +112,12 @@ func DecodeAndExecute(w http.ResponseWriter, r *http.Request, currentPCB *pcb.T_
 		cantDirecciones := len(direcsFisicas)
 
 		for i := 0; i < cantDirecciones; i++ {
+			tamanio := currentPCB.CPU_reg["DI"] - currentPCB.CPU_reg["SI"]
+			// a chequear lo de tamanio y el error que tira
 			requestBody := BodyRequestEscribir{
 				Direccion_fisica: direcsFisicas[i].direccion_fisica,
 				Valor_a_escribir: instruccionDecodificada[2],
-				Desplazamiento:   3,
+				Desplazamiento:   tamanio,
 			}
 			SolicitarEscritura(w, r, requestBody)
 
@@ -128,14 +130,16 @@ func DecodeAndExecute(w http.ResponseWriter, r *http.Request, currentPCB *pcb.T_
 		// en el Registro Dirección y lo almacena en el Registro Datos.
 
 	case "MOV_IN":
-		//TODO,DE DONDE SALE EL TAM?*/
+
 		direcsFisicas := ObtenerDireccionesFisicas(PasarAInt(instruccionDecodificada[2]), 5, int(currentPCB.PID))
 		cantDirecciones := len(direcsFisicas)
 
 		for i := 0; i < cantDirecciones; i++ {
+			tamanio := currentPCB.CPU_reg["DI"] - currentPCB.CPU_reg["SI"]
+			// a chequear lo de tamanio
 			requestBody := BodyRequestLeer{
 				Direccion_fisica: direcsFisicas[i].direccion_fisica,
-				Tamanio:          3,
+				Tamanio:          tamanio,
 			}
 			datos := SolicitarLectura(w, r, requestBody)
 			currentPCB.CPU_reg[instruccionDecodificada[1]] = datos

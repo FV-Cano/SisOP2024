@@ -15,10 +15,12 @@ import (
 	"github.com/sisoputnfrba/tp-golang/utils/slice"
 )
 
-var quantum int
-
 func LTS_Plan() {
 	for {
+		// Si la lista de jobs está vacía, esperar a que tenga al menos uno
+		if len(globals.LTS) == 0 {
+			globals.EmptiedListMutex.Lock()
+		}
 		auxJob := slice.Shift(&globals.LTS)
 		globals.MultiprogrammingCounter <- int(auxJob.PID)
 		globals.ChangeState(&auxJob, "READY")
@@ -38,21 +40,27 @@ func STS_Plan() {
 			<- globals.PlanBinary
 			
 		}
-		// FIFO
+		
 	case "RR":
-		quantum = globals.Configkernel.Quantum * int(time.Millisecond)
 		log.Println("ROUND ROBIN algorithm")
+		quantum := uint32(globals.Configkernel.Quantum * int(time.Millisecond))
 		for {
 			globals.PlanBinary <- true
 			//log.Println("RR Planificandoooo")
-			RR_Plan()
+			RR_Plan(quantum)
 			<- globals.JobExecBinary
 			<- globals.PlanBinary
 		}
-		// RR
+		
 	case "VRR":
 		log.Println("VIRTUAL ROUND ROBIN algorithm")
-		// VRR
+		for {
+			globals.PlanBinary <- true
+			VRR_Plan()
+			<- globals.JobExecBinary
+			<- globals.PlanBinary
+		}
+
 	default:
 		log.Fatalf("Not a planning algorithm")
 	}
@@ -60,47 +68,6 @@ func STS_Plan() {
 
 type T_Quantum struct {
 	TimeExpired chan bool
-}
-
-/**
-  - RR_Plan
-*/
-func RR_Plan() {
-	// 1. Tomo el primer proceso de la lista y lo quito de la misma
-	globals.CurrentJob = slice.Shift(&globals.STS)
-
-	// 2. Cambio su estado a EXEC
-	globals.ChangeState(&globals.CurrentJob, "EXEC")
-
-	// 3. Envío el PCB al CPU
-	go startTimer()
-	kernel_api.PCB_Send() // <-- Envía proceso y espera respuesta
-
-	// 4. Esperar a que el proceso termine o sea desalojado por el timer
-	<- globals.PcbReceived
-
-	// fmt.Println("REGISTROS: ", globals.CurrentJob.CPU_reg)
-	// fmt.Println("EVICTION REASON: ", globals.CurrentJob.EvictionReason)
-
-	// 5. Manejo de desalojo
-	EvictionManagement()
-}
-
-func startTimer() {
-	quantumTime := time.Duration(quantum)
-	auxPcb := globals.CurrentJob
-	time.Sleep(quantumTime)
-	
-	quantumInterrupt(auxPcb)
-}
-
-func quantumInterrupt(pcb pcb.T_PCB) {
-	// Interrumpir proceso actual, response = OK message
-	SendInterrupt("QUANTUM", pcb.PID)
-	
-	if globals.CurrentJob.EvictionReason == "TIMEOUT" {
-		log.Printf("PID: %d - Desalojado por fin de quantum\n", globals.CurrentJob.PID)
-	}
 }
 
 /**
@@ -124,6 +91,77 @@ func FIFO_Plan() {
 }
 
 /**
+  - RR_Plan
+*/
+func RR_Plan(quantum uint32) {
+	globals.EnganiaPichangaMutex.Lock()
+	// 1. Tomo el primer proceso de la lista y lo quito de la misma
+	globals.CurrentJob = slice.Shift(&globals.STS)
+
+	// 2. Cambio su estado a EXEC
+	globals.ChangeState(&globals.CurrentJob, "EXEC")
+	globals.EnganiaPichangaMutex.Unlock()
+
+	// 3. Envío el PCB al CPU
+	go startTimer(quantum)
+	kernel_api.PCB_Send() // <-- Envía proceso y espera respuesta
+
+	// 4. Esperar a que el proceso termine o sea desalojado por el timer
+	<- globals.PcbReceived
+
+	// fmt.Println("REGISTROS: ", globals.CurrentJob.CPU_reg)
+	// fmt.Println("EVICTION REASON: ", globals.CurrentJob.EvictionReason)
+
+	// 5. Manejo de desalojo
+	EvictionManagement()
+}
+
+func VRR_Plan() {
+	globals.EnganiaPichangaMutex.Lock()
+	if len(globals.STS_Priority) == 0 {
+		globals.CurrentJob = slice.Shift(&globals.STS)
+	} else {
+		globals.CurrentJob = slice.Shift(&globals.STS_Priority)
+	}
+	
+	globals.ChangeState(&globals.CurrentJob, "EXEC")
+	globals.EnganiaPichangaMutex.Unlock()
+
+	timeBefore := time.Now()
+	go startTimer(globals.CurrentJob.Quantum)
+	kernel_api.PCB_Send()
+	timeAfter := time.Now()
+
+	<- globals.PcbReceived
+
+	diffTime := uint32(timeAfter.Sub(timeBefore))
+	if diffTime < globals.CurrentJob.Quantum {
+		globals.CurrentJob.Quantum -= diffTime
+	} else {
+		globals.CurrentJob.Quantum = uint32(globals.Configkernel.Quantum)
+	}
+
+	EvictionManagement()
+}
+
+func startTimer(quantum uint32) {
+	quantumTime := time.Duration(quantum)
+	auxPcb := globals.CurrentJob
+	time.Sleep(quantumTime)
+	
+	quantumInterrupt(auxPcb)
+}
+
+func quantumInterrupt(pcb pcb.T_PCB) {
+	// Interrumpir proceso actual, response = OK message
+	SendInterrupt("QUANTUM", pcb.PID)
+	
+	if globals.CurrentJob.EvictionReason == "TIMEOUT" {
+		log.Printf("PID: %d - Desalojado por fin de quantum\n", globals.CurrentJob.PID)
+	}
+}
+
+/**
   - EvictionManagement
 
   - [ ] Implementar caso de desalojo por bloqueo
@@ -136,11 +174,12 @@ func EvictionManagement() {
 
 	switch evictionReason {
 	case "BLOCKED_IO":
+		globals.EnganiaPichangaMutex.Lock()
 		globals.ChangeState(&globals.CurrentJob, "BLOCKED")
 		slice.Push(&globals.Blocked, globals.CurrentJob)
-		enganiaPichanga := globals.CurrentJob
+		<- globals.MultiprogrammingCounter
 		go func(){
-			kernel_api.SolicitarGenSleep(enganiaPichanga)
+			kernel_api.SolicitarGenSleep(globals.CurrentJob)
 		}()
 		globals.JobExecBinary <- true
 		

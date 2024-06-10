@@ -15,6 +15,7 @@ var (
 	LTS 				[]pcb.T_PCB
 	STS 				[]pcb.T_PCB
 	Blocked 			[]pcb.T_PCB
+	STS_Priority 		[]pcb.T_PCB
 	Interfaces 			[]device.T_IOInterface
 	ResourceMap			map[string][]pcb.T_PCB
 	Resource_instances  map[string]int
@@ -29,6 +30,8 @@ var (
 		STSMutex 				sync.Mutex
 		LTSMutex 				sync.Mutex
 		MapMutex 				sync.Mutex
+		EmptiedListMutex		sync.Mutex
+		EnganiaPichangaMutex	sync.Mutex
 	// * Binarios
 		PlanBinary  			= make (chan bool, 1)
 		JobExecBinary			= make (chan bool, 1)

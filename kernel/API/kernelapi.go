@@ -60,7 +60,7 @@ func ProcessInit(w http.ResponseWriter, r *http.Request) {
 	newPcb := &pcb.T_PCB{
 		PID: 			generatePID(),
 		PC: 			0,
-		Quantum: 		0,
+		Quantum: 		uint32(globals.Configkernel.Quantum),
 		CPU_reg: 		map[string]interface{}{
 							"AX": uint8(0),
 							"BX": uint8(0),
@@ -80,6 +80,11 @@ func ProcessInit(w http.ResponseWriter, r *http.Request) {
 	globals.LTSMutex.Lock()
 	slice.Push(&globals.LTS, *newPcb)
 	defer globals.LTSMutex.Unlock()
+
+	// Si la lista estaba vacía, la desbloqueo
+	if len(globals.LTS) == 1 {
+		globals.EmptiedListMutex.Unlock()
+	}
 
 	var respBody ProcessStart_BRS = ProcessStart_BRS{PID: newPcb.PID}
 
@@ -215,8 +220,7 @@ type ProcessList_BRS struct {
  * ProcessList: Devuelve una lista de procesos con su PID y estado
 */
 func ProcessList(w http.ResponseWriter, r *http.Request) {
-	allProcesses := append(globals.LTS, globals.STS...)
-	allProcesses = append(allProcesses, globals.Blocked...)
+	allProcesses := getProcessList()
 
 	// Formateo los procesos para devolverlos
 	respBody := make([]ProcessList_BRS, len(allProcesses))
@@ -232,6 +236,19 @@ func ProcessList(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	w.Write(response)
+}
+
+/**
+ * getProcessList: Devuelve una lista de todos los procesos en el sistema (LTS, STS, Blocked, STS_Priority, CurrentJob)
+
+ * @return []pcb.T_PCB: Lista de procesos
+*/
+func getProcessList() []pcb.T_PCB {
+	allProcesses := append(globals.LTS, globals.STS...)
+	allProcesses = append(allProcesses, globals.Blocked...)
+	allProcesses = append(allProcesses, globals.STS_Priority...)
+	allProcesses = append(allProcesses, globals.CurrentJob)
+	return allProcesses
 }
 
 /**
@@ -462,6 +479,8 @@ func SolicitarGenSleep(pcb pcb.T_PCB) {
 		Inter: newInter, 
 		TimeToSleep: genIntTime.WTime,
 	}
+
+	globals.EnganiaPichangaMutex.Unlock()
 	
 	jsonData, err := json.Marshal(genSleep)
 	if err != nil {

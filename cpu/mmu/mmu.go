@@ -81,13 +81,12 @@ type Direccion_y_tamanio struct {
 	tamanio int
 }
 
+
 func ObtenerDireccionesFisicas(direccionLogica int, tamanio int, pid int) []Direccion_y_tamanio { 
 	var direccion_y_tamanio []Direccion_y_tamanio
 	tamPagina := SolicitarTamPagina()
-
 	numeroPagina := direccionLogica/tamPagina
-	frame := Frame_rcv(&globals.CurrentJob, numeroPagina)
-	
+	frame := Frame_rcv(&globals.CurrentJob, numeroPagina) 
 	desplazamiento := direccionLogica - numeroPagina*tamPagina
 	cantidadPaginas := tamanio/tamPagina
 
@@ -106,8 +105,6 @@ func ObtenerDireccionesFisicas(direccionLogica int, tamanio int, pid int) []Dire
 	}
 	return direccion_y_tamanio
 }
-
-
 func bytesToInt(b []byte) uint32 {
     return binary.BigEndian.Uint32(b)
 }

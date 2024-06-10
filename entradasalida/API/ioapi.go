@@ -86,6 +86,17 @@ func IOGenSleep(w http.ResponseWriter, r *http.Request) {
 }
 
 func IOStdinRead(w http.ResponseWriter, r *http.Request) {
+	var infoRecibida struct {
+		direccionesFisicas []T_DireccionFisica
+		tamanio int
+	}
+	
+	err := json.NewDecoder(r.Body).Decode(&infoRecibida)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	
 	// Lee datos de la entrada
 	reader := bufio.NewReader(os.Stdin)
 	data, _ := reader.ReadString('\n')
@@ -93,7 +104,11 @@ func IOStdinRead(w http.ResponseWriter, r *http.Request) {
 	// Le pido a memoria que me guarde los datos
 	url := fmt.Sprintf("http://%s:%d/write", globals.ConfigIO.Ip_memory, globals.ConfigIO.Port_memory)
 
-	bodyWrite, err := json.Marshal(data)
+	bodyWrite, err := json.Marshal(struct {
+		data string
+		direccionesFisicas []T_DireccionFisica
+		tamanio int
+	} {data, infoRecibida.direccionesFisicas, infoRecibida.tamanio})
 	if err != nil {
 		log.Printf("Failed to encode data: %v", err)
 	}

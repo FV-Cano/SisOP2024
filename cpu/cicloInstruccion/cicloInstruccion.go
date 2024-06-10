@@ -132,6 +132,8 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		
 				// Obtener la cantidad de datos a leer desde el registro
 				dataSize := currentPCB.CPU_reg[instruccionDecodificada[3]]
+				tipoActualReg3 := reflect.TypeOf(currentPCB.CPU_reg[instruccionDecodificada[3]]).String()
+				dataSizeInt := int(Convertir[uint32](tipoActualReg3, dataSize))
 				
 				// ? Chequear como lo implementaron en mmu
 				direccionesFisicas := ObtenerDireccionFisica(memoryAddress, dataSize, currentPCB.PID)
@@ -142,7 +144,8 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 				bodyStdin, err := json.Marshal(struct {
 					direccionesFisicas []T_DireccionFisica
 					interfaz device.T_IOInterface
-				} {direccionesFisicas, interfazEncontrada})
+					tamanio int
+				} {direccionesFisicas, interfazEncontrada, dataSizeInt})
 				if err != nil {
 					log.Printf("Failed to encode adresses: %v", err)
 				}
@@ -172,9 +175,11 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		
 				// Obtener la cantidad de datos a leer desde el registro
 				dataSize := currentPCB.CPU_reg[instruccionDecodificada[3]]
+				tipoActualReg3 := reflect.TypeOf(currentPCB.CPU_reg[instruccionDecodificada[3]]).String()
+				dataSizeInt := int(Convertir[uint32](tipoActualReg3, dataSize))
 				
 				// ? Chequear como lo implementaron en mmu
-				direccionesFisicas := ObtenerDireccionFisica(memoryAddress, dataSize, currentPCB.PID)
+				direccionesFisicas := ObtenerDireccionFisica(memoryAddress, dataSizeInt, currentPCB.PID)
 
 				// Mandar a escribir a la interfaz (a través de kernel)				
 				url := fmt.Sprintf("http://%s:%d/io-stdout-write", globals.Configcpu.IP_kernel, globals.Configcpu.Port_kernel)

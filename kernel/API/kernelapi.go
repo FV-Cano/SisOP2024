@@ -286,8 +286,8 @@ func PCB_Send() error {
 	if err != nil {
 		return fmt.Errorf("failed to decode PCB response: %v", err)
 	}
-	globals.PcbReceived <- true
 
+	globals.PcbReceived <- true
 
 	return nil
 }
@@ -511,6 +511,7 @@ func IOStdinRead(w http.ResponseWriter, r *http.Request) {
 	var infoRecibida struct {
 		direccionesFisicas []T_DireccionFisica
 		interfaz device.T_IOInterface
+		tamanio int
 	}
 	
 	err := json.NewDecoder(r.Body).Decode(&infoRecibida)
@@ -522,7 +523,7 @@ func IOStdinRead(w http.ResponseWriter, r *http.Request) {
 	// Da la orden a la interfaz STDIN de leer			
 	url := fmt.Sprintf("http://%s:%d/io-stdin-read", infoRecibida.interfaz.InterfaceIP, infoRecibida.interfaz.InterfacePort)
 
-	bodyStdin, err := json.Marshal(infoRecibida.direccionesFisicas)
+	bodyStdin, err := json.Marshal(infoRecibida.direccionesFisicas, infoRecibida.tamanio)
 	if err != nil {
 		log.Printf("Failed to encode adresses: %v", err)
 	}
@@ -538,7 +539,7 @@ func IOStdinRead(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("Kernel mandó a leer a la interfaz: ", infoRecibida.InterfaceType, infoRecibida.InterfacePort)
 
-	globals.AvailablePcb <- true
+	globals.AvailablePcb <- true // TODO: Chequear si con la nueva implementacion se delega a la lista de bloqueados
 	w.WriteHeader(http.StatusOK)
 }
 

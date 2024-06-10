@@ -226,7 +226,8 @@ type BodyRequestLeer struct {
 	Direccion_fisica int `json:"direccion_fisica"`
 	Tamanio          int `json:"tamanio"`
 }
-
+// le va a llegar la lista de struct de direccionfisica y tamanio
+//por cada struct va a leer la memoria en el tamaño que le pide y devolver el contenido
 func LeerMemoria(w http.ResponseWriter, r *http.Request) {
 	var request BodyRequestLeer
 	err := json.NewDecoder(r.Body).Decode(&request)
@@ -246,7 +247,8 @@ func LeerMemoria(w http.ResponseWriter, r *http.Request) {
 	w.Write(respuesta)
 }
 
-// lista de struct
+// le va a llegar la lista de struct de direccionfisica y tamanio (O LE LLEGA DE A UNA? ES DECIR DE A UNA PETICION)
+//por cada struct va a leer la memoria en el tamaño que le pide y devolver el contenido
 func LeerDeMemoria(direccion_fisica int, tamanio int) string {
 	/*Ante un pedido de lectura, devolver el valor que se encuentra a partir de la dirección física pedida.*/
 	if (direccion_fisica + tamanio) < len(globals.User_Memory) { //
@@ -282,10 +284,12 @@ func EscribirMemoria(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write(respuesta)
 }
-
+// le va a llegar la lista de struct de direccionfisica y tamanio (O LE LLEGA DE A UNA? ES DECIR DE A UNA PETICION)
+//por cada struct va a ESCRIBIR la memoria en el tamaño que le pide
 func EscribirEnMemoria(direccion_fisica int, valor string, desplazamiento int) string { //TODO: tenemos que validar que al proceso le corresponda escribir ahí o ya la validación la hizo cpu al traducir la dirección?
 	/*Ante un pedido de escritura, escribir lo indicado a partir de la dirección física pedida.
 	  En caso satisfactorio se responderá un mensaje de ‘OK’.*/
+	
 	bytesValor := []byte(valor)
 	if len(bytesValor) > globals.Configmemory.Page_size-desplazamiento { //TODO: validar si no le alcanza una pagina
 		return "Error: dirección o tamanio fuera de rango"

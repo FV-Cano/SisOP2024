@@ -92,7 +92,7 @@ func ObtenerDireccionesFisicas(direccionLogica int, tamanio int, pid int) []Dire
 
 	if (desplazamiento != 0){
 		for i := 0; i < cantidadPaginas; i++ {
-			slice.Push[Direccion_y_tamanio](&direccion_y_tamanio, Direccion_y_tamanio{frame * tamPagina, tamPagina - desplazamiento})
+			slice.Push[Direccion_y_tamanio](&direccion_y_tamanio, Direccion_y_tamanio{frame * tamPagina + desplazamiento, tamPagina - desplazamiento})
 			numeroPagina++
 			frame = Frame_rcv(&globals.CurrentJob, numeroPagina)
 		}

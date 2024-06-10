@@ -35,15 +35,15 @@ func InstruccionActual(w http.ResponseWriter, r *http.Request) {
 	queryParams := r.URL.Query()
 	pid := queryParams.Get("pid")
 	pc := queryParams.Get("pc")
-		
+
 	respuesta, err := json.Marshal((BuscarInstruccionMap(PasarAInt(pc), PasarAInt(pid))))
 	if err != nil {
 		http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
 		return
 	}
-	
+
 	log.Printf("La instruccion buscada fue: %s", BuscarInstruccionMap(PasarAInt(pc), PasarAInt(pid)))
-	
+
 	time.Sleep(time.Duration(globals.Configmemory.Delay_response))
 
 	w.WriteHeader(http.StatusOK)
@@ -75,13 +75,13 @@ func CargarInstrucciones(w http.ResponseWriter, r *http.Request) {
 	pathInstrucciones := strings.Trim(request.Path, "\"")
 	pid := request.Pid
 	pc := request.Pc
-	
+
 	var instrucciones []string
 	//Lee linea por linea el archivo
 	file := AbrirArchivo(globals.Configmemory.Instructions_path + pathInstrucciones)
-    defer file.Close()
+	defer file.Close()
 
-    scanner := bufio.NewScanner(file)
+	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		// Agregar cada línea al slice de strings
 		instrucciones = append(instrucciones, scanner.Text())
@@ -89,7 +89,7 @@ func CargarInstrucciones(w http.ResponseWriter, r *http.Request) {
 	if err := scanner.Err(); err != nil {
 		log.Fatal(err)
 	}
-		
+
 	globals.InstructionsMutex.Lock()
 	defer globals.InstructionsMutex.Unlock()
 	globals.InstruccionesProceso[int(pid)] = instrucciones
@@ -109,8 +109,8 @@ func CargarInstrucciones(w http.ResponseWriter, r *http.Request) {
 	w.Write(respuesta)
 }
 
-//--------------------------------------------------------------------------------------//
-//AJUSTAR TAMANiO DE UN PROCESO: CPU le hace la peticion desde estoVaParaCpuApi.go
+// --------------------------------------------------------------------------------------//
+// AJUSTAR TAMANiO DE UN PROCESO: CPU le hace la peticion desde estoVaParaCpuApi.go
 func Resize(w http.ResponseWriter, r *http.Request) { //hay que hacer un patch ya que vamos a estar modificando un recurso existente (la tabla de páginas)
 	queryParams := r.URL.Query()
 	tamanio := queryParams.Get("tamanio")
@@ -125,18 +125,19 @@ func Resize(w http.ResponseWriter, r *http.Request) { //hay que hacer un patch y
 	w.Write(respuesta)
 }
 
-
 func RealizarResize(tamanio int, pid int) string {
-cantPaginasActual := len(globals.Tablas_de_paginas[int(pid)])
+	cantPaginasActual := len(globals.Tablas_de_paginas[int(pid)])
 	//ver cuantas paginas tiene el proceso en la tabla
-cantPaginas := tamanio / globals.Configmemory.Page_size
-//agregar a la tabla de páginas del proceso la cantidad de páginas que se le asignaron
-globals.Tablas_de_paginas[int(pid)] = make(globals.TablaPaginas, cantPaginas)
-/*make(globals.TablaPaginas, cantPaginas) crea una nueva tabla de páginas con una cantidad específica de páginas (cantPaginas).
-Cada página en la tabla es un Frame.*/
-ModificarTamanioProceso(cantPaginasActual, cantPaginas, pid)
-log.Printf("Tabla de páginas del PID %d redimensionada a %d páginas", pid, cantPaginas)
-return "OK"
+	cantPaginas := tamanio / globals.Configmemory.Page_size
+	// agregar a la tabla de páginas del proceso la cantidad de páginas que se le asignaron
+	globals.Tablas_de_paginas[int(pid)] = make(globals.TablaPaginas, cantPaginas)
+	/*
+	   make(globals.TablaPaginas, cantPaginas) crea una nueva tabla de páginas con una cantidad específica de páginas (cantPaginas).
+	   Cada página en la tabla es un Frame.
+	*/
+	ModificarTamanioProceso(cantPaginasActual, cantPaginas, pid)
+	log.Printf("Tabla de páginas del PID %d redimensionada a %d páginas", pid, cantPaginas)
+	return "OK"
 }
 
 func ModificarTamanioProceso(tamanioProcesoActual int, tamanioProcesoNuevo int, pid int) {
@@ -149,14 +150,14 @@ func ModificarTamanioProceso(tamanioProcesoActual int, tamanioProcesoNuevo int, 
 		var diferenciaEnPaginas = tamanioProcesoActual - tamanioProcesoNuevo
 		log.Printf("PID: %d - Tamanio Actual: %d - Tamanio a Reducir: %d", pid, tamanioProcesoActual, tamanioProcesoNuevo) // verificar si en el último parámetro va diferenciaEnPaginas
 		ReducirProceso(diferenciaEnPaginas, pid)
-	}	
+	}
 }
 
 func AmpliarProceso(diferenciaEnPaginas int, pid int) string {
 	for pagina := 0; pagina < diferenciaEnPaginas; pagina++ {
 		marcoDisponible := false
 		for i := 0; i < globals.Frames; i++ { //out of memory si no hay marcos disponibles
-			if IsNotSet(i){
+			if IsNotSet(i) {
 				//setear el valor del marco en la tabla de páginas del proceso
 				globals.Tablas_de_paginas[pid][pagina] = globals.Frame(i)
 				//marcar marco como ocupado
@@ -164,18 +165,18 @@ func AmpliarProceso(diferenciaEnPaginas int, pid int) string {
 				marcoDisponible = true
 				// Salir del bucle una vez que se ha asignado un marco a la página
 				break
-			} 			
-		} 
+			}
+		}
 		if !marcoDisponible {
-            return "out of memory"
-        }
+			return "out of memory"
+		}
 	}
 	return "OK"
 
 }
 
-func ReducirProceso(diferenciaEnPaginas int, pid int){
-	for  (diferenciaEnPaginas > 0){
+func ReducirProceso(diferenciaEnPaginas int, pid int) {
+	for diferenciaEnPaginas > 0 {
 		//obtener el marco que le corresponde a la página
 		marco := BuscarMarco(pid, diferenciaEnPaginas)
 		//marcar marco como desocupado
@@ -184,18 +185,18 @@ func ReducirProceso(diferenciaEnPaginas int, pid int){
 		diferenciaEnPaginas--
 	}
 }
-//--------------------------------------------------------------------------------------//
-//ACCESO A TABLA DE PAGINAS: PETICION DESDE CPU (GET)
-//Busca el marco que pertenece al proceso y a la página que envía CPU, dentro del diccionario
+
+// --------------------------------------------------------------------------------------//
+// ACCESO A TABLA DE PAGINAS: PETICION DESDE CPU (GET)
+// Busca el marco que pertenece al proceso y a la página que envía CPU, dentro del diccionario
 func BuscarMarco(pid int, pagina int) int {
 	resultado := globals.Tablas_de_paginas[pid][pagina]
 	return int(resultado)
-	}
+}
 
-
-func EnviarMarco(w http.ResponseWriter, r *http.Request){
+func EnviarMarco(w http.ResponseWriter, r *http.Request) {
 	//Ante cada peticion de CPU, dado un pid y una página, enviar frame a CPU
-	
+
 	queryParams := r.URL.Query()
 	pid := queryParams.Get("pid")
 	pagina := queryParams.Get("pagina")
@@ -208,6 +209,7 @@ func EnviarMarco(w http.ResponseWriter, r *http.Request){
 	w.WriteHeader(http.StatusOK)
 	w.Write(respuesta)
 }
+
 //--------------------------------------------------------------------------------------//
 //FINALIZACION DE PROCESO: PETICION DESDE KERNEL (PATCH)
 
@@ -217,11 +219,12 @@ func FinalizarProceso(w http.ResponseWriter, r *http.Request) {
 	ReducirProceso(len(globals.Tablas_de_paginas[PasarAInt(pid)]), PasarAInt(pid))
 	w.WriteHeader(http.StatusOK)
 }
-//--------------------------------------------------------------------------------------//
-//ACCESO A ESPACIO DE USUARIO: Esta petición puede venir tanto de la CPU como de un Módulo de Interfaz de I/O
+
+// --------------------------------------------------------------------------------------//
+// ACCESO A ESPACIO DE USUARIO: Esta petición puede venir tanto de la CPU como de un Módulo de Interfaz de I/O
 type BodyRequestLeer struct {
 	Direccion_fisica int `json:"direccion_fisica"`
-	Tamanio int `json:"tamanio"`
+	Tamanio          int `json:"tamanio"`
 }
 
 func LeerMemoria(w http.ResponseWriter, r *http.Request) {
@@ -236,26 +239,28 @@ func LeerMemoria(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
 		return
 	}
-	
+
 	time.Sleep(time.Duration(globals.Configmemory.Delay_response) * time.Millisecond) //nos dan los milisegundos o lo dejamos así?
 
 	w.WriteHeader(http.StatusOK)
 	w.Write(respuesta)
 }
-//lista de struct
+
+// lista de struct
 func LeerDeMemoria(direccion_fisica int, tamanio int) string {
 	/*Ante un pedido de lectura, devolver el valor que se encuentra a partir de la dirección física pedida.*/
 	if (direccion_fisica + tamanio) < len(globals.User_Memory) { //
-	 contenido := globals.User_Memory[direccion_fisica : direccion_fisica+tamanio] //ver si hay que restar bytes o si está ok
-	 return string(contenido)
-	} else{
+		contenido := globals.User_Memory[direccion_fisica : direccion_fisica+tamanio] //ver si hay que restar bytes o si está ok
+		return string(contenido)
+	} else {
 		return "Error: dirección fuera de rango"
 	}
 }
+
 type BodyRequestEscribir struct {
-	Direccion_fisica int `json:"direccion_fisica"`
+	Direccion_fisica int    `json:"direccion_fisica"`
 	Valor_a_escribir string `json:"valor_a_escribir"`
-	Desplazamiento int `json:"desplazamiento"`
+	Desplazamiento   int    `json:"desplazamiento"`
 }
 
 func EscribirMemoria(w http.ResponseWriter, r *http.Request) {
@@ -280,22 +285,23 @@ func EscribirMemoria(w http.ResponseWriter, r *http.Request) {
 
 func EscribirEnMemoria(direccion_fisica int, valor string, desplazamiento int) string { //TODO: tenemos que validar que al proceso le corresponda escribir ahí o ya la validación la hizo cpu al traducir la dirección?
 	/*Ante un pedido de escritura, escribir lo indicado a partir de la dirección física pedida.
-     En caso satisfactorio se responderá un mensaje de ‘OK’.*/
-    bytesValor := []byte(valor)
-    if  (len(bytesValor) > globals.Configmemory.Page_size - desplazamiento) { //TODO: validar si no le alcanza una pagina
-        return "Error: dirección o tamanio fuera de rango"
-    }
-    copy(globals.User_Memory[direccion_fisica:], bytesValor)
-    return "OK"
+	  En caso satisfactorio se responderá un mensaje de ‘OK’.*/
+	bytesValor := []byte(valor)
+	if len(bytesValor) > globals.Configmemory.Page_size-desplazamiento { //TODO: validar si no le alcanza una pagina
+		return "Error: dirección o tamanio fuera de rango"
+	}
+	copy(globals.User_Memory[direccion_fisica:], bytesValor)
+	return "OK"
 }
-//--------------------------------------------------------------------------------------//
+
+// --------------------------------------------------------------------------------------//
 // BITMAP AUXILIAR
 func NewBitMap(size int) BitMap {
-	NewBMAp := make(BitMap,size)
+	NewBMAp := make(BitMap, size)
 	for i := 0; i < size; i++ {
 		NewBMAp[i] = 0
 	}
-    return NewBMAp
+	return NewBMAp
 }
 
 func Set(i int) {
@@ -307,10 +313,10 @@ func Clear(i int) {
 }
 
 func IsNotSet(i int) bool {
-  	return  globals.CurrentBitMap[i] == 0
+	return globals.CurrentBitMap[i] == 0
 }
 
-//--------------------------------------------------------------------------------------//
+// --------------------------------------------------------------------------------------//
 func Page_size(w http.ResponseWriter, r *http.Request) {
 	respuesta, err := json.Marshal(globals.Configmemory.Page_size)
 	if err != nil {

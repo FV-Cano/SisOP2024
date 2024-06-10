@@ -43,14 +43,14 @@ func main() {
 func RegisteredModuleRoutes() http.Handler {
 	moduleHandler := &server.ModuleHandler{
 		RouteHandlers: map[string]http.HandlerFunc{
-			"GET /instrucciones":  memoria_api.InstruccionActual,
-			"POST /instrucciones": memoria_api.CargarInstrucciones,
-			"GET /enviarMarco": memoria_api.EnviarMarco, //implementada en la MMU
-			"PATCH /resize": memoria_api.Resize, //falta implementar desde CPU
+			"GET /instrucciones":      memoria_api.InstruccionActual,
+			"POST /instrucciones":     memoria_api.CargarInstrucciones,
+			"GET /enviarMarco":        memoria_api.EnviarMarco,      //implementada en la MMU
+			"PATCH /resize":           memoria_api.Resize,           //implementada en CPU
 			"PATCH /finalizarProceso": memoria_api.FinalizarProceso, //falta implementar desde KERNEL
-			"GET /read": memoria_api.LeerMemoria, //falta implementar desde cliente
-			"POST /write": memoria_api.EscribirMemoria, //falta implementar desde cliente
-			"GET /tamPagina": memoria_api.Page_size, //falta implementar desde cliente
+			"GET /read":               memoria_api.LeerMemoria,      // implementada en cpu
+			"POST /write":             memoria_api.EscribirMemoria,  // implementada en cpu
+			"GET /tamPagina":          memoria_api.Page_size,        //falta implementar desde cliente
 		},
 	}
 	return moduleHandler

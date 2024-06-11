@@ -89,7 +89,7 @@ func ObtenerDireccionesFisicas(direccionLogica int, tamanio int, pid int) []Dire
 	frame := Frame_rcv(&globals.CurrentJob, numeroPagina) 
 	desplazamiento := direccionLogica - numeroPagina*tamPagina
 	cantidadPaginas := tamanio/tamPagina
-
+	if (tamanio > )
 	if (desplazamiento != 0){
 		for i := 0; i < cantidadPaginas; i++ {
 			slice.Push[Direccion_y_tamanio](&direccion_y_tamanio, Direccion_y_tamanio{frame * tamPagina + desplazamiento, tamPagina - desplazamiento})
@@ -103,8 +103,22 @@ func ObtenerDireccionesFisicas(direccionLogica int, tamanio int, pid int) []Dire
 			frame = Frame_rcv(&globals.CurrentJob, direccionLogica + tamPagina)
 		}
 	}
+
+
+	if (tamanio + desplazamiento > tamPagina){
+
+		tamPagina++
+		slice.Push[Direccion_y_tamanio](&direccion_y_tamanio, Direccion_y_tamanio{frame * tamPagina + desplazamiento, tamanio + desplazamiento - tamPagina})
+	} 
+
+
 	return direccion_y_tamanio
+
+
+
 }
 func bytesToInt(b []byte) uint32 {
     return binary.BigEndian.Uint32(b)
 }
+
+

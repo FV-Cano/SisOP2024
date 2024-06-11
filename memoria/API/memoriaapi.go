@@ -222,20 +222,20 @@ func FinalizarProceso(w http.ResponseWriter, r *http.Request) {
 
 // --------------------------------------------------------------------------------------//
 // ACCESO A ESPACIO DE USUARIO: Esta petición puede venir tanto de la CPU como de un Módulo de Interfaz de I/O
-type BodyRequestLeer struct {
-	Direccion_fisica int `json:"direccion_fisica"`
-	Tamanio          int `json:"tamanio"`
+type DireccionTamanio struct {
+    DireccionFisica int
+    Tamanio         int
 }
 // le va a llegar la lista de struct de direccionfisica y tamanio
 //por cada struct va a leer la memoria en el tamaño que le pide y devolver el contenido
 func LeerMemoria(w http.ResponseWriter, r *http.Request) {
-	var request BodyRequestLeer
+	var request[] DireccionTamanio
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	respuesta, err := json.Marshal(LeerDeMemoria(request.Direccion_fisica, request.Tamanio))
+	respuesta, err := json.Marshal(LeerDeMemoria(request))
 	if err != nil {
 		http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
 		return
@@ -249,21 +249,25 @@ func LeerMemoria(w http.ResponseWriter, r *http.Request) {
 
 // le va a llegar la lista de struct de direccionfisica y tamanio (O LE LLEGA DE A UNA? ES DECIR DE A UNA PETICION)
 //por cada struct va a leer la memoria en el tamaño que le pide y devolver el contenido
-func LeerDeMemoria(direccion_fisica int, tamanio int) string {
+func LeerDeMemoria(direccionesTamanios []DireccionTamanio) string {
 	/*Ante un pedido de lectura, devolver el valor que se encuentra a partir de la dirección física pedida.*/
-	if (direccion_fisica + tamanio) < len(globals.User_Memory) { //
-		contenido := globals.User_Memory[direccion_fisica : direccion_fisica+tamanio] //ver si hay que restar bytes o si está ok
-		return string(contenido)
-	} else {
-		return "Error: dirección fuera de rango"
-	}
+	var contenido []byte
+    for _, dt := range direccionesTamanios {
+        if (dt.DireccionFisica + dt.Tamanio) <= len(globals.User_Memory) {
+            contenido = append(contenido, globals.User_Memory[dt.DireccionFisica:dt.DireccionFisica+dt.Tamanio]...)
+        } else {
+            return "Error: dirección fuera de rango"
+        }
+    }
+    return string(contenido)
 }
 
-type BodyRequestEscribir struct {
-	Direccion_fisica int    `json:"direccion_fisica"`
-	Tamanio int `json:"tamanio"`
-	Valor_a_escribir string `json:"valor_a_escribir"`
 
+
+type BodyRequestEscribir struct {
+	DireccionesTamanios []DireccionTamanio `json:"direcciones_tamanios"`
+	Valor_a_escribir string `json:"valor_a_escribir"`
+	Pid int `json:"pid"`
 	
 }
 
@@ -275,7 +279,7 @@ func EscribirMemoria(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respuesta, err := json.Marshal(EscribirEnMemoria(request.Direccion_fisica, request.Tamanio ,request.Valor_a_escribir))
+	respuesta, err := json.Marshal(EscribirEnMemoria(request.DireccionesTamanios,request.Valor_a_escribir, request.Pid))
 	if err != nil {
 		http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
 		return
@@ -288,15 +292,29 @@ func EscribirMemoria(w http.ResponseWriter, r *http.Request) {
 }
 // le va a llegar la lista de struct de direccionfisica y tamanio (O LE LLEGA DE A UNA? ES DECIR DE A UNA PETICION)
 //por cada struct va a ESCRIBIR la memoria en el tamaño que le pide
-func EscribirEnMemoria(direccion_fisica int, tamanio int ,valor_a_escribir string) string { //TODO: tenemos que validar que al proceso le corresponda escribir ahí o ya la validación la hizo cpu al traducir la dirección?
+func EscribirEnMemoria(direccionesTamanios []DireccionTamanio ,valor_a_escribir string, pid int) string { //TODO: tenemos que validar que al proceso le corresponda escribir ahí o ya la validación la hizo cpu al traducir la dirección?
 	/*Ante un pedido de escritura, escribir lo indicado a partir de la dirección física pedida.
 	  En caso satisfactorio se responderá un mensaje de ‘OK’.*/
-	  bytesValor := []byte(valor_a_escribir)
-	if len(bytesValor) > globals.Configmemory.Page_size { //TODO: validar si no le alcanza una pagina
-		return "Error: dirección o tamanio fuera de rango"
+	     var tamanioTotal int
+    for _, dt := range direccionesTamanios {
+        tamanioTotal += dt.Tamanio
+    } 
+	 
+	  for _, dt := range direccionesTamanios {
+		tamanioAEscribirTotal := dt.DireccionFisica + sumarTamanio(dt.Tamanio)
+        tamañoARealizarElResize := tamanioAEscribirTotal + len(globals.Tablas_de_paginas[pid])
+		if (dt.DireccionFisica + dt.Tamanio > tamanioAEscribirEnPaginas * globals.Configmemory.Page_size) {
+  
+        RealizarResize(tamañoARealizarElResize, pid)
 	}
-	copy(globals.User_Memory[direccion_fisica:], bytesValor)
-	return "OK"
+
+        bytesValor := []byte(valor_a_escribir)
+        if len(bytesValor) > globals.Configmemory.Page_size {
+            return "Error: dirección o tamanio fuera de rango"
+        }
+        copy(globals.User_Memory[dt.DireccionFisica:], bytesValor)
+    }
+    return "OK"
 }
 
 // --------------------------------------------------------------------------------------//

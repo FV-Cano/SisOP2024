@@ -16,6 +16,8 @@ import (
 	"github.com/sisoputnfrba/tp-golang/utils/pcb"
 )
 
+// ENTIENDO QUE UNA VEZ QUE SOLUCIONEMOS LO DE LAS DIRECS FISICAS TODOS
+// NUESTROS PROBLEMAS SERAN RESUELTOS
 type BodyRequestEscribir struct {
 	Direccion_fisica int
 	Valor_a_escribir string
@@ -161,7 +163,40 @@ func DecodeAndExecute(w http.ResponseWriter, r *http.Request, currentPCB *pcb.T_
 		}
 
 		currentPCB.PC++
+		//-----------------------------------------------------------------------------
+		//COPY_STRING (Tamaño): Toma del string apuntado por el registro SI y
+		//copia la cantidad de bytes indicadas en el parámetro tamaño a la
+		//posición de memoria apuntada por el registro DI.
+
+	case "COPY_STRING":
+		tamanio := PasarAInt(instruccionDecodificada[1])
+
+		direc_logica, ok := currentPCB.CPU_reg["DI"].(int)
+		if !ok {
+			log.Fatalf("Error: el valor en el registro no es de tipo string")
+		}
+
+		direcsFisicas := ObtenerDireccionesFisicas(direc_logica, tamanio, int(currentPCB.PID))
+		cantDirecciones := len(direcsFisicas)
+
+		datos_a_esribir, ok := currentPCB.CPU_reg["SI"].(string)
+		if !ok {
+			log.Fatalf("Error: el valor en el registro no es de tipo string")
+		}
+
+		for i := 0; i < cantDirecciones; i++ {
+			requestBody := BodyRequestEscribir{
+				Direccion_fisica: direcsFisicas[i].direccion_fisica,
+				Valor_a_escribir: datos_a_esribir,
+				Desplazamiento:   5, /*Lo hardcodeo, Seguro no necesite este dato*/
+			}
+
+			SolicitarEscritura(w, r, requestBody)
+		}
+
+		currentPCB.PC++
 	}
+
 }
 
 // -------------------------------------------------------------------------------

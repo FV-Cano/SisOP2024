@@ -7,7 +7,9 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"reflect"
 	"strconv"
+	"unsafe"
 
 	"github.com/sisoputnfrba/tp-golang/cpu/cicloInstruccion"
 	"github.com/sisoputnfrba/tp-golang/cpu/globals"
@@ -107,19 +109,30 @@ func DecodeAndExecute(w http.ResponseWriter, r *http.Request, currentPCB *pcb.T_
 
 	switch instruccionDecodificada[0] {
 	case "MOV_OUT":
-		//TODO,DE DONDE SALE EL TAM?*/
-		direcsFisicas := ObtenerDireccionesFisicas(PasarAInt(instruccionDecodificada[1]), 5, int(currentPCB.PID))
+
+		tamanio := int(unsafe.Sizeof(instruccionDecodificada[2]))
+
+		direcsFisicas := ObtenerDireccionesFisicas(PasarAInt(instruccionDecodificada[1]), tamanio, int(currentPCB.PID))
+		tipoTamanio := reflect.TypeOf(instruccionDecodificada[2]).String()
+
 		cantDirecciones := len(direcsFisicas)
 
-		for i := 0; i < cantDirecciones; i++ {
-			tamanio := currentPCB.CPU_reg["DI"] - currentPCB.CPU_reg["SI"]
-			// a chequear lo de tamanio y el error que tira
-			requestBody := BodyRequestEscribir{
-				Direccion_fisica: direcsFisicas[i].direccion_fisica,
-				Valor_a_escribir: instruccionDecodificada[2],
-				Desplazamiento:   tamanio,
+		if tipoTamanio == "uint8" {
+			for i := 0; i < cantDirecciones; i++ {
+
+				valor, ok := currentPCB.CPU_reg[instruccionDecodificada[2]].(string)
+				if !ok {
+					log.Fatalf("Error: el valor en el registro no es de tipo string")
+				}
+				requestBody := BodyRequestEscribir{
+					Direccion_fisica: direcsFisicas[i].direccion_fisica,
+					// revisar error
+					Valor_a_escribir: valor,
+					Desplazamiento:   5, /*Lo hardcodeo, Seguro no necesite este dato*/
+				}
+
+				SolicitarEscritura(w, r, requestBody)
 			}
-			SolicitarEscritura(w, r, requestBody)
 
 		}
 		currentPCB.PC++
@@ -131,23 +144,24 @@ func DecodeAndExecute(w http.ResponseWriter, r *http.Request, currentPCB *pcb.T_
 
 	case "MOV_IN":
 
-		direcsFisicas := ObtenerDireccionesFisicas(PasarAInt(instruccionDecodificada[2]), 5, int(currentPCB.PID))
+		tamanio := int(unsafe.Sizeof(instruccionDecodificada[2]))
+
+		direcsFisicas := ObtenerDireccionesFisicas(PasarAInt(instruccionDecodificada[1]), tamanio, int(currentPCB.PID))
+
 		cantDirecciones := len(direcsFisicas)
 
 		for i := 0; i < cantDirecciones; i++ {
-			tamanio := currentPCB.CPU_reg["DI"] - currentPCB.CPU_reg["SI"]
-			// a chequear lo de tamanio
 			requestBody := BodyRequestLeer{
 				Direccion_fisica: direcsFisicas[i].direccion_fisica,
 				Tamanio:          tamanio,
 			}
 			datos := SolicitarLectura(w, r, requestBody)
 			currentPCB.CPU_reg[instruccionDecodificada[1]] = datos
+
 		}
 
 		currentPCB.PC++
 	}
-
 }
 
 // -------------------------------------------------------------------------------

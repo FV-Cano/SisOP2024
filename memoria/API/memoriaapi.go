@@ -261,8 +261,10 @@ func LeerDeMemoria(direccion_fisica int, tamanio int) string {
 
 type BodyRequestEscribir struct {
 	Direccion_fisica int    `json:"direccion_fisica"`
+	Tamanio int `json:"tamanio"`
 	Valor_a_escribir string `json:"valor_a_escribir"`
-	Desplazamiento   int    `json:"desplazamiento"`
+
+	
 }
 
 func EscribirMemoria(w http.ResponseWriter, r *http.Request) {
@@ -273,7 +275,7 @@ func EscribirMemoria(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respuesta, err := json.Marshal(EscribirEnMemoria(request.Direccion_fisica, request.Valor_a_escribir, request.Desplazamiento))
+	respuesta, err := json.Marshal(EscribirEnMemoria(request.Direccion_fisica, request.Tamanio ,request.Valor_a_escribir))
 	if err != nil {
 		http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
 		return
@@ -286,12 +288,11 @@ func EscribirMemoria(w http.ResponseWriter, r *http.Request) {
 }
 // le va a llegar la lista de struct de direccionfisica y tamanio (O LE LLEGA DE A UNA? ES DECIR DE A UNA PETICION)
 //por cada struct va a ESCRIBIR la memoria en el tamaño que le pide
-func EscribirEnMemoria(direccion_fisica int, valor string, desplazamiento int) string { //TODO: tenemos que validar que al proceso le corresponda escribir ahí o ya la validación la hizo cpu al traducir la dirección?
+func EscribirEnMemoria(direccion_fisica int, tamanio int ,valor_a_escribir string) string { //TODO: tenemos que validar que al proceso le corresponda escribir ahí o ya la validación la hizo cpu al traducir la dirección?
 	/*Ante un pedido de escritura, escribir lo indicado a partir de la dirección física pedida.
 	  En caso satisfactorio se responderá un mensaje de ‘OK’.*/
-	
-	bytesValor := []byte(valor)
-	if len(bytesValor) > globals.Configmemory.Page_size-desplazamiento { //TODO: validar si no le alcanza una pagina
+	  bytesValor := []byte(valor_a_escribir)
+	if len(bytesValor) > globals.Configmemory.Page_size { //TODO: validar si no le alcanza una pagina
 		return "Error: dirección o tamanio fuera de rango"
 	}
 	copy(globals.User_Memory[direccion_fisica:], bytesValor)

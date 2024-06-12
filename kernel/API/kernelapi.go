@@ -75,6 +75,8 @@ func ProcessInit(w http.ResponseWriter, r *http.Request) {
 						},
 		State: 			"NEW",
 		EvictionReason: "",
+		Resources: 		make(map[string]int),	// * El valor por defecto es 0, tener en cuenta por las dudas a la hora de testear
+		RequestedResource: "",
 	}
 
 	globals.LTSMutex.Lock()
@@ -387,7 +389,9 @@ func GetIOInterface(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	globals.Interfaces = append(globals.Interfaces, interf)
+	newInterface := globals.InterfaceController{IoInterf: interf, Controller: make(chan bool, 1)}
+
+	globals.Interfaces = append(globals.Interfaces, newInterface)
 
 	log.Printf("Interface received, type: %s, port: %d\n", interf.InterfaceType, interf.InterfacePort)
 
@@ -427,14 +431,14 @@ func ExisteInterfaz(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonResp)
 }
 
-func SearchDeviceByName(deviceName string) (device.T_IOInterface, error) {
+func SearchDeviceByName(deviceName string) (globals.InterfaceController, error) {
 	for _, interf := range globals.Interfaces {
-		if interf.InterfaceName == deviceName  {
+		if interf.IoInterf.InterfaceName == deviceName  {
 			fmt.Println("Interfaz encontrada: ", interf)
 			return interf, nil
 		}
 	}
-	return device.T_IOInterface{}, fmt.Errorf("device not found")
+	return globals.InterfaceController{}, fmt.Errorf("device not found")
 }
 
 type Interfac_Time struct {
@@ -474,9 +478,11 @@ func SolicitarGenSleep(pcb pcb.T_PCB) {
 		log.Printf("Device not found: %v", err)
 	}
 	
+	newInter.Controller <- true
+
 	genSleep := GenSleep{
 		Pcb: pcb,
-		Inter: newInter, 
+		Inter: newInter.IoInterf, 
 		TimeToSleep: genIntTime.WTime,
 	}
 
@@ -487,7 +493,7 @@ func SolicitarGenSleep(pcb pcb.T_PCB) {
 		log.Printf("Failed to encode PCB: %v", err)
 	}
 
-	url := fmt.Sprintf("http://%s:%d/io-gen-sleep", newInter.InterfaceIP, newInter.InterfacePort)
+	url := fmt.Sprintf("http://%s:%d/io-gen-sleep", newInter.IoInterf.InterfaceIP, newInter.IoInterf.InterfacePort)
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		log.Printf("Failed to send PCB: %v", err)
@@ -505,6 +511,8 @@ func SolicitarGenSleep(pcb pcb.T_PCB) {
 	RemoveFromBlocked(genPCB.PID)
 	genPCB.State = "READY"
 	slice.Push(&globals.STS, genPCB)
+	globals.MultiprogrammingCounter <- 1
+	<- newInter.Controller
 }
 
 func IOStdinRead(w http.ResponseWriter, r *http.Request) {

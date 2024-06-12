@@ -10,16 +10,20 @@ import (
 	"github.com/sisoputnfrba/tp-golang/utils/pcb"
 )
 
+type InterfaceController struct {
+	IoInterf 					device.T_IOInterface
+	Controller 					chan bool
+}
+
 var (
-	NextPID 			uint32 = 0
-	LTS 				[]pcb.T_PCB
-	STS 				[]pcb.T_PCB
-	Blocked 			[]pcb.T_PCB
-	STS_Priority 		[]pcb.T_PCB
-	Interfaces 			[]device.T_IOInterface
-	ResourceMap			map[string][]pcb.T_PCB
-	Resource_instances  map[string]int
-	RequestedResource 	string
+	NextPID 					uint32 = 0
+	LTS 						[]pcb.T_PCB
+	STS 						[]pcb.T_PCB
+	Blocked 					[]pcb.T_PCB
+	STS_Priority 				[]pcb.T_PCB
+	Interfaces 					[]InterfaceController
+	ResourceMap					map[string][]pcb.T_PCB
+	Resource_instances  		map[string]int
 )
 
 // Global semaphores
@@ -47,16 +51,16 @@ var (
 var CurrentJob pcb.T_PCB
 
 type T_ConfigKernel struct {
-	Port 				int 		`json:"port"`
-	IP_memory 			string 		`json:"ip_memory"`
-	Port_memory 		int 		`json:"port_memory"`
-	IP_cpu 				string 		`json:"ip_cpu"`
-	Port_cpu 			int 		`json:"port_cpu"`
-	Planning_algorithm 	string 		`json:"planning_algorithm"`
-	Quantum 			int 		`json:"quantum"`
-	Resources 			[]string 	`json:"resources"`
-	Resource_instances 	[]int 		`json:"resource_instances"`
-	Multiprogramming 	int 		`json:"multiprogramming"`
+	Port 						int 		`json:"port"`
+	IP_memory 					string 		`json:"ip_memory"`
+	Port_memory 				int 		`json:"port_memory"`
+	IP_cpu 						string 		`json:"ip_cpu"`
+	Port_cpu 					int 		`json:"port_cpu"`
+	Planning_algorithm 			string 		`json:"planning_algorithm"`
+	Quantum 					int 		`json:"quantum"`
+	Resources 					[]string 	`json:"resources"`
+	Resource_instances 			[]int 		`json:"resource_instances"`
+	Multiprogramming 			int 		`json:"multiprogramming"`
 }
 
 var Configkernel *T_ConfigKernel

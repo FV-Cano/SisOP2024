@@ -106,6 +106,10 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 			// COPY_STRING (Longitud): Copia la cantidad de bytes indicadas por la Longitud desde el Registro SI (que apunta a un string) al Registro Destino DI (que apunta a una posicion de memoria).
 
 		case "IO_GEN_SLEEP":
+			cond, err := HallarInterfaz(instruccionDecodificada[1], "GENERICA")
+			if err != nil {
+				log.Print("La interfaz no existe o no acepta operaciones de I/O genéricas")
+			}
 			tiempo_esp, err := strconv.Atoi(instruccionDecodificada[2])
 			if err != nil {
 				log.Fatal("Error al convertir el tiempo de espera a entero")
@@ -255,6 +259,14 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 				currentPCB.CPU_reg[instruccionDecodificada[1]] = Convertir[uint8](tipoActualReg1, currentPCB.CPU_reg[instruccionDecodificada[1]]) - Convertir[uint8](tipoActualReg2, valorReg2)
 			}
 			currentPCB.PC++
+
+		case "WAIT":
+			currentPCB.RequestedResource = instruccionDecodificada[1]
+			currentPCB.EvictionReason = "WAIT"
+
+		case "SIGNAL":
+			currentPCB.RequestedResource = instruccionDecodificada[1]
+			currentPCB.EvictionReason = "SIGNAL"
 	}
 
 }

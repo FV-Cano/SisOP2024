@@ -3,6 +3,7 @@ package globals
 import (
 	"sync"
 
+	"github.com/sisoputnfrba/tp-golang/utils/device"
 	"github.com/sisoputnfrba/tp-golang/utils/pcb"
 )
 
@@ -32,3 +33,8 @@ var (
 )
 
 type Frame int
+
+type InterfaceController struct {
+	IoInterf 					device.T_IOInterface
+	Controller 					chan bool
+}

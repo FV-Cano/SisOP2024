@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strconv"
 
+	cpu_api "github.com/sisoputnfrba/tp-golang/cpu/API"
 	"github.com/sisoputnfrba/tp-golang/cpu/globals"
 	"github.com/sisoputnfrba/tp-golang/utils/pcb"
 	"github.com/sisoputnfrba/tp-golang/utils/slice"
@@ -124,7 +125,7 @@ func ObtenerDireccionesFisicas(direccionLogica int, tamanio int, pid int) []Dire
 	frame := Frame_rcv(&globals.CurrentJob, numeroPagina) 
 	tamanioTotal := frame * tamPagina + desplazamiento + tamanio
 	if (tamanioTotal > PedirTamTablaPaginas(pid) * tamPagina) {
-		Resize(tamanioTotal)
+		cpu_api.Resize(tamanioTotal)
 	}
 	//Primer pagina teniendo en cuenta el desplazamiento
 	slice.Push[DireccionTamanio](&direccion_y_tamanio, DireccionTamanio{frame * tamPagina + desplazamiento, tamPagina - desplazamiento})

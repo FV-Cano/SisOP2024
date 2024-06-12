@@ -211,8 +211,8 @@ func EnviarMarco(w http.ResponseWriter, r *http.Request) {
 }
 
 //--------------------------------------------------------------------------------------//
-//FINALIZACION DE PROCESO: PETICION DESDE KERNEL (PATCH)
-
+//FINALIZACION DE PROCESO: PETICION DESDE KERNEL (PATCH) 
+//TODO: falta implementar desde el kernel
 func FinalizarProceso(w http.ResponseWriter, r *http.Request) {
 	queryParams := r.URL.Query()
 	pid := queryParams.Get("pid")
@@ -257,7 +257,7 @@ func LeerDeMemoria(direccionesTamanios []DireccionTamanio) string {
 	/*Ante un pedido de lectura, devolver el valor que se encuentra a partir de la dirección física pedida.*/
 	var contenido []byte
 	for _, dt := range direccionesTamanios {
-		if (dt.DireccionFisica + dt.Tamanio) <= len(globals.User_Memory) {
+		if (dt.DireccionFisica + dt.Tamanio) <= len(globals.User_Memory) { //TODO: ver cuál es la validación que hay que hacer
 			contenido = append(contenido, globals.User_Memory[dt.DireccionFisica:dt.DireccionFisica+dt.Tamanio]...)
 		} else {
 			return "Error: dirección fuera de rango"
@@ -292,24 +292,30 @@ func EscribirMemoria(w http.ResponseWriter, r *http.Request) {
 	w.Write(respuesta)
 }
 
-// le va a llegar la lista de struct de direccionfisica y tamanio (O LE LLEGA DE A UNA? ES DECIR DE A UNA PETICION)
 // por cada struct va a ESCRIBIR la memoria en el tamaño que le pide
 func EscribirEnMemoria(direccionesTamanios []DireccionTamanio, valor_a_escribir string, pid int) string { //TODO: tenemos que validar que al proceso le corresponda escribir ahí o ya la validación la hizo cpu al traducir la dirección?
 	/*Ante un pedido de escritura, escribir lo indicado a partir de la dirección física pedida.
 	  En caso satisfactorio se responderá un mensaje de ‘OK’.*/
-	var tamanioTotal int
-	for _, dt := range direccionesTamanios {
-		tamanioTotal += dt.Tamanio
-	}
-	bytesValor := []byte(valor_a_escribir)
-	if len(bytesValor) > globals.Configmemory.Page_size {
-		return "Error: dirección o tamanio fuera de rango"
-	}
-	copy(globals.User_Memory[dt.DireccionFisica:], bytesValor)
 
+	for _, dt := range direccionesTamanios {
+		bytesValor := []byte(valor_a_escribir)
+		valorAEscribir := takeAndRemove(dt.Tamanio, &bytesValor)
+		copy(globals.User_Memory[dt.DireccionFisica:], valorAEscribir)
+	}
+	/*if len(bytesValor) > globals.Configmemory.Page_size { //TODO: ver cuál es la validación que hay que hacer
+		return "Error: dirección o tamanio fuera de rango"
+	}*/
 	return "OK"
 }
-
+	
+func takeAndRemove(n int, list *[]byte) []byte {
+    if n > len(*list) {
+        n = len(*list)
+    }
+    result := (*list)[:n]
+    *list = (*list)[n:]
+    return result
+}
 // --------------------------------------------------------------------------------------//
 // BITMAP AUXILIAR
 func NewBitMap(size int) BitMap {

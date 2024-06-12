@@ -22,12 +22,12 @@ import (
 
 
 
-func Resize(tamanio int) string {
+func Resize(tamanio int) {
 	cliente := &http.Client{}
 	url := fmt.Sprintf("http://%s:%d/resize", globals.Configcpu.IP_memory,globals.Configcpu.Port_memory)
 	req, err := http.NewRequest("PATCH", url, nil)
 	if err != nil {
-		return "Error: " + err.Error()
+		return 
 	}
 
 	q := req.URL.Query()
@@ -37,45 +37,25 @@ func Resize(tamanio int) string {
 	req.Header.Set("Content-Type", "application/json")
 	respuesta, err := cliente.Do(req)
 	if err != nil {
-		return "Error: " + err.Error()
+		return 
 	}
 
 	// Verificar el código de estado de la respuesta
 	if respuesta.StatusCode != http.StatusOK {
-		return "Error: " + respuesta.Status
+		return 
 	}
 
 	bodyBytes, err := io.ReadAll(respuesta.Body)
 	if err != nil {
-		return 	"Error: " + err.Error()	
+		return 	
 	}
 	//En caso de que la respuesta de la memoria sea Out of Memory, se deberá devolver el contexto de ejecución al Kernel informando de esta situación
 	// Y Avisar que el error es por out of memory
 	var respuestaResize = string(bodyBytes)
 	if respuestaResize != "OK" {
-		return "OK"
+		//TODO: pcb.EvictionFlag = true
 		//hacer esto
-	} else {
-		return respuestaResize
-	}
-}
-
-// Se ocupa de enviar el pcb actual
-// TODO: solicitud desde kernel, o puedo mandarlo como cliente?
-
-func Return_EC(w http.ResponseWriter, r *http.Request) {
-
-	contextoEjecucion := globals.CurrentJob
-
-	respuesta, err := json.Marshal(&contextoEjecucion)
-	if err != nil {
-		http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(respuesta)
-
+	} 
 }
 
 //-----------------------------------------------------------------------
@@ -83,9 +63,6 @@ func Return_EC(w http.ResponseWriter, r *http.Request) {
 // Lee el valor del Registro Datos y lo escribe en la
 // dirección física de memoria obtenida a partir de la Dirección
 //	Lógica almacenada en el Registro Dirección.
-
-
-
 
 type BodyRequestLeer struct {
 	DireccionesTamanios []DireccionTamanio `json:"direcciones_tamanios"`
@@ -183,11 +160,8 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		
 		currentPCB.PC++
 
+	}
 }
-}
-
-
-
 
 // -------------------------------------------------------------------------------
 // LE SOLICITO A MEMORIA ESCRIBIR EN LA DIRECCION FISICA INDICADA
@@ -239,7 +213,7 @@ func SolicitarEscritura(direccionesTamanios []DireccionTamanio  , valorAEscribir
 
 // -------------------------------------------------------------------------------
 // LE SOLICITO A MEMORIA LEER Y DEVOLVER LO QUE ESTÉ EN LA DIREC FISICA INDICADA
-func SolicitarLectura(direccionesFisicas []DireccionTamanio ) string {
+func SolicitarLectura(direccionesFisicas []DireccionTamanio) string {
 
 	jsonDirecYTamanio, err := json.Marshal(BodyRequestLeer{
 		DireccionesTamanios: direccionesFisicas,

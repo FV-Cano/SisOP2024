@@ -19,3 +19,6 @@
 
 # Logs
 *.log
+
+# Launch para Debug
+.vscode/

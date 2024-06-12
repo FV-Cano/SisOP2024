@@ -6,11 +6,14 @@ import (
 
 	kernel_api "github.com/sisoputnfrba/tp-golang/kernel/API"
 	"github.com/sisoputnfrba/tp-golang/kernel/globals"
-	"github.com/sisoputnfrba/tp-golang/utils/client-Functions"
+	resources "github.com/sisoputnfrba/tp-golang/kernel/resources"
+	kernelutils "github.com/sisoputnfrba/tp-golang/kernel/utils"
 	cfg "github.com/sisoputnfrba/tp-golang/utils/config"
 	logger "github.com/sisoputnfrba/tp-golang/utils/log"
 	"github.com/sisoputnfrba/tp-golang/utils/server-Functions"
 )
+
+// ? Handshake IO?
 
 func main() {
 	// Iniciar loggers
@@ -25,15 +28,22 @@ func main() {
 	log.Println("Configuracion KERNEL cargada")
 
 	// Handlers
-	
 	kernelRoutes := RegisteredModuleRoutes()
 
-	// Iniciar servidor
+	// Execution Config
+	globals.MultiprogrammingCounter = make (chan int, globals.Configkernel.Multiprogramming)	// Inicializamos el contador de multiprogramación
+	resources.InitResourceMap()
 
+	globals.EmptiedListMutex.Lock() // Bloqueamos la lista de jobs vacía
+	globals.PlanBinary <- false
+
+
+	// Iniciar servidor
 	go server.ServerStart(globals.Configkernel.Port, kernelRoutes)
 
-	client.EnviarMensaje(globals.Configkernel.IP_memory, globals.Configkernel.Port_memory, "Saludo memoria desde Kernel")
-	client.EnviarMensaje(globals.Configkernel.IP_cpu, globals.Configkernel.Port_cpu, "Saludo cpu desde Kernel")
+	// * Planificación
+	go kernelutils.LTS_Plan()
+	go kernelutils.STS_Plan()
 
 	select {}		// Deja que la goroutine principal siga corriendo
 }
@@ -44,17 +54,20 @@ func UNUSED(x ...interface{}){}
 func RegisteredModuleRoutes() http.Handler {
 	moduleHandler := &server.ModuleHandler{
 		RouteHandlers: map[string]http.HandlerFunc{
-			"PUT /process": kernel_api.ProcessInit,
-			"DELETE /process/{pid}": kernel_api.ProcessDelete,
-			"GET /process/{pid}": kernel_api.ProcessState,
-			"PUT /plani": kernel_api.PlanificationStart,
-			"DELETE /plani": kernel_api.PlanificationStop,
-			"GET /process": kernel_api.ProcessList,
-			/* "POST /pcb-recv": kernel_api.PCB_recv, */
+			"PUT /process": 			kernel_api.ProcessInit,
+			"DELETE /process/{pid}": 	kernel_api.ProcessDelete,
+			"GET /process/{pid}": 		kernel_api.ProcessState,
+			"PUT /plani": 				kernel_api.PlanificationStart,
+			"DELETE /plani": 			kernel_api.PlanificationStop,
+			"GET /process": 			kernel_api.ProcessList,
+			"POST /io-handshake": 		kernel_api.GetIOInterface,
+			"POST /io-interface": 		kernel_api.ExisteInterfaz,
+			"POST /tiempo-bloq":		kernel_api.Resp_TiempoEspera,
+			"POST /io-stdin-read":		kernel_api.IOStdinRead,
+			"POST /io-stdout-write":	kernel_api.IOStdoutWrite,
 		},
 	}
 	return moduleHandler
 }
 
 // TODO: Probar finalizar proceso y estado proceso
-// ?: Preguntar utilización de APIs externas

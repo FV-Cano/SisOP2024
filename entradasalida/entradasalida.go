@@ -1,38 +1,19 @@
 package main
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 
-
-	"github.com/sisoputnfrba/tp-golang/cpu/operaciones"
-	client "github.com/sisoputnfrba/tp-golang/utils/client-Functions"
+	IO_api "github.com/sisoputnfrba/tp-golang/entradasalida/API"
+	"github.com/sisoputnfrba/tp-golang/entradasalida/globals"
 	logger "github.com/sisoputnfrba/tp-golang/utils/log"
+	"github.com/sisoputnfrba/tp-golang/utils/server-Functions"
 
 	cfg "github.com/sisoputnfrba/tp-golang/utils/config"
 )
 
-type T_ConfigIO struct {
-	Port               int    `json:"port"`
-	Type               string `json:"type"`
-	Unit_work_time     int    `json:"unit_work_time"`
-	Ip_kernel          string `json:"ip_kernel"`
-	Port_kernel        int    `json:"port_kernel"`
-	Ip_memory          string `json:"ip_memory"`
-	Port_memory        int    `json:"port_memory"`
-	Dialfs_path        string `json:"dialfs_path"`
-	Dialfs_block_size  int    `json:"dialfs_block_size"`
-	Dialfs_block_count int    `json:"dialfs_block_count"`
-}
-
-var configio T_ConfigIO
-
-// TODO, este struct va en el globals, en Kernel hay que desarrollar
 // una funcion que codifique las unidades de trabajo en un json
-type CantUnidadesTrabajo struct {
-	Unidades int `json:"cantUnidades"`
-}
 
 func main() {
 	// Iniciar loggers
@@ -40,33 +21,30 @@ func main() {
 	logger.LogfileCreate("io_debug.log")
 
 	// Inicializar config
-	err := cfg.ConfigInit("config-io.json", &configio)
+	err := cfg.ConfigInit(os.Args[2], &globals.ConfigIO)
 	if err != nil {
 		log.Fatalf("Error al cargar la configuracion %v", err)
 	}
 	log.Printf("Configuración IO cargada")
 
-	client.EnviarMensaje(configio.Ip_kernel, configio.Port_kernel, "Saludo kernel desde IO")
-	client.EnviarMensaje(configio.Ip_memory, configio.Port_memory, "Saludo memoria desde IO")
+	IORoutes := RegisteredModuleRoutes()
 
+	go server.ServerStart(globals.ConfigIO.Port, IORoutes)
+
+	// Handshake con kernel
+	log.Println("Handshake con Kernel")
+	IO_api.HandshakeKernel(os.Args[1])
+
+	select {}
 }
 
-func RecibirPeticionKernel(w http.ResponseWriter, r *http.Request) {
-	decoder := json.NewDecoder(r.Body)
-	var cantUnidadesTrabajo CantUnidadesTrabajo
-	err := decoder.Decode(&cantUnidadesTrabajo)
-	if err != nil {
-		log.Printf("Error al decodificar mensaje: %s\n", err.Error())
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Error al decodificar mensaje"))
-		return
+func RegisteredModuleRoutes() http.Handler {
+	moduleHandler := &server.ModuleHandler{
+		RouteHandlers: map[string]http.HandlerFunc{
+			"POST /io-gen-sleep": 	IO_api.IOGenSleep,
+			"POST /io-stdin-read": 	IO_api.IOStdinRead,
+			"POST /io-stdin-write": IO_api.IOStdoutWrite,
+		},
 	}
-
-	log.Println("Me llego una petición de Kernel")
-	log.Printf("%+v\n", cantUnidadesTrabajo)
-
-	operaciones.IO_GEN_SLEEP(cantUnidadesTrabajo.Unidades, configio.Unit_work_time)
-
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Espera finalizada"))
+	return moduleHandler
 }

@@ -1,33 +1,15 @@
 package main
 
 import (
-	"bufio"
-	//"fmt"
 	"log"
-	"strconv"
-	
-	//"path/filepath"
+	"net/http"
 
+	memoria_api "github.com/sisoputnfrba/tp-golang/memoria/API"
+	"github.com/sisoputnfrba/tp-golang/memoria/globals"
 	cfg "github.com/sisoputnfrba/tp-golang/utils/config"
 	logger "github.com/sisoputnfrba/tp-golang/utils/log"
 	"github.com/sisoputnfrba/tp-golang/utils/server-Functions"
-
-	//"github.com/sisoputnfrba/tp-golang/utils/server-Functions"
-	//"github.com/sisoputnfrba/tp-golang/utils/slice"
-	"encoding/json"
-	"net/http"
-	"os"
 )
-
-type T_ConfigMemory struct {
-	Port 				int 	`json:"port"`
-	Memory_size 		int 	`json:"memory_size"`
-	Page_size		 	int 	`json:"page_size"`
-	Instructions_path 	string 	`json:"instructions_path"`
-	Delay_response 		int 	`json:"delay_response"`
-}
-
-var configmemory T_ConfigMemory
 
 func main() {
 	// Iniciar loggers
@@ -35,69 +17,41 @@ func main() {
 	logger.LogfileCreate("memory_debug.log")
 
 	// Inicializamos la config
-	err := cfg.ConfigInit("config-memory.json", &configmemory)
+	err := cfg.ConfigInit("config-memory.json", &globals.Configmemory)
 	if err != nil {
 		log.Fatalf("Error al cargar la configuracion %v", err)
 	}
 	log.Println("Configuracion MEMORIA cargada")
-	
+
+	//verificar si estan bien los punteros
+	// Calculo la cantidad de frames que tendrá la memoria
+	globals.Frames = globals.Configmemory.Memory_size / globals.Configmemory.Page_size //ver si hay que ponerle puntero
+
+	globals.CurrentBitMap = memoria_api.NewBitMap(globals.Frames)
+
 	// Handlers
 	// Iniciar servidor
 
-	log.Println("Instrucciones leídas por memoria.")
-	go server.ServerStart(configmemory.Port,RegisteredModuleRoutes())
-	log.Println("Instrucciones enviadas a CPU")	
-	
+	// log.Println("Instrucciones leídas por memoria.")
+	go server.ServerStart(globals.Configmemory.Port, RegisteredModuleRoutes())
+	// log.Println("Instrucciones enviadas a CPU")
+
 	select {}
-	
-}
 
-func AbrirArchivo(filePath string)(*os.File){
-	file, err := os.Open(filePath) //El paquete os provee el método ReadFile el cual recibe como argumento el nombre de un archivo el cual se encargará de leer. Al completar la lectura, retorna un slice de bytes, de forma que si se desea leer, tiene que ser convertido primero a una cadena de tipo string
-	if err != nil {
-			log.Fatal(err)
-		}
-		
-	return file
-}
-
-func  LeerInstrucciones(filePath string) []string {
-	
-	var instrucciones []string
-	//Lee linea por linea el archivo
-	scanner := bufio.NewScanner(AbrirArchivo(filePath))
-    for scanner.Scan() {
-        // Agregar cada línea al slice de strings
-        instrucciones = append(instrucciones, scanner.Text())
-    }
-	if err := scanner.Err(); err != nil {
-        log.Fatal(err)
-    }
-    return instrucciones
-}
-
-func RespuestaServidor(w http.ResponseWriter, r *http.Request) {
-	queryParams := r.URL.Query()	//Nos permitirá acceder a aquellas variables definidas en la ruta.
-	name := queryParams.Get("name") //para obtener la variable name y utilizarla dentro de nuestra respuesta.
-	pc, err := strconv.Atoi(name) //de esta forma convierto la cadena (que sería el pc)
-	if err != nil{								//en un int para usarlo de indice
-		log.Fatal(err)
-	}
-	instrucciones := LeerInstrucciones(configmemory.Instructions_path)
-	respuesta, err := json.Marshal(instrucciones[pc])
-	if err != nil {
-		http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-	w.Write(respuesta)
 }
 
 func RegisteredModuleRoutes() http.Handler {
 	moduleHandler := &server.ModuleHandler{
 		RouteHandlers: map[string]http.HandlerFunc{
-			"GET /instrucciones": RespuestaServidor,
+			"GET /instrucciones":      memoria_api.InstruccionActual,
+			"POST /instrucciones":     memoria_api.CargarInstrucciones,
+			"GET /enviarMarco":        memoria_api.EnviarMarco,      //implementada en la MMU
+			"PATCH /resize":           memoria_api.Resize,           //implementada en CPU
+			"PATCH /finalizarProceso": memoria_api.FinalizarProceso, //falta implementar desde KERNEL
+			"GET /read":               memoria_api.LeerMemoria,      // implementada en cpu
+			"POST /write":             memoria_api.EscribirMemoria, // implementada en cpu
+			"GET /tamPagina":          memoria_api.Page_size,
+			"GET /tamTabla":           memoria_api.PedirTamTablaPaginas,        //falta implementar desde cliente
 		},
 	}
 	return moduleHandler

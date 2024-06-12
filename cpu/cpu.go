@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	cpu_api "github.com/sisoputnfrba/tp-golang/cpu/API"
-	cicloinstruccion "github.com/sisoputnfrba/tp-golang/cpu/cicloInstruccion"
 	"github.com/sisoputnfrba/tp-golang/cpu/globals"
 	cfg "github.com/sisoputnfrba/tp-golang/utils/config"
 	logger "github.com/sisoputnfrba/tp-golang/utils/log"
@@ -13,7 +12,6 @@ import (
 )
 
 func main() {
-
 	// Iniciar loggers
 	logger.ConfigurarLogger("cpu.log")
 	logger.LogfileCreate("cpu_debug.log")
@@ -25,20 +23,22 @@ func main() {
 	}
 	log.Println("Configuracion CPU cargada")
 
+	// Handlers
+	cpuRoutes := RegisteredModuleRoutes()
+
 	// *** SERVIDOR ***
-	go server.ServerStart(globals.Configcpu.Port)
+	go server.ServerStart(globals.Configcpu.Port, cpuRoutes)
 
 	// *** CLIENTE ***
-
-	cicloinstruccion.DecodeAndExecute()
-
-	//select {}
+	
+	select {}
 }
 
 func RegisteredModuleRoutes() http.Handler {
 	moduleHandler := &server.ModuleHandler{
 		RouteHandlers: map[string]http.HandlerFunc{
-			"POST /pcb-recv": cpu_api.PCB_recv,
+			"POST /dispatch": 	cpu_api.PCB_recv,
+			"POST /interrupt": 	cpu_api.HandleInterruption,
 		},
 	}
 	return moduleHandler

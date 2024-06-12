@@ -75,3 +75,8 @@ func ChangeState(pcb *pcb.T_PCB, newState string) {
 }
 		
 var BlockedJob_by_IO pcb.T_PCB
+
+type DireccionTamanio struct {
+	DireccionFisica 	int 
+	Tamanio         	int 
+}

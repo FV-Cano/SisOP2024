@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/sisoputnfrba/tp-golang/cpu/mmu"
 	"github.com/sisoputnfrba/tp-golang/kernel/globals"
 	"github.com/sisoputnfrba/tp-golang/utils/device"
 	"github.com/sisoputnfrba/tp-golang/utils/pcb"
@@ -518,7 +517,7 @@ func SolicitarGenSleep(pcb pcb.T_PCB) {
 
 func IOStdinRead(w http.ResponseWriter, r *http.Request) {
 	var infoRecibida struct {
-		direccionesFisicas []mmu.DireccionTamanio
+		direccionesFisicas []globals.DireccionTamanio
 		interfaz globals.InterfaceController
 		tamanio int
 	}
@@ -533,7 +532,7 @@ func IOStdinRead(w http.ResponseWriter, r *http.Request) {
 	url := fmt.Sprintf("http://%s:%d/io-stdin-read", infoRecibida.interfaz.IoInterf.InterfaceIP, infoRecibida.interfaz.IoInterf.InterfacePort)
 
 	bodyStdin, err := json.Marshal(struct {
-		direccionesFisicas []mmu.DireccionTamanio
+		direccionesFisicas []globals.DireccionTamanio
 		tamanio int
 	} {infoRecibida.direccionesFisicas, infoRecibida.tamanio})
 	if err != nil {
@@ -549,7 +548,7 @@ func IOStdinRead(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Unexpected response status: %s", response.Status)
 	}
 
-	log.Printf("Kernel mandó a leer a la interfaz: ", infoRecibida.interfaz.InterfaceType, infoRecibida.interfaz.InterfacePort)
+	log.Printf("Kernel mandó a leer a la interfaz: ", infoRecibida.interfaz.IoInterf.InterfaceType, infoRecibida.interfaz.IoInterf.InterfacePort)
 
 	globals.AvailablePcb <- true // TODO: Chequear si con la nueva implementacion se delega a la lista de bloqueados
 	w.WriteHeader(http.StatusOK)
@@ -557,7 +556,7 @@ func IOStdinRead(w http.ResponseWriter, r *http.Request) {
 
 func IOStdoutWrite(w http.ResponseWriter, r *http.Request) {
 	var infoRecibida struct {
-		direccionesFisicas []mmu.DireccionTamanio
+		direccionesFisicas []globals.DireccionTamanio
 		interfaz globals.InterfaceController
 	}
 	
@@ -584,7 +583,7 @@ func IOStdoutWrite(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Unexpected response status: %s", response.Status)
 	}
 
-	log.Printf("Kernel mandó a escribir a la interfaz: ", infoRecibida.interfaz.InterfaceType, infoRecibida.interfaz.InterfacePort)
+	log.Printf("Kernel mandó a escribir a la interfaz: ", infoRecibida.interfaz.IoInterf.InterfaceIP, infoRecibida.interfaz.IoInterf.InterfacePort)
 
 	globals.AvailablePcb <- true
 	w.WriteHeader(http.StatusOK)

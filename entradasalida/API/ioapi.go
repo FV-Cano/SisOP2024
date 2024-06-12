@@ -11,7 +11,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/sisoputnfrba/tp-golang/cpu/mmu"
 	"github.com/sisoputnfrba/tp-golang/entradasalida/globals"
 	"github.com/sisoputnfrba/tp-golang/utils/device"
 	"github.com/sisoputnfrba/tp-golang/utils/pcb"
@@ -88,7 +87,7 @@ func IOGenSleep(w http.ResponseWriter, r *http.Request) {
 
 func IOStdinRead(w http.ResponseWriter, r *http.Request) {
 	var infoRecibida struct {
-		direccionesFisicas []mmu.DireccionTamanio
+		direccionesFisicas []globals.DireccionTamanio
 		tamanio int
 	}
 	
@@ -107,7 +106,7 @@ func IOStdinRead(w http.ResponseWriter, r *http.Request) {
 
 	bodyWrite, err := json.Marshal(struct {
 		data string
-		direccionesFisicas []mmu.DireccionTamanio
+		direccionesFisicas []globals.DireccionTamanio
 		tamanio int
 	} {data, infoRecibida.direccionesFisicas, infoRecibida.tamanio})
 	if err != nil {
@@ -128,7 +127,7 @@ func IOStdinRead(w http.ResponseWriter, r *http.Request) {
 }
 
 func IOStdoutWrite(w http.ResponseWriter, r *http.Request) {
-	var direccionesRecibidas []mmu.DireccionTamanio
+	var direccionesRecibidas []globals.DireccionTamanio
 
 	err := json.NewDecoder(r.Body).Decode(&direccionesRecibidas)
 	if err != nil {

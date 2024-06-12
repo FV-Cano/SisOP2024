@@ -12,10 +12,9 @@ import (
 	"strings"
 	"unsafe"
 
-	cpu_api "github.com/sisoputnfrba/tp-golang/cpu/API"
 	"github.com/sisoputnfrba/tp-golang/cpu/globals"
 	"github.com/sisoputnfrba/tp-golang/cpu/mmu"
-	"github.com/sisoputnfrba/tp-golang/utils/device"
+	solicitudesmemoria "github.com/sisoputnfrba/tp-golang/cpu/solicitudesMemoria"
 	"github.com/sisoputnfrba/tp-golang/utils/pcb"
 )
 
@@ -26,11 +25,11 @@ import (
 **/
 
 type BodyRequestLeer struct {
-	DireccionesTamanios []mmu.DireccionTamanio `json:"direcciones_tamanios"`
+	DireccionesTamanios []globals.DireccionTamanio `json:"direcciones_tamanios"`
 }
 
 type BodyRequestEscribir struct {
-	DireccionesTamanios []mmu.DireccionTamanio `json:"direcciones_tamanios"`
+	DireccionesTamanios []globals.DireccionTamanio `json:"direcciones_tamanios"`
 	Valor_a_escribir    string             `json:"valor_a_escribir"`
 	Pid                 int                `json:"pid"`
 }
@@ -149,7 +148,7 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 				url := fmt.Sprintf("http://%s:%d/io-stdin-read", globals.Configcpu.IP_kernel, globals.Configcpu.Port_kernel)
 
 				bodyStdin, err := json.Marshal(struct {
-					direccionesFisicas []mmu.DireccionTamanio
+					direccionesFisicas []globals.DireccionTamanio
 					interfaz globals.InterfaceController
 					tamanio int
 				} {direccionesFisicas, interfazEncontrada, dataSizeInt})
@@ -194,7 +193,7 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 				url := fmt.Sprintf("http://%s:%d/io-stdout-write", globals.Configcpu.IP_kernel, globals.Configcpu.Port_kernel)
 
 				bodyStdout, err := json.Marshal(struct {
-					direccionesFisicas []mmu.DireccionTamanio
+					direccionesFisicas []globals.DireccionTamanio
 					interfaz globals.InterfaceController
 				} {direccionesFisicas, interfazEncontrada})
 				if err != nil {
@@ -292,7 +291,7 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 						log.Fatalf("Error: el valor en el registro no es de tipo string")
 			}
 	
-			cpu_api.SolicitarEscritura(direcsFisicas, valor, int(currentPCB.PID)) //([direccion fisica y tamanio], valorAEscribir, pid
+			solicitudesmemoria.SolicitarEscritura(direcsFisicas, valor, int(currentPCB.PID)) //([direccion fisica y tamanio], valorAEscribir, pid
 				
 			currentPCB.PC++
 			
@@ -314,7 +313,7 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 	
 			direcsFisicas := mmu.ObtenerDireccionesFisicas(direc_logica, tamanio, int(currentPCB.PID))
 	
-				datos := cpu_api.SolicitarLectura(direcsFisicas)
+				datos := solicitudesmemoria.SolicitarLectura(direcsFisicas)
 				currentPCB.CPU_reg[instruccionDecodificada[1]] = datos
 	
 			currentPCB.PC++
@@ -325,7 +324,7 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 	
 		case "COPY_STRING":
 			// COPY_STRING (Longitud): Copia la cantidad de bytes indicadas por la Longitud desde el Registro SI (que apunta a un string) al Registro Destino DI (que apunta a una posicion de memoria).
-			tamanio := cpu_api.PasarAInt(instruccionDecodificada[1])
+			tamanio := globals.PasarAInt(instruccionDecodificada[1])
 	
 			direc_logicaSI, ok := currentPCB.CPU_reg["SI"].(int)
 			if !ok {
@@ -333,7 +332,7 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 			}
 	
 			direcsFisicasSI := mmu.ObtenerDireccionesFisicas(direc_logicaSI, tamanio, int(currentPCB.PID))
-			datos := cpu_api.SolicitarLectura(direcsFisicasSI)
+			datos := solicitudesmemoria.SolicitarLectura(direcsFisicasSI)
 	
 			direc_logicaDI, ok := currentPCB.CPU_reg["DI"].(int)
 			if !ok {
@@ -342,7 +341,7 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 	
 			direcsFisicasDI := mmu.ObtenerDireccionesFisicas(direc_logicaDI, tamanio, int(currentPCB.PID))
 	
-			cpu_api.SolicitarEscritura(direcsFisicasDI, datos, int(currentPCB.PID)) //([direccion fisica y tamanio], valorAEscribir, pid)
+			solicitudesmemoria.SolicitarEscritura(direcsFisicasDI, datos, int(currentPCB.PID)) //([direccion fisica y tamanio], valorAEscribir, pid)
 			
 			currentPCB.PC++
 	

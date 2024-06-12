@@ -109,17 +109,17 @@ func Frame_rcv(currentPCB *pcb.T_PCB, pagina int) int {
 	return int(bytesToInt(frame))
 }
 
-type Direccion_y_tamanio struct {
-	direccion_fisica int
-	tamanio int
+type DireccionTamanio struct {
+	DireccionFisica int 
+	Tamanio         int 
 }
 
 
-func ObtenerDireccionesFisicas(direccionLogica int, tamanio int, pid int) []Direccion_y_tamanio { 
-	var direccion_y_tamanio []Direccion_y_tamanio
+func ObtenerDireccionesFisicas(direccionLogica int, tamanio int, pid int) []DireccionTamanio { 
+	var direccion_y_tamanio []DireccionTamanio
 	tamPagina := SolicitarTamPagina()
 	numeroPagina := direccionLogica/tamPagina
-	desplazamiento := direccionLogica - numeroPagina*tamPagina
+	desplazamiento := direccionLogica - numeroPagina * tamPagina
 	cantidadPaginas := tamanio/tamPagina
 	frame := Frame_rcv(&globals.CurrentJob, numeroPagina) 
 	tamanioTotal := frame * tamPagina + desplazamiento + tamanio
@@ -127,16 +127,16 @@ func ObtenerDireccionesFisicas(direccionLogica int, tamanio int, pid int) []Dire
 		Resize(tamanioTotal)
 	}
 	//Primer pagina teniendo en cuenta el desplazamiento
-	slice.Push[Direccion_y_tamanio](&direccion_y_tamanio, Direccion_y_tamanio{frame * tamPagina + desplazamiento, tamPagina - desplazamiento})
+	slice.Push[DireccionTamanio](&direccion_y_tamanio, DireccionTamanio{frame * tamPagina + desplazamiento, tamPagina - desplazamiento})
 	tamanioRestante := tamanio - (tamPagina - desplazamiento)
 	for  i:= 1; i < cantidadPaginas; i++ {
 		if (i == cantidadPaginas-1) {
 			//Ultima pagina teniendo en cuenta el tamanio
-			slice.Push[Direccion_y_tamanio](&direccion_y_tamanio, Direccion_y_tamanio{frame * tamPagina, tamanioRestante})
+			slice.Push[DireccionTamanio](&direccion_y_tamanio, DireccionTamanio{frame * tamPagina, tamanioRestante})
 		} else { //Paginas del medio sin tener en cuenta el desplazamiento
 			numeroPagina++
 			frame = Frame_rcv(&globals.CurrentJob, direccionLogica)
-			slice.Push[Direccion_y_tamanio](&direccion_y_tamanio, Direccion_y_tamanio{frame * tamPagina, tamPagina})
+			slice.Push[DireccionTamanio](&direccion_y_tamanio, DireccionTamanio{frame * tamPagina, tamPagina})
 			tamanioRestante -= tamPagina
 	}
 }

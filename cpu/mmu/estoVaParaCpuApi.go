@@ -7,7 +7,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"reflect"
 	"strconv"
 	"unsafe"
 
@@ -17,20 +16,11 @@ import (
 )
 
 // ENTIENDO QUE UNA VEZ QUE SOLUCIONEMOS LO DE LAS DIRECS FISICAS TODOS
-// NUESTROS PROBLEMAS SERAN RESUELTOS
-type BodyRequestEscribir struct {
-	Direccion_fisica int
-	Valor_a_escribir string
-	Desplazamiento   int
-}
-
-type BodyRequestLeer struct {
-	Direccion_fisica int
-	Tamanio          int
-}
 
 //hago este archivo para que no se rompa nada si hago pull de cpu, pero va para cpu.api!!!
 //peticion para RESIZE de memoria (DESDE CPU A MEMORIA)
+
+
 
 func Resize(tamanio int) string {
 	cliente := &http.Client{}
@@ -63,8 +53,8 @@ func Resize(tamanio int) string {
 	// Y Avisar que el error es por out of memory
 	var respuestaResize = string(bodyBytes)
 	if respuestaResize != "OK" {
-		//Return_EC(w, r)
-		return "Error: Out of memory"
+		return "OK"
+		//hacer esto
 	} else {
 		return respuestaResize
 	}
@@ -94,7 +84,21 @@ func Return_EC(w http.ResponseWriter, r *http.Request) {
 // dirección física de memoria obtenida a partir de la Dirección
 //	Lógica almacenada en el Registro Dirección.
 
-func DecodeAndExecute(w http.ResponseWriter, r *http.Request, currentPCB *pcb.T_PCB) {
+
+
+
+type BodyRequestLeer struct {
+	DireccionesTamanios []DireccionTamanio `json:"direcciones_tamanios"`
+}
+
+
+type BodyRequestEscribir struct {
+	DireccionesTamanios []DireccionTamanio `json:"direcciones_tamanios"`
+	Valor_a_escribir    string             `json:"valor_a_escribir"`
+	Pid                 int                `json:"pid"`
+}
+
+func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 	instActual := cicloInstruccion.Fetch(currentPCB)
 	instruccionDecodificada := cicloInstruccion.Delimitador(instActual)
 
@@ -107,35 +111,30 @@ func DecodeAndExecute(w http.ResponseWriter, r *http.Request, currentPCB *pcb.T_
 		log.Printf("PID: %d - Ejecutando: %s - %s", currentPCB.PID, instruccionDecodificada[0], instruccionDecodificada[1:])
 	}
 
+
 	switch instruccionDecodificada[0] {
+
 	case "MOV_OUT":
+//(Registro Dirección, Registro Datos): Lee el valor del Registro Datos y lo escribe en la dirección física de memoria 
+//obtenida a partir de la Dirección Lógica almacenada en el Registro Dirección.
+		tamanio := int(unsafe.Sizeof(currentPCB.CPU_reg[instruccionDecodificada[2]])) //ver de usar el switch que tenemos en globals
 
-		tamanio := int(unsafe.Sizeof(instruccionDecodificada[2]))
-
-		direcsFisicas := ObtenerDireccionesFisicas(PasarAInt(instruccionDecodificada[1]), tamanio, int(currentPCB.PID))
-		tipoTamanio := reflect.TypeOf(instruccionDecodificada[2]).String()
-
-		cantDirecciones := len(direcsFisicas)
-
-		if tipoTamanio == "uint8" {
-			for i := 0; i < cantDirecciones; i++ {
-
-				valor, ok := currentPCB.CPU_reg[instruccionDecodificada[2]].(string)
-				if !ok {
-					log.Fatalf("Error: el valor en el registro no es de tipo string")
-				}
-				requestBody := BodyRequestEscribir{
-					Direccion_fisica: direcsFisicas[i].direccion_fisica,
-					// revisar error
-					Valor_a_escribir: valor,
-					Desplazamiento:   5, /*Lo hardcodeo, Seguro no necesite este dato*/
-				}
-
-				SolicitarEscritura(w, r, requestBody)
-			}
-
+		direc_logica, ok := currentPCB.CPU_reg[instruccionDecodificada[1]].(int)
+		if !ok {
+			log.Fatalf("Error: el valor en el registro no es de tipo string")
 		}
+
+		direcsFisicas := ObtenerDireccionesFisicas(direc_logica, tamanio, int(currentPCB.PID))
+
+		valor, ok := currentPCB.CPU_reg[instruccionDecodificada[2]].(string)
+		if !ok {
+					log.Fatalf("Error: el valor en el registro no es de tipo string")
+		}
+
+		SolicitarEscritura(direcsFisicas, valor, int(currentPCB.PID)) //([direccion fisica y tamanio], valorAEscribir, pid
+			
 		currentPCB.PC++
+
 		//----------------------------------------------------------------------------
 
 		// MOV_IN (Registro Datos, Registro Dirección): Lee el valor
@@ -144,21 +143,17 @@ func DecodeAndExecute(w http.ResponseWriter, r *http.Request, currentPCB *pcb.T_
 
 	case "MOV_IN":
 
-		tamanio := int(unsafe.Sizeof(instruccionDecodificada[2]))
+		tamanio := int(unsafe.Sizeof(currentPCB.CPU_reg[instruccionDecodificada[1]]))
 
-		direcsFisicas := ObtenerDireccionesFisicas(PasarAInt(instruccionDecodificada[1]), tamanio, int(currentPCB.PID))
-
-		cantDirecciones := len(direcsFisicas)
-
-		for i := 0; i < cantDirecciones; i++ {
-			requestBody := BodyRequestLeer{
-				Direccion_fisica: direcsFisicas[i].direccion_fisica,
-				Tamanio:          tamanio,
-			}
-			datos := SolicitarLectura(w, r, requestBody)
-			currentPCB.CPU_reg[instruccionDecodificada[1]] = datos
-
+		direc_logica, ok := currentPCB.CPU_reg[instruccionDecodificada[2]].(int)
+		if !ok {
+			log.Fatalf("Error: el valor en el registro no es de tipo string")
 		}
+
+		direcsFisicas := ObtenerDireccionesFisicas(direc_logica, tamanio, int(currentPCB.PID))
+
+			datos := SolicitarLectura(direcsFisicas)
+			currentPCB.CPU_reg[instruccionDecodificada[1]] = datos
 
 		currentPCB.PC++
 		//-----------------------------------------------------------------------------
@@ -169,46 +164,49 @@ func DecodeAndExecute(w http.ResponseWriter, r *http.Request, currentPCB *pcb.T_
 	case "COPY_STRING":
 		tamanio := PasarAInt(instruccionDecodificada[1])
 
-		direc_logica, ok := currentPCB.CPU_reg["DI"].(int)
+		direc_logicaSI, ok := currentPCB.CPU_reg["SI"].(int)
 		if !ok {
 			log.Fatalf("Error: el valor en el registro no es de tipo string")
 		}
 
-		direcsFisicas := ObtenerDireccionesFisicas(direc_logica, tamanio, int(currentPCB.PID))
-		cantDirecciones := len(direcsFisicas)
+		direcsFisicasSI := ObtenerDireccionesFisicas(direc_logicaSI, tamanio, int(currentPCB.PID))
+		datos := SolicitarLectura(direcsFisicasSI)
 
-		datos_a_esribir, ok := currentPCB.CPU_reg["SI"].(string)
+		direc_logicaDI, ok := currentPCB.CPU_reg["DI"].(int)
 		if !ok {
 			log.Fatalf("Error: el valor en el registro no es de tipo string")
 		}
 
-		for i := 0; i < cantDirecciones; i++ {
-			requestBody := BodyRequestEscribir{
-				Direccion_fisica: direcsFisicas[i].direccion_fisica,
-				Valor_a_escribir: datos_a_esribir,
-				Desplazamiento:   5, /*Lo hardcodeo, Seguro no necesite este dato*/
-			}
+		direcsFisicasDI := ObtenerDireccionesFisicas(direc_logicaDI, tamanio, int(currentPCB.PID))
 
-			SolicitarEscritura(w, r, requestBody)
-		}
-
+		SolicitarEscritura(direcsFisicasDI, datos, int(currentPCB.PID)) //([direccion fisica y tamanio], valorAEscribir, pid)
+		
 		currentPCB.PC++
-	}
 
 }
+}
+
+
+
 
 // -------------------------------------------------------------------------------
 // LE SOLICITO A MEMORIA ESCRIBIR EN LA DIRECCION FISICA INDICADA
-func SolicitarEscritura(w http.ResponseWriter, r *http.Request, requestBody BodyRequestEscribir) {
 
-	bodyEscritura, err := json.Marshal(requestBody)
+
+func SolicitarEscritura(direccionesTamanios []DireccionTamanio  , valorAEscribir string, pid int) {
+
+	body, err := json.Marshal(BodyRequestEscribir{
+		DireccionesTamanios : direccionesTamanios,
+		Valor_a_escribir    : valorAEscribir,
+		Pid                 : pid,
+	})          
 	if err != nil {
 		return
 	}
 
 	cliente := &http.Client{}
 	url := fmt.Sprintf("http://%s:%d/write", globals.Configcpu.IP_memory, globals.Configcpu.Port_memory)
-	escribirEnMemoria, err := http.NewRequest("POST", url, bytes.NewBuffer(bodyEscritura))
+	escribirEnMemoria, err := http.NewRequest("POST", url, bytes.NewBuffer(body))
 	if err != nil {
 		return
 	}
@@ -241,9 +239,11 @@ func SolicitarEscritura(w http.ResponseWriter, r *http.Request, requestBody Body
 
 // -------------------------------------------------------------------------------
 // LE SOLICITO A MEMORIA LEER Y DEVOLVER LO QUE ESTÉ EN LA DIREC FISICA INDICADA
-func SolicitarLectura(w http.ResponseWriter, r *http.Request, requestBody BodyRequestLeer) string {
+func SolicitarLectura(direccionesFisicas []DireccionTamanio ) string {
 
-	jsonDirecYTamanio, err := json.Marshal(requestBody)
+	jsonDirecYTamanio, err := json.Marshal(BodyRequestLeer{
+		DireccionesTamanios: direccionesFisicas,
+	})
 	if err != nil {
 		return "error"
 	}
@@ -262,7 +262,7 @@ func SolicitarLectura(w http.ResponseWriter, r *http.Request, requestBody BodyRe
 	}
 
 	if respuesta.StatusCode != http.StatusOK {
-		return fmt.Sprintf("Error al realizar la lectura")
+		return "Error al realizar la lectura"	
 	}
 
 	bodyBytes, err := io.ReadAll(respuesta.Body)

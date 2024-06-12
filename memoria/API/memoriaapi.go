@@ -223,20 +223,23 @@ func FinalizarProceso(w http.ResponseWriter, r *http.Request) {
 // --------------------------------------------------------------------------------------//
 // ACCESO A ESPACIO DE USUARIO: Esta petición puede venir tanto de la CPU como de un Módulo de Interfaz de I/O
 type DireccionTamanio struct {
-	DireccionFisica int
-	Tamanio         int
+	DireccionFisica int 
+	Tamanio         int 
 }
 
+type BodyRequestLeer struct {
+	DireccionesTamanios []DireccionTamanio `json:"direcciones_tamanios"`
+}
 // le va a llegar la lista de struct de direccionfisica y tamanio
 // por cada struct va a leer la memoria en el tamaño que le pide y devolver el contenido
 func LeerMemoria(w http.ResponseWriter, r *http.Request) {
-	var request []DireccionTamanio
+	var request BodyRequestLeer
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	respuesta, err := json.Marshal(LeerDeMemoria(request))
+	respuesta, err := json.Marshal(LeerDeMemoria(request.DireccionesTamanios))
 	if err != nil {
 		http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
 		return

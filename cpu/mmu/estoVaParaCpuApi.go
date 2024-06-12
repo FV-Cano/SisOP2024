@@ -63,7 +63,7 @@ func Resize(tamanio int) string {
 	// Y Avisar que el error es por out of memory
 	var respuestaResize = string(bodyBytes)
 	if respuestaResize != "OK" {
-		Return_EC(w, r)
+		//Return_EC(w, r)
 		return "Error: Out of memory"
 	} else {
 		return respuestaResize

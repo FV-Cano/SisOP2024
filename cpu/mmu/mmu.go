@@ -42,6 +42,39 @@ func SolicitarTamPagina() int {
 
 }
 
+
+func PedirTamTablaPaginas(pid int) int {
+	cliente := &http.Client{}
+	url := fmt.Sprintf("http://%s:%d/tamTabla", globals.Configcpu.IP_memory,globals.Configcpu.Port_memory)
+	
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		log.Fatal("Error al hacer el request")
+	}
+	q := req.URL.Query()
+	q.Add("pid", strconv.Itoa(int(pid)))
+	req.URL.RawQuery = q.Encode()
+
+	req.Header.Set("Content-Type", "application/json")
+	respuesta, err := cliente.Do(req)
+	if err != nil {
+		log.Fatal("Error al hacer el request")
+	}
+
+	if respuesta.StatusCode != http.StatusOK {
+		log.Fatal("Error en el estado de la respuesta")
+	}
+
+	//Memoria nos devuelve un frame a partir de la data enviada
+	tamTabla, err := io.ReadAll(respuesta.Body)
+	if err != nil {
+		log.Fatal("Error al leer el cuerpo de la respuesta")
+	}
+
+	return int(bytesToInt(tamTabla))
+
+}
+
 func Frame_rcv(currentPCB *pcb.T_PCB, pagina int) int {
 	//Enviamos el PID y la PAGINA a memoria
 	pid := currentPCB.PID
@@ -86,37 +119,32 @@ func ObtenerDireccionesFisicas(direccionLogica int, tamanio int, pid int) []Dire
 	var direccion_y_tamanio []Direccion_y_tamanio
 	tamPagina := SolicitarTamPagina()
 	numeroPagina := direccionLogica/tamPagina
-	frame := Frame_rcv(&globals.CurrentJob, numeroPagina) 
 	desplazamiento := direccionLogica - numeroPagina*tamPagina
 	cantidadPaginas := tamanio/tamPagina
-	if (tamanio > )
-	if (desplazamiento != 0){
-		for i := 0; i < cantidadPaginas; i++ {
-			slice.Push[Direccion_y_tamanio](&direccion_y_tamanio, Direccion_y_tamanio{frame * tamPagina + desplazamiento, tamPagina - desplazamiento})
+	frame := Frame_rcv(&globals.CurrentJob, numeroPagina) 
+	tamanioTotal := frame * tamPagina + desplazamiento + tamanio
+	if (tamanioTotal > PedirTamTablaPaginas(pid) * tamPagina) {
+		Resize(tamanioTotal)
+	}
+	//Primer pagina teniendo en cuenta el desplazamiento
+	slice.Push[Direccion_y_tamanio](&direccion_y_tamanio, Direccion_y_tamanio{frame * tamPagina + desplazamiento, tamPagina - desplazamiento})
+	tamanioRestante := tamanio - (tamPagina - desplazamiento)
+	for  i:= 1; i < cantidadPaginas; i++ {
+		if (i == cantidadPaginas-1) {
+			//Ultima pagina teniendo en cuenta el tamanio
+			slice.Push[Direccion_y_tamanio](&direccion_y_tamanio, Direccion_y_tamanio{frame * tamPagina, tamanioRestante})
+		} else { //Paginas del medio sin tener en cuenta el desplazamiento
 			numeroPagina++
-			frame = Frame_rcv(&globals.CurrentJob, numeroPagina)
-		}
-	} else {
-		for  i:= 1; i < cantidadPaginas; i++ {
+			frame = Frame_rcv(&globals.CurrentJob, direccionLogica)
 			slice.Push[Direccion_y_tamanio](&direccion_y_tamanio, Direccion_y_tamanio{frame * tamPagina, tamPagina})
-			numeroPagina++
-			frame = Frame_rcv(&globals.CurrentJob, direccionLogica + tamPagina)
-		}
+			tamanioRestante -= tamPagina
+	}
+}
+		return direccion_y_tamanio
+
 	}
 
 
-	if (tamanio + desplazamiento > tamPagina){
-
-		tamPagina++
-		slice.Push[Direccion_y_tamanio](&direccion_y_tamanio, Direccion_y_tamanio{frame * tamPagina + desplazamiento, tamanio + desplazamiento - tamPagina})
-	} 
-
-
-	return direccion_y_tamanio
-
-
-
-}
 func bytesToInt(b []byte) uint32 {
     return binary.BigEndian.Uint32(b)
 }

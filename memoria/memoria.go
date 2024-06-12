@@ -49,8 +49,9 @@ func RegisteredModuleRoutes() http.Handler {
 			"PATCH /resize":           memoria_api.Resize,           //implementada en CPU
 			"PATCH /finalizarProceso": memoria_api.FinalizarProceso, //falta implementar desde KERNEL
 			"GET /read":               memoria_api.LeerMemoria,      // implementada en cpu
-			"POST /write":             memoria_api.EscribirMemoria,  // implementada en cpu
-			"GET /tamPagina":          memoria_api.Page_size,        //falta implementar desde cliente
+			"POST /write":             memoria_api.EscribirMemoria, // implementada en cpu
+			"GET /tamPagina":          memoria_api.Page_size,
+			"GET /tamTabla":           memoria_api.PedirTamTablaPaginas,        //falta implementar desde cliente
 		},
 	}
 	return moduleHandler

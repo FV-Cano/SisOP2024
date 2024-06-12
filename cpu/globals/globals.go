@@ -1,8 +1,12 @@
 package globals
 
 import (
+	"encoding/binary"
+	"fmt"
+	"strconv"
 	"sync"
 
+	"github.com/sisoputnfrba/tp-golang/utils/device"
 	"github.com/sisoputnfrba/tp-golang/utils/pcb"
 )
 
@@ -32,3 +36,25 @@ var (
 )
 
 type Frame int
+
+type InterfaceController struct {
+	IoInterf 					device.T_IOInterface
+	Controller 					chan bool
+}
+
+type DireccionTamanio struct {
+	DireccionFisica 	int 
+	Tamanio         	int 
+}
+
+func PasarAInt(cadena string) int {
+	num, err := strconv.Atoi(cadena)
+	if err != nil {
+		fmt.Println("Error: ", err)
+	}
+	return num
+}
+
+func BytesToInt(b []byte) uint32 {
+    return binary.BigEndian.Uint32(b)
+}

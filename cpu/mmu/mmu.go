@@ -1,8 +1,6 @@
 package mmu
 
 import (
-	//"encoding/json"
-	"encoding/binary"
 	"fmt"
 	"io"
 	"log"
@@ -10,10 +8,10 @@ import (
 	"strconv"
 
 	"github.com/sisoputnfrba/tp-golang/cpu/globals"
+	solicitudesmemoria "github.com/sisoputnfrba/tp-golang/cpu/solicitudesMemoria"
 	"github.com/sisoputnfrba/tp-golang/utils/pcb"
 	"github.com/sisoputnfrba/tp-golang/utils/slice"
 )
-
 
 func SolicitarTamPagina() int {
 	cliente := &http.Client{}
@@ -41,7 +39,6 @@ func SolicitarTamPagina() int {
 	return tamPaginaEnInt
 
 }
-
 
 func PedirTamTablaPaginas(pid int) int {
 	cliente := &http.Client{}
@@ -71,7 +68,7 @@ func PedirTamTablaPaginas(pid int) int {
 		log.Fatal("Error al leer el cuerpo de la respuesta")
 	}
 
-	return int(bytesToInt(tamTabla))
+	return int(globals.BytesToInt(tamTabla))
 
 }
 
@@ -106,17 +103,12 @@ func Frame_rcv(currentPCB *pcb.T_PCB, pagina int) int {
 		log.Fatal("Error al leer el cuerpo de la respuesta")
 	}
 
-	return int(bytesToInt(frame))
-}
-
-type DireccionTamanio struct {
-	DireccionFisica int 
-	Tamanio         int 
+	return int(globals.BytesToInt(frame))
 }
 
 
-func ObtenerDireccionesFisicas(direccionLogica int, tamanio int, pid int) []DireccionTamanio { 
-	var direccion_y_tamanio []DireccionTamanio
+func ObtenerDireccionesFisicas(direccionLogica int, tamanio int, pid int) []globals.DireccionTamanio { 
+	var direccion_y_tamanio []globals.DireccionTamanio
 	tamPagina := SolicitarTamPagina()
 	numeroPagina := direccionLogica/tamPagina
 	desplazamiento := direccionLogica - numeroPagina * tamPagina
@@ -124,29 +116,21 @@ func ObtenerDireccionesFisicas(direccionLogica int, tamanio int, pid int) []Dire
 	frame := Frame_rcv(&globals.CurrentJob, numeroPagina) 
 	tamanioTotal := frame * tamPagina + desplazamiento + tamanio
 	if (tamanioTotal > PedirTamTablaPaginas(pid) * tamPagina) {
-		Resize(tamanioTotal)
+		solicitudesmemoria.Resize(tamanioTotal)
 	}
 	//Primer pagina teniendo en cuenta el desplazamiento
-	slice.Push[DireccionTamanio](&direccion_y_tamanio, DireccionTamanio{frame * tamPagina + desplazamiento, tamPagina - desplazamiento})
+	slice.Push(&direccion_y_tamanio, globals.DireccionTamanio{DireccionFisica: frame * tamPagina + desplazamiento, Tamanio: tamPagina - desplazamiento})
 	tamanioRestante := tamanio - (tamPagina - desplazamiento)
 	for  i:= 1; i < cantidadPaginas; i++ {
 		if (i == cantidadPaginas-1) {
 			//Ultima pagina teniendo en cuenta el tamanio
-			slice.Push[DireccionTamanio](&direccion_y_tamanio, DireccionTamanio{frame * tamPagina, tamanioRestante})
+			slice.Push(&direccion_y_tamanio, globals.DireccionTamanio{DireccionFisica: frame * tamPagina, Tamanio: tamanioRestante})
 		} else { //Paginas del medio sin tener en cuenta el desplazamiento
 			numeroPagina++
 			frame = Frame_rcv(&globals.CurrentJob, direccionLogica)
-			slice.Push[DireccionTamanio](&direccion_y_tamanio, DireccionTamanio{frame * tamPagina, tamPagina})
+			slice.Push(&direccion_y_tamanio, globals.DireccionTamanio{DireccionFisica: frame * tamPagina, Tamanio: tamPagina})
 			tamanioRestante -= tamPagina
+		}
 	}
+	return direccion_y_tamanio
 }
-		return direccion_y_tamanio
-
-	}
-
-
-func bytesToInt(b []byte) uint32 {
-    return binary.BigEndian.Uint32(b)
-}
-
-

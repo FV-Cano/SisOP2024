@@ -39,7 +39,7 @@ type GetInstructions_BRQ struct {
  * ProcessInit: Inicia un proceso en base a un archivo dentro del FS de Linux.
 	[x] Creación de PCB
 	[x] Asignación de PID incrementando en 1 por cada proceso creado
-	[ ] Estado de proceso: NEW
+	[x] Estado de proceso: NEW
 */
 func ProcessInit(w http.ResponseWriter, r *http.Request) {
 	var request ProcessStart_BRQ
@@ -60,7 +60,7 @@ func ProcessInit(w http.ResponseWriter, r *http.Request) {
 	newPcb := &pcb.T_PCB{
 		PID: 			generatePID(),
 		PC: 			0,
-		Quantum: 		0,
+		Quantum: 		uint32(globals.Configkernel.Quantum),
 		CPU_reg: 		map[string]interface{}{
 							"AX": uint8(0),
 							"BX": uint8(0),
@@ -73,19 +73,20 @@ func ProcessInit(w http.ResponseWriter, r *http.Request) {
 							"SI": uint32(0),
 							"DI": uint32(0),
 						},
-		State: 			"READY", // TODO: La idea es que el estado sea NEW cuando implementemos el LTS
+		State: 			"NEW",
 		EvictionReason: "",
+		Resources: 		make(map[string]int),	// * El valor por defecto es 0, tener en cuenta por las dudas a la hora de testear
+		RequestedResource: "",
 	}
 
-	globals.ProcessesMutex.Lock()
-	slice.Push(&globals.Processes, *newPcb)
-	defer globals.ProcessesMutex.Unlock()
+	globals.LTSMutex.Lock()
+	slice.Push(&globals.LTS, *newPcb)
+	defer globals.LTSMutex.Unlock()
 
-	globals.STSMutex.Lock()
-	slice.Push(&globals.STS, *newPcb)	// TODO: Implementar LTS
-	defer globals.STSMutex.Unlock()
-
-	globals.MultiprogrammingCounter <- int(newPcb.PID)
+	// Si la lista estaba vacía, la desbloqueo
+	if len(globals.LTS) == 1 {
+		globals.EmptiedListMutex.Unlock()
+	}
 
 	var respBody ProcessStart_BRS = ProcessStart_BRS{PID: newPcb.PID}
 
@@ -172,7 +173,15 @@ func ProcessState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	process, _ := SearchByID(pid, globals.Processes)
+	process, _ := SearchByID(pid, globals.LTS)
+	if process == nil {
+		process, _ = SearchByID(pid, globals.STS)
+	} 
+	
+	if process == nil {
+		http.Error(w, "Process not found", http.StatusNotFound)
+		return
+	}
 
 	result := ProcessStatus_BRS{State: process.State}
 
@@ -213,10 +222,7 @@ type ProcessList_BRS struct {
  * ProcessList: Devuelve una lista de procesos con su PID y estado
 */
 func ProcessList(w http.ResponseWriter, r *http.Request) {
-	// Me traigo los procesos de la lista de procesos
-	globals.ProcessesMutex.Lock()
-	allProcesses := globals.Processes
-	defer globals.ProcessesMutex.Unlock()
+	allProcesses := getProcessList()
 
 	// Formateo los procesos para devolverlos
 	respBody := make([]ProcessList_BRS, len(allProcesses))
@@ -232,6 +238,19 @@ func ProcessList(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	w.Write(response)
+}
+
+/**
+ * getProcessList: Devuelve una lista de todos los procesos en el sistema (LTS, STS, Blocked, STS_Priority, CurrentJob)
+
+ * @return []pcb.T_PCB: Lista de procesos
+*/
+func getProcessList() []pcb.T_PCB {
+	allProcesses := append(globals.LTS, globals.STS...)
+	allProcesses = append(allProcesses, globals.Blocked...)
+	allProcesses = append(allProcesses, globals.STS_Priority...)
+	allProcesses = append(allProcesses, globals.CurrentJob)
+	return allProcesses
 }
 
 /**
@@ -269,8 +288,8 @@ func PCB_Send() error {
 	if err != nil {
 		return fmt.Errorf("failed to decode PCB response: %v", err)
 	}
-	globals.PcbReceived <- true
 
+	globals.PcbReceived <- true
 
 	return nil
 }
@@ -322,27 +341,14 @@ func SearchByID(pid uint32, processList []pcb.T_PCB) (*pcb.T_PCB, int) {
  * @param pid: PID del proceso a remover
 */
 func RemoveByID(pid uint32) error {
-	_, generalIndex := SearchByID(pid, globals.Processes)
-	
-	if (generalIndex == -1) {
-		return fmt.Errorf("process with PID %d not found", pid)
-	} else {
-		globals.ProcessesMutex.Lock()
-		defer globals.ProcessesMutex.Unlock()
-		slice.RemoveAtIndex(&globals.Processes, generalIndex)
-	}
-	
 	_, ltsIndex := SearchByID(pid, globals.LTS)
-	
 	_, stsIndex := SearchByID(pid, globals.STS)
 	
 	if ltsIndex != -1 {
 		globals.LTSMutex.Lock()
 		defer globals.LTSMutex.Unlock()
 		slice.RemoveAtIndex(&globals.LTS, ltsIndex)	
-	}
-	
-	if stsIndex != -1 {
+	} else if stsIndex != -1 {
 		globals.STSMutex.Lock()
 		defer globals.STSMutex.Unlock()
 		slice.RemoveAtIndex(&globals.STS, stsIndex)
@@ -362,6 +368,17 @@ func GetPIDFromString(pidString string) (uint32, error) {
 	return uint32(pid64), error
 }
 
+func RemoveFromBlocked(pid uint32) {
+	for i, pcb := range globals.Blocked {
+		if pcb.PID == pid {
+			globals.MapMutex.Lock()
+			defer globals.MapMutex.Unlock()
+			slice.RemoveAtIndex(&globals.Blocked, i)
+		}
+	}
+
+}
+
 // ----------------- IO -----------------
 func GetIOInterface(w http.ResponseWriter, r *http.Request) {
 	var interf device.T_IOInterface
@@ -372,7 +389,9 @@ func GetIOInterface(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	globals.Interfaces = append(globals.Interfaces, interf)
+	newInterface := globals.InterfaceController{IoInterf: interf, Controller: make(chan bool, 1)}
+
+	globals.Interfaces = append(globals.Interfaces, newInterface)
 
 	log.Printf("Interface received, type: %s, port: %d\n", interf.InterfaceType, interf.InterfacePort)
 
@@ -396,13 +415,14 @@ func ExisteInterfaz(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Device not found", http.StatusNotFound)
 	}
 	
-	var response bool
-	if aux.InterfaceType == received_data.Type {
-		response = true
+	var response globals.InterfaceController
+	if aux.IoInterf.InterfaceType == received_data.Type {
+		response = aux
 	} else {
-		response = false
+		http.Error(w, "Device type not match", http.StatusNotFound)
 	}
 
+	//TODO: Ahora que las interfaces devuelven un canal no se puede hacer el Marshal
 	jsonResp, err := json.Marshal(response)
 	if err != nil {
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
@@ -412,14 +432,14 @@ func ExisteInterfaz(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonResp)
 }
 
-func SearchDeviceByName(deviceName string) (device.T_IOInterface, error) {
+func SearchDeviceByName(deviceName string) (globals.InterfaceController, error) {
 	for _, interf := range globals.Interfaces {
-		if interf.InterfaceName == deviceName  {
+		if interf.IoInterf.InterfaceName == deviceName  {
 			fmt.Println("Interfaz encontrada: ", interf)
 			return interf, nil
 		}
 	}
-	return device.T_IOInterface{}, fmt.Errorf("device not found")
+	return globals.InterfaceController{}, fmt.Errorf("device not found")
 }
 
 type Interfac_Time struct {
@@ -452,24 +472,29 @@ type GenSleep struct {
 	Inter 		device.T_IOInterface
 	TimeToSleep int
 }
+
 func SolicitarGenSleep(pcb pcb.T_PCB) {
 	newInter, err := SearchDeviceByName(genIntTime.Name)
 	if err != nil {
 		log.Printf("Device not found: %v", err)
 	}
 	
+	newInter.Controller <- true
+
 	genSleep := GenSleep{
 		Pcb: pcb,
-		Inter: newInter, 
+		Inter: newInter.IoInterf, 
 		TimeToSleep: genIntTime.WTime,
 	}
+
+	globals.EnganiaPichangaMutex.Unlock()
 	
 	jsonData, err := json.Marshal(genSleep)
 	if err != nil {
 		log.Printf("Failed to encode PCB: %v", err)
 	}
 
-	url := fmt.Sprintf("http://%s:%d/io-gen-sleep", newInter.InterfaceIP, newInter.InterfacePort)
+	url := fmt.Sprintf("http://%s:%d/io-gen-sleep", newInter.IoInterf.InterfaceIP, newInter.IoInterf.InterfacePort)
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		log.Printf("Failed to send PCB: %v", err)
@@ -484,6 +509,83 @@ func SolicitarGenSleep(pcb pcb.T_PCB) {
 		log.Printf("Failed to decode PCB response: %v", err)
 	}
 
+	RemoveFromBlocked(genPCB.PID)
 	genPCB.State = "READY"
 	slice.Push(&globals.STS, genPCB)
+	globals.MultiprogrammingCounter <- 1
+	<- newInter.Controller
+}
+
+func IOStdinRead(w http.ResponseWriter, r *http.Request) {
+	var infoRecibida struct {
+		DireccionesFisicas []globals.DireccionTamanio
+		Interfaz globals.InterfaceController
+		Tamanio int
+	}
+	
+	err := json.NewDecoder(r.Body).Decode(&infoRecibida)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Da la orden a la interfaz STDIN de leer			
+	url := fmt.Sprintf("http://%s:%d/io-stdin-read", infoRecibida.Interfaz.IoInterf.InterfaceIP, infoRecibida.Interfaz.IoInterf.InterfacePort)
+
+	bodyStdin, err := json.Marshal(struct {
+		DireccionesFisicas []globals.DireccionTamanio
+		Tamanio int
+	} {infoRecibida.DireccionesFisicas, infoRecibida.Tamanio})
+	if err != nil {
+		log.Printf("Failed to encode adresses: %v", err)
+	}
+
+	response, err := http.Post(url, "application/json", bytes.NewBuffer(bodyStdin))
+	if err != nil {
+		log.Printf("Failed to send adresses: %v", err)
+	}
+
+	if response.StatusCode != http.StatusOK {
+		log.Printf("Unexpected response status: %s", response.Status)
+	}
+
+	log.Println("Kernel mandó a leer a la interfaz: ", infoRecibida.Interfaz.IoInterf.InterfaceType, infoRecibida.Interfaz.IoInterf.InterfacePort)
+
+	globals.AvailablePcb <- true // TODO: Chequear si con la nueva implementacion se delega a la lista de bloqueados
+	w.WriteHeader(http.StatusOK)
+}
+
+func IOStdoutWrite(w http.ResponseWriter, r *http.Request) {
+	var infoRecibida struct {
+		DireccionesFisicas []globals.DireccionTamanio
+		Interfaz globals.InterfaceController
+	}
+	
+	err := json.NewDecoder(r.Body).Decode(&infoRecibida)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Da la orden a la interfaz STDOUT de mostrar por pantalla la salida			
+	url := fmt.Sprintf("http://%s:%d/io-stdout-write", infoRecibida.Interfaz.IoInterf.InterfaceIP, infoRecibida.Interfaz.IoInterf.InterfacePort)
+
+	bodyStdout, err := json.Marshal(infoRecibida.DireccionesFisicas)
+	if err != nil {
+		log.Printf("Failed to encode adresses: %v", err)
+	}
+
+	response, err := http.Post(url, "application/json", bytes.NewBuffer(bodyStdout))
+	if err != nil {
+		log.Printf("Failed to send adresses: %v", err)
+	}
+
+	if response.StatusCode != http.StatusOK {
+		log.Printf("Unexpected response status: %s", response.Status)
+	}
+
+	log.Println("Kernel mandó a escribir a la interfaz: ", infoRecibida.Interfaz.IoInterf.InterfaceIP, infoRecibida.Interfaz.IoInterf.InterfacePort)
+
+	globals.AvailablePcb <- true
+	w.WriteHeader(http.StatusOK)
 }

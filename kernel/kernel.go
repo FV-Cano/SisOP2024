@@ -6,11 +6,14 @@ import (
 
 	kernel_api "github.com/sisoputnfrba/tp-golang/kernel/API"
 	"github.com/sisoputnfrba/tp-golang/kernel/globals"
+	resources "github.com/sisoputnfrba/tp-golang/kernel/resources"
 	kernelutils "github.com/sisoputnfrba/tp-golang/kernel/utils"
 	cfg "github.com/sisoputnfrba/tp-golang/utils/config"
 	logger "github.com/sisoputnfrba/tp-golang/utils/log"
 	"github.com/sisoputnfrba/tp-golang/utils/server-Functions"
 )
+
+// ? Handshake IO?
 
 func main() {
 	// Iniciar loggers
@@ -27,13 +30,20 @@ func main() {
 	// Handlers
 	kernelRoutes := RegisteredModuleRoutes()
 
+	// Execution Config
+	globals.MultiprogrammingCounter = make (chan int, globals.Configkernel.Multiprogramming)	// Inicializamos el contador de multiprogramación
+	resources.InitResourceMap()
+
+	globals.EmptiedListMutex.Lock() // Bloqueamos la lista de jobs vacía
 	globals.PlanBinary <- false
+
 
 	// Iniciar servidor
 	go server.ServerStart(globals.Configkernel.Port, kernelRoutes)
 
 	// * Planificación
-	go kernelutils.Plan()
+	go kernelutils.LTS_Plan()
+	go kernelutils.STS_Plan()
 
 	select {}		// Deja que la goroutine principal siga corriendo
 }
@@ -53,6 +63,8 @@ func RegisteredModuleRoutes() http.Handler {
 			"POST /io-handshake": 		kernel_api.GetIOInterface,
 			"POST /io-interface": 		kernel_api.ExisteInterfaz,
 			"POST /tiempo-bloq":		kernel_api.Resp_TiempoEspera,
+			"POST /io-stdin-read":		kernel_api.IOStdinRead,
+			"POST /io-stdout-write":	kernel_api.IOStdoutWrite,
 		},
 	}
 	return moduleHandler

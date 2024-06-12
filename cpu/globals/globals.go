@@ -30,3 +30,5 @@ var (
 	// * Contadores
 		MultiprogrammingCounter 		= make (chan int, 10)
 )
+
+type Frame int

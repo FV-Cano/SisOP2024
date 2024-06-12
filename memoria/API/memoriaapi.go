@@ -257,11 +257,7 @@ func LeerDeMemoria(direccionesTamanios []DireccionTamanio) string {
 	/*Ante un pedido de lectura, devolver el valor que se encuentra a partir de la dirección física pedida.*/
 	var contenido []byte
 	for _, dt := range direccionesTamanios {
-		if (dt.DireccionFisica + dt.Tamanio) <= len(globals.User_Memory) { //TODO: ver cuál es la validación que hay que hacer
-			contenido = append(contenido, globals.User_Memory[dt.DireccionFisica:dt.DireccionFisica+dt.Tamanio]...)
-		} else {
-			return "Error: dirección fuera de rango"
-		}
+		contenido = append(contenido, globals.User_Memory[dt.DireccionFisica:dt.DireccionFisica+dt.Tamanio]...)
 	}
 	return string(contenido)
 }
@@ -302,9 +298,6 @@ func EscribirEnMemoria(direccionesTamanios []DireccionTamanio, valor_a_escribir 
 		valorAEscribir := takeAndRemove(dt.Tamanio, &bytesValor)
 		copy(globals.User_Memory[dt.DireccionFisica:], valorAEscribir)
 	}
-	/*if len(bytesValor) > globals.Configmemory.Page_size { //TODO: ver cuál es la validación que hay que hacer
-		return "Error: dirección o tamanio fuera de rango"
-	}*/
 	return "OK"
 }
 	

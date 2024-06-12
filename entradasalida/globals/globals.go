@@ -15,3 +15,8 @@ type T_ConfigIO struct {
 }
 
 var ConfigIO 		T_ConfigIO
+
+type DireccionTamanio struct {
+	DireccionFisica 	int 
+	Tamanio         	int 
+}

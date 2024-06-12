@@ -198,29 +198,21 @@ func EvictionManagement() {
 		globals.STS = append(globals.STS, globals.CurrentJob)
 		globals.JobExecBinary <- true
 
-	case "NOT_FOUND_IO":
-		globals.ChangeState(&globals.CurrentJob, "READY")
-		globals.STS = append(globals.STS, globals.CurrentJob)
-		globals.JobExecBinary <- true
-
 	case "EXIT":
 		globals.ChangeState(&globals.CurrentJob, "TERMINATED")
 		globals.JobExecBinary <- true
 		<- globals.MultiprogrammingCounter
 		log.Printf("Finaliza el proceso %d - Motivo: %s\n", globals.CurrentJob.PID, evictionReason)
 
-	// TODO: Falta tocar la lógica desde CPU
 	case "WAIT":
-		if resource.Exists(globals.RequestedResource) {
-			resource.RequestConsumption(globals.RequestedResource)
+		if resource.Exists(globals.CurrentJob.RequestedResource) {
+			resource.RequestConsumption(globals.CurrentJob.RequestedResource)
 		}
-		// TODO: Ver caso bloqueado por recurso, se debería desbloquear el proceso pero el PC no debería haber aumentado luego de haber bloqueado
 
 	case "SIGNAL":
-		if resource.Exists(globals.RequestedResource) {
-			resource.ReleaseConsumption(globals.RequestedResource)
+		if resource.Exists(globals.CurrentJob.RequestedResource) {
+			resource.ReleaseConsumption(globals.CurrentJob.RequestedResource)
 		}
-
 
 	default:
 		log.Fatalf("'%s' no es una razón de desalojo válida", evictionReason)

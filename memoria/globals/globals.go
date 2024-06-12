@@ -23,4 +23,22 @@ type T_ConfigMemory struct {
 	Delay_response    int    `json:"delay_response"`
 }
 
+var CurrentBitMap []int
+var Frames int
+
+type Frame int
+
+//Tabla de páginas (donde a cada página(indice) le corresponde un frame)
+type TablaPaginas []Frame 
+
+//Diccionario para idenficiar a que proceso pertenece cada TablaPaginas
+var  Tablas_de_paginas map[int]TablaPaginas //ver nombre
+
 var Configmemory *T_ConfigMemory
+
+// Inicializo la memoria
+var User_Memory = make([]byte,Configmemory.Memory_size) // de 0 a 15 corresponde a una página, marco compuesto por 16 bytes (posiciones)
+
+
+
+

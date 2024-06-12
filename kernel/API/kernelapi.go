@@ -288,8 +288,8 @@ func PCB_Send() error {
 	if err != nil {
 		return fmt.Errorf("failed to decode PCB response: %v", err)
 	}
-	globals.PcbReceived <- true
 
+	globals.PcbReceived <- true
 
 	return nil
 }
@@ -415,13 +415,14 @@ func ExisteInterfaz(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Device not found", http.StatusNotFound)
 	}
 	
-	var response bool
+	var response globals.InterfaceController
 	if aux.IoInterf.InterfaceType == received_data.Type {
-		response = true
+		response = aux
 	} else {
-		response = false
+		http.Error(w, "Device type not match", http.StatusNotFound)
 	}
 
+	//TODO: Ahora que las interfaces devuelven un canal no se puede hacer el Marshal
 	jsonResp, err := json.Marshal(response)
 	if err != nil {
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
@@ -513,4 +514,78 @@ func SolicitarGenSleep(pcb pcb.T_PCB) {
 	slice.Push(&globals.STS, genPCB)
 	globals.MultiprogrammingCounter <- 1
 	<- newInter.Controller
+}
+
+func IOStdinRead(w http.ResponseWriter, r *http.Request) {
+	var infoRecibida struct {
+		DireccionesFisicas []globals.DireccionTamanio
+		Interfaz globals.InterfaceController
+		Tamanio int
+	}
+	
+	err := json.NewDecoder(r.Body).Decode(&infoRecibida)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Da la orden a la interfaz STDIN de leer			
+	url := fmt.Sprintf("http://%s:%d/io-stdin-read", infoRecibida.Interfaz.IoInterf.InterfaceIP, infoRecibida.Interfaz.IoInterf.InterfacePort)
+
+	bodyStdin, err := json.Marshal(struct {
+		DireccionesFisicas []globals.DireccionTamanio
+		Tamanio int
+	} {infoRecibida.DireccionesFisicas, infoRecibida.Tamanio})
+	if err != nil {
+		log.Printf("Failed to encode adresses: %v", err)
+	}
+
+	response, err := http.Post(url, "application/json", bytes.NewBuffer(bodyStdin))
+	if err != nil {
+		log.Printf("Failed to send adresses: %v", err)
+	}
+
+	if response.StatusCode != http.StatusOK {
+		log.Printf("Unexpected response status: %s", response.Status)
+	}
+
+	log.Println("Kernel mandó a leer a la interfaz: ", infoRecibida.Interfaz.IoInterf.InterfaceType, infoRecibida.Interfaz.IoInterf.InterfacePort)
+
+	globals.AvailablePcb <- true // TODO: Chequear si con la nueva implementacion se delega a la lista de bloqueados
+	w.WriteHeader(http.StatusOK)
+}
+
+func IOStdoutWrite(w http.ResponseWriter, r *http.Request) {
+	var infoRecibida struct {
+		DireccionesFisicas []globals.DireccionTamanio
+		Interfaz globals.InterfaceController
+	}
+	
+	err := json.NewDecoder(r.Body).Decode(&infoRecibida)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Da la orden a la interfaz STDOUT de mostrar por pantalla la salida			
+	url := fmt.Sprintf("http://%s:%d/io-stdout-write", infoRecibida.Interfaz.IoInterf.InterfaceIP, infoRecibida.Interfaz.IoInterf.InterfacePort)
+
+	bodyStdout, err := json.Marshal(infoRecibida.DireccionesFisicas)
+	if err != nil {
+		log.Printf("Failed to encode adresses: %v", err)
+	}
+
+	response, err := http.Post(url, "application/json", bytes.NewBuffer(bodyStdout))
+	if err != nil {
+		log.Printf("Failed to send adresses: %v", err)
+	}
+
+	if response.StatusCode != http.StatusOK {
+		log.Printf("Unexpected response status: %s", response.Status)
+	}
+
+	log.Println("Kernel mandó a escribir a la interfaz: ", infoRecibida.Interfaz.IoInterf.InterfaceIP, infoRecibida.Interfaz.IoInterf.InterfacePort)
+
+	globals.AvailablePcb <- true
+	w.WriteHeader(http.StatusOK)
 }

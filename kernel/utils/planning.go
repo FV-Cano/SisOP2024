@@ -22,9 +22,12 @@ func LTS_Plan() {
 			globals.EmptiedListMutex.Lock()
 		}
 		auxJob := slice.Shift(&globals.LTS)
-		globals.MultiprogrammingCounter <- int(auxJob.PID)
+		//globals.MultiprogrammingCounter <- int(auxJob.PID)
 		globals.ChangeState(&auxJob, "READY")
 		globals.STS = append(globals.STS, auxJob)
+
+		// Los procesos en READY, EXEC y BLOCKED afectan al grado de multiprogramación
+		globals.MultiprogrammingCounter <- int(auxJob.PID) // ! Lo cambiamos de linea porque tecnicamente debería ser después de ser agregado a la cola de listos
 	}
 }
 
@@ -38,7 +41,6 @@ func STS_Plan() {
 			FIFO_Plan()
 			<- globals.JobExecBinary
 			<- globals.PlanBinary
-			
 		}
 		
 	case "RR":
@@ -75,7 +77,6 @@ type T_Quantum struct {
 */
 func FIFO_Plan() {
 	// 1. Tomo el primer proceso de la lista y lo quito de la misma
-
 	globals.CurrentJob = slice.Shift(&globals.STS)
 	
 	// 2. Cambio su estado a EXEC
@@ -130,9 +131,10 @@ func VRR_Plan() {
 	timeBefore := time.Now()
 	go startTimer(globals.CurrentJob.Quantum)
 	kernel_api.PCB_Send()
-	timeAfter := time.Now()
+	//timeAfter := time.Now()
 
 	<- globals.PcbReceived
+	timeAfter := time.Now() // ! Se cambió de lugar para que se tome el tiempo después de recibir el PCB
 
 	diffTime := uint32(timeAfter.Sub(timeBefore))
 	if diffTime < globals.CurrentJob.Quantum {
@@ -177,23 +179,24 @@ func EvictionManagement() {
 		globals.EnganiaPichangaMutex.Lock()
 		globals.ChangeState(&globals.CurrentJob, "BLOCKED")
 		slice.Push(&globals.Blocked, globals.CurrentJob)
-		<- globals.MultiprogrammingCounter
 		go func(){
 			kernel_api.SolicitarGenSleep(globals.CurrentJob)
 		}()
 		globals.JobExecBinary <- true
 		
+	case "BLOCKED_IO_STD":
+		globals.ChangeState(&globals.CurrentJob, "BLOCKED")
+		
+		<- globals.AvailablePcb
+
+		globals.ChangeState(&globals.CurrentJob, "READY")
+		globals.STS = append(globals.STS, globals.CurrentJob) // diferente en el caso de VRR
+		globals.JobExecBinary <- true
+
 	case "TIMEOUT":
 		globals.ChangeState(&globals.CurrentJob, "READY")
 		globals.STS = append(globals.STS, globals.CurrentJob)
 		globals.JobExecBinary <- true
-		
-		// ? Se puede eliminar esto?
-		/* var pids []uint32
-		for _, job := range globals.STS {
-			pids = append(pids, job.PID)
-		}
-		log.Printf("Cola ready %d\n", pids) */
 
 	case "EXIT":
 		globals.ChangeState(&globals.CurrentJob, "TERMINATED")

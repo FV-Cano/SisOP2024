@@ -119,16 +119,16 @@ func ObtenerDireccionesFisicas(direccionLogica int, tamanio int, pid int) []glob
 		solicitudesmemoria.Resize(tamanioTotal)
 	}
 	//Primer pagina teniendo en cuenta el desplazamiento
-	slice.Push[globals.DireccionTamanio](&direccion_y_tamanio, globals.DireccionTamanio{frame * tamPagina + desplazamiento, tamPagina - desplazamiento})
+	slice.Push(&direccion_y_tamanio, globals.DireccionTamanio{DireccionFisica: frame * tamPagina + desplazamiento, Tamanio: tamPagina - desplazamiento})
 	tamanioRestante := tamanio - (tamPagina - desplazamiento)
 	for  i:= 1; i < cantidadPaginas; i++ {
 		if (i == cantidadPaginas-1) {
 			//Ultima pagina teniendo en cuenta el tamanio
-			slice.Push[globals.DireccionTamanio](&direccion_y_tamanio, globals.DireccionTamanio{frame * tamPagina, tamanioRestante})
+			slice.Push(&direccion_y_tamanio, globals.DireccionTamanio{DireccionFisica: frame * tamPagina, Tamanio: tamanioRestante})
 		} else { //Paginas del medio sin tener en cuenta el desplazamiento
 			numeroPagina++
 			frame = Frame_rcv(&globals.CurrentJob, direccionLogica)
-			slice.Push[globals.DireccionTamanio](&direccion_y_tamanio, globals.DireccionTamanio{frame * tamPagina, tamPagina})
+			slice.Push(&direccion_y_tamanio, globals.DireccionTamanio{DireccionFisica: frame * tamPagina, Tamanio: tamPagina})
 			tamanioRestante -= tamPagina
 		}
 	}

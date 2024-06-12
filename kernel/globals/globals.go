@@ -12,10 +12,14 @@ import (
 
 var (
 	NextPID 			uint32 = 0
-	Processes 			[]pcb.T_PCB
 	LTS 				[]pcb.T_PCB
 	STS 				[]pcb.T_PCB
+	Blocked 			[]pcb.T_PCB
+	STS_Priority 		[]pcb.T_PCB
 	Interfaces 			[]device.T_IOInterface
+	ResourceMap			map[string][]pcb.T_PCB
+	Resource_instances  map[string]int
+	RequestedResource 	string
 )
 
 // Global semaphores
@@ -25,13 +29,17 @@ var (
 		ProcessesMutex 			sync.Mutex
 		STSMutex 				sync.Mutex
 		LTSMutex 				sync.Mutex
+		MapMutex 				sync.Mutex
+		EmptiedListMutex		sync.Mutex
+		EnganiaPichangaMutex	sync.Mutex
 	// * Binarios
 		PlanBinary  			= make (chan bool, 1)
 		JobExecBinary			= make (chan bool, 1)
 		PcbReceived				= make (chan bool, 1)
+		AvailablePcb			= make (chan bool, 1)
 	// * Contadores
 		// Chequea si hay procesos en la cola de listos, lo usamos en EvictionManagement y en ProcessInit
-		MultiprogrammingCounter = make (chan int, 10)
+		MultiprogrammingCounter chan int
 )
 
 // CurrentJob (kernel_api funcion PCB_Send) se lee

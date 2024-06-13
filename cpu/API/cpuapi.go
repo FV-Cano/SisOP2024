@@ -137,7 +137,6 @@ func CalcularDireccionFisica(frame int, offset int, tamanio int) int {
 func ActualizarTLB(pid, pagina, marco int) { 
 	switch globals.Configcpu.Algorithm_tlb {
 		case "FIFO":
-    
         if !BuscarEnTLB(pid, pagina) { //Si la página no está en la tlb
             if len(tlb.CurrentTLB) < globals.Configcpu.Number_felling_tlb {
                 // Si la TLB no está llena, agregar la entrada
@@ -150,20 +149,34 @@ func ActualizarTLB(pid, pagina, marco int) {
                 tlb.OrderedKeys = tlb.OrderedKeys[1:] // Eliminar la clave más antigua de la lista
                 tlb.CurrentTLB[pid] = tlb.Pagina_marco{Pagina: pagina, Marco: marco} // Agregar la nueva entrada
                 tlb.OrderedKeys = append(tlb.OrderedKeys, pid) // Agregar la nueva clave al final de la lista
-            }
-        } else { //SI LA PAGINA YA EXISTE EN LA TLB, LLEVARLA AL FINAL DE LA LISTA
-            // Eliminar la entrada existente y agregarla nuevamente
-            for i, key := range tlb.OrderedKeys {
-                if key == pid {
-                    // Eliminar la clave de la lista
-                    tlb.OrderedKeys = append(tlb.OrderedKeys[:i], tlb.OrderedKeys[i+1:]...)
-                    break
-                }
-            }
-            tlb.CurrentTLB[pid] = tlb.Pagina_marco{Pagina: pagina, Marco: marco} // Agregar la nueva entrada
-            tlb.OrderedKeys = append(tlb.OrderedKeys, pid) // Agregar la nueva clave al final de la lista
-        }
+            } 
+        } 
+			
 		case "LRU":
-			//implementar
+			 if !BuscarEnTLB(pid, pagina) { //Si la página no está en la tlb
+				if len(tlb.CurrentTLB) < globals.Configcpu.Number_felling_tlb {
+					// Si la TLB no está llena, agregar la entrada
+					tlb.CurrentTLB[pid] = tlb.Pagina_marco{Pagina: pagina, Marco: marco}
+					tlb.OrderedKeys = append(tlb.OrderedKeys, pid) // Agregar la clave al final de la lista
+				} else {
+					// Si la TLB está llena, eliminar la entrada más antigua (FIFO)
+					oldestKey := tlb.OrderedKeys[0] // Obtener la clave más antigua
+					delete(tlb.CurrentTLB, oldestKey) // Eliminar la entrada más antigua
+					tlb.OrderedKeys = tlb.OrderedKeys[1:] // Eliminar la clave más antigua de la lista
+					tlb.CurrentTLB[pid] = tlb.Pagina_marco{Pagina: pagina, Marco: marco} // Agregar la nueva entrada
+					tlb.OrderedKeys = append(tlb.OrderedKeys, pid) // Agregar la nueva clave al final de la lista
+				}
+			} else { //SI LA PAGINA YA EXISTE EN LA TLB, LLEVARLA AL FINAL DE LA LISTA
+				// Eliminar la entrada existente y agregarla nuevamente
+				for i, key := range tlb.OrderedKeys {
+					if key == pid {
+						// Eliminar la clave de la lista
+						tlb.OrderedKeys = append(tlb.OrderedKeys[:i], tlb.OrderedKeys[i+1:]...)
+						break
+					}
+				}
+				tlb.CurrentTLB[pid] = tlb.Pagina_marco{Pagina: pagina, Marco: marco} // Agregar la nueva entrada
+				tlb.OrderedKeys = append(tlb.OrderedKeys, pid) // Agregar la nueva clave al final de la lista
+			}
 	}
 }

@@ -8,3 +8,4 @@ type Pagina_marco struct {
 type TLB map[int]Pagina_marco
 
 var CurrentTLB TLB = make(TLB)
+var OrderedKeys []int //mantiene el orden de las claves en la TLB

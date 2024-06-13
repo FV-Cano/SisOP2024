@@ -120,7 +120,7 @@ func CalcularDireccionFisica(frame int, offset int, tamanio int) int {
 
 }
 
-func ActualizarTLB(pid, pagina, marco int) { //TODO: SI LA PAGINA YA EXISTE, LLEVARLA AL FINAL DE LA LISTA
+/*func ActualizarTLB(pid, pagina, marco int) { 
 	if globals.Configcpu.Algorithm_tlb == "FIFO" {
 	if len(tlb.CurrentTLB) >= globals.Configcpu.Number_felling_tlb {
 		// Si la TLB está llena, eliminar la entrada más antigua (FIFO)
@@ -132,34 +132,11 @@ func ActualizarTLB(pid, pagina, marco int) { //TODO: SI LA PAGINA YA EXISTE, LLE
 	tlb.CurrentTLB[pid] = tlb.Pagina_marco{Pagina: pagina, Marco: marco}
 
 	}
-}
+}*/
 
-
-func ActualizarTLB1(pid, pagina, marco int) { 
-	if globals.Configcpu.Algorithm_tlb == "FIFO" {
-	
-		if(!BuscarEnTLB(pid, pagina)){ //Si la página no está en la tlb
-			if (len(tlb.CurrentTLB) < globals.Configcpu.Number_felling_tlb){
-				// Si la TLB no está llena, agregar la entrada
-				tlb.CurrentTLB[pid] = tlb.Pagina_marco{Pagina: pagina, Marco: marco}
-
-			} else {
-			// Si la TLB está llena, eliminar la entrada más antigua (FIFO)
-				for key := range tlb.CurrentTLB {
-					delete(tlb.CurrentTLB, key)
-					break
-					tlb.CurrentTLB[pid] = tlb.Pagina_marco{Pagina: pagina, Marco: marco} // VER ESTO
-				}
-			}
-		} else { //TODO: SI LA PAGINA YA EXISTE EN LA TLB, LLEVARLA AL FINAL DE LA LISTA
-			
-
-			}
-
-}
-
-func ActualizarTLB2(pid, pagina, marco int) { 
-    if globals.Configcpu.Algorithm_tlb == "FIFO" {
+func ActualizarTLB(pid, pagina, marco int) { 
+	switch globals.Configcpu.Algorithm_tlb {
+		case "FIFO":
     
         if !BuscarEnTLB(pid, pagina) { //Si la página no está en la tlb
             if len(tlb.CurrentTLB) < globals.Configcpu.Number_felling_tlb {
@@ -174,7 +151,7 @@ func ActualizarTLB2(pid, pagina, marco int) {
                 tlb.CurrentTLB[pid] = tlb.Pagina_marco{Pagina: pagina, Marco: marco} // Agregar la nueva entrada
                 tlb.OrderedKeys = append(tlb.OrderedKeys, pid) // Agregar la nueva clave al final de la lista
             }
-        } else { //TODO: SI LA PAGINA YA EXISTE EN LA TLB, LLEVARLA AL FINAL DE LA LISTA
+        } else { //SI LA PAGINA YA EXISTE EN LA TLB, LLEVARLA AL FINAL DE LA LISTA
             // Eliminar la entrada existente y agregarla nuevamente
             for i, key := range tlb.OrderedKeys {
                 if key == pid {
@@ -186,5 +163,7 @@ func ActualizarTLB2(pid, pagina, marco int) {
             tlb.CurrentTLB[pid] = tlb.Pagina_marco{Pagina: pagina, Marco: marco} // Agregar la nueva entrada
             tlb.OrderedKeys = append(tlb.OrderedKeys, pid) // Agregar la nueva clave al final de la lista
         }
-    }
+		case "LRU":
+			//implementar
+	}
 }

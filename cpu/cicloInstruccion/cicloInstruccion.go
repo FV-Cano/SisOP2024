@@ -345,6 +345,13 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 
 		currentPCB.PC++
 
+	//RESIZE (Tamaño)
+	case "RESIZE" :
+
+		tamanio := globals.PasarAInt(instruccionDecodificada[1])
+		solicitudesmemoria.Resize(tamanio)
+
+
 	}
 
 }

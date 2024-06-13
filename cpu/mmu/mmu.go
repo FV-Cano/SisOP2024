@@ -136,6 +136,8 @@ func ObtenerDireccionesFisicas(direccionLogica int, tamanio int, pid int) []glob
 	return direccion_y_tamanio
 }
 
+//TODO: Revisar esta funcion con Mili y si le parece bien dejar esta en vez de la anterior
+
 func ObtenerDireccionesFisicasConTLB(direccionLogica int, tamanio int, pid int) []globals.DireccionTamanio {
 	var direccion_y_tamanio []globals.DireccionTamanio
 	tamPagina := SolicitarTamPagina()
@@ -153,11 +155,11 @@ func ObtenerDireccionesFisicasConTLB(direccionLogica int, tamanio int, pid int) 
 		if cpu_api.BuscarEnTLB(pid, numeroPagina) {
 			frame = cpu_api.FrameEnTLB(pid, numeroPagina)
 			// Calcular dirección física usando la TLB
-			direccionFisica = cpu_api.DireccionFisicaTLB(frame, offset, tamPagina)
+			direccionFisica = cpu_api.CalcularDireccionFisica(frame, offset, tamPagina)
 		} else {
 			// TLB miss, calcular dirección física como antes
 			frame = Frame_rcv(&globals.CurrentJob, numeroPagina)
-			direccionFisica = frame * tamPagina + offset
+			direccionFisica = cpu_api.CalcularDireccionFisica(frame, offset, tamPagina)
 		}
 
 		// Calcular el tamaño de la página actual
@@ -165,10 +167,10 @@ func ObtenerDireccionesFisicasConTLB(direccionLogica int, tamanio int, pid int) 
 		//Para la primera página, se ajusta según el offset.
 		if i == 0 {
 			tamanioPagina = tamPagina - offset
-		//Para la última página, se ajusta según el tamanioRestante.
+			//Para la última página, se ajusta según el tamanioRestante.
 		} else if i == cantidadPaginas-1 {
 			tamanioPagina = tamanioRestante
-		//Para las páginas intermedias, se utiliza el tamaño completo de la página.
+			//Para las páginas intermedias, se utiliza el tamaño completo de la página.
 		} else {
 			tamanioPagina = tamPagina
 		}
@@ -187,7 +189,12 @@ func ObtenerDireccionesFisicasConTLB(direccionLogica int, tamanio int, pid int) 
 		tamanioRestante -= tamanioPagina
 
 		// Actualizar TLB (opcionalmente)
-		// cpu_api.ActualizarTLB(pid, numeroPagina, frame)
+
+		if globals.Configcpu.Algorithm_tlb == "FIFO" {
+			cpu_api.ActualizarTLB(pid, numeroPagina, frame)
+		} else {
+			//TODO: IMPLEMENTAR LRU
+		}
 	}
 
 	return direccion_y_tamanio

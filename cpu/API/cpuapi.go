@@ -111,10 +111,23 @@ func ObtenerOffset(direccionLogica int, nroPag int, tamanio int) int {
 	return offset
 }
 
-func DireccionFisicaTLB(frame int, offset int, tamanio int) int {
+func CalcularDireccionFisica(frame int, offset int, tamanio int) int {
 
 	direccionBase := frame * tamanio
 
 	return direccionBase + offset
 
 }
+
+func ActualizarTLB(pid, pagina, marco int) {
+	if len(tlb.CurrentTLB) >= globals.Configcpu.Number_felling_tlb {
+		// Si la TLB está llena, eliminar la entrada más antigua (FIFO)
+		for key := range tlb.CurrentTLB {
+			delete(tlb.CurrentTLB, key)
+			break
+		}
+	}
+	tlb.CurrentTLB[pid] = tlb.Pagina_marco{Pagina: pagina, Marco: marco}
+}
+
+

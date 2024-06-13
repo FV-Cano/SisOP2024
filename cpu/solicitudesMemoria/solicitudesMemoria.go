@@ -42,8 +42,8 @@ func Resize(tamanio int) {
 	// Y Avisar que el error es por out of memory
 	var respuestaResize = string(bodyBytes)
 	if respuestaResize != "OK" {
-		//TODO: pcb.EvictionFlag = true
-		//hacer esto
+		globals.CurrentJob.EvictionReason = "OUT OF MEMORY"
+		// falta algo mas?
 	} 
 }
 

@@ -213,6 +213,12 @@ func EvictionManagement() {
 		if resource.Exists(globals.CurrentJob.RequestedResource) {
 			resource.ReleaseConsumption(globals.CurrentJob.RequestedResource)
 		}
+	case "OUT OF MEMORY":
+		//Si está sin memoria, pasa a la sig instruccion y devuelve esta
+		// a la cola para ejecutrar en otro momento
+		globals.ChangeState(&globals.CurrentJob, "READY")
+		globals.STS = append(globals.STS, globals.CurrentJob)
+		globals.JobExecBinary <- true
 
 	default:
 		log.Fatalf("'%s' no es una razón de desalojo válida", evictionReason)

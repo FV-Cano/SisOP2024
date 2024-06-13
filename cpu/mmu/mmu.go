@@ -107,7 +107,7 @@ func Frame_rcv(currentPCB *pcb.T_PCB, pagina int) int {
 	return int(globals.BytesToInt(frame))
 }
 
-func ObtenerDireccionesFisicas(direccionLogica int, tamanio int, pid int) []globals.DireccionTamanio {
+/*func ObtenerDireccionesFisicasSinTLB(direccionLogica int, tamanio int, pid int) []globals.DireccionTamanio {
 	var direccion_y_tamanio []globals.DireccionTamanio
 	//TODO reemplazar estos calculos por las func creadas
 	tamPagina := SolicitarTamPagina()
@@ -134,11 +134,10 @@ func ObtenerDireccionesFisicas(direccionLogica int, tamanio int, pid int) []glob
 		}
 	}
 	return direccion_y_tamanio
-}
+}*/
 
-//TODO: Revisar esta funcion con Mili y si le parece bien dejar esta en vez de la anterior
-
-func ObtenerDireccionesFisicasConTLB(direccionLogica int, tamanio int, pid int) []globals.DireccionTamanio {
+/*
+func ObtenerDireccionesFisicasCHATGT(direccionLogica int, tamanio int, pid int) []globals.DireccionTamanio {
 	var direccion_y_tamanio []globals.DireccionTamanio
 	tamPagina := SolicitarTamPagina()
 	cantidadPaginas := (tamanio + tamPagina - 1) / tamPagina // Redondear hacia arriba
@@ -190,12 +189,62 @@ func ObtenerDireccionesFisicasConTLB(direccionLogica int, tamanio int, pid int) 
 
 		// Actualizar TLB (opcionalmente)
 
-		if globals.Configcpu.Algorithm_tlb == "FIFO" {
+		
 			cpu_api.ActualizarTLB(pid, numeroPagina, frame)
-		} else {
-			//TODO: IMPLEMENTAR LRU
-		}
+		
 	}
 
+	return direccion_y_tamanio
+}
+
+*/
+
+
+//------------------------------------------------------------------------------------------
+
+func ObtenerDireccionesFisicas(direccionLogica int, tamanio int, pid int) []globals.DireccionTamanio {
+	var direccion_y_tamanio []globals.DireccionTamanio
+	tamPagina := SolicitarTamPagina()
+	numeroPagina := direccionLogica / tamPagina
+	desplazamiento := direccionLogica - numeroPagina*tamPagina 
+	cantidadPaginas := tamanio / tamPagina
+	var frame int
+	if(cpu_api.BuscarEnTLB(pid, numeroPagina)){
+		frame = cpu_api.FrameEnTLB(pid, numeroPagina)
+	} else { 
+		frame = Frame_rcv(&globals.CurrentJob, numeroPagina)
+		cpu_api.ActualizarTLB(pid, numeroPagina, frame)
+	}
+	
+	tamanioTotal := frame*tamPagina + desplazamiento + tamanio
+	if tamanioTotal > PedirTamTablaPaginas(pid)*tamPagina {
+		solicitudesmemoria.Resize(tamanioTotal)
+	}
+	//Primer pagina teniendo en cuenta el desplazamiento
+	slice.Push(&direccion_y_tamanio, globals.DireccionTamanio{DireccionFisica: frame*tamPagina + desplazamiento, Tamanio: tamPagina - desplazamiento})
+	tamanioRestante := tamanio - (tamPagina - desplazamiento)
+	for i := 1; i < cantidadPaginas; i++ {
+		if i == cantidadPaginas-1 {
+			//Ultima pagina teniendo en cuenta el tamanio
+			numeroPagina++
+			if(cpu_api.BuscarEnTLB(pid, numeroPagina)){ 			 //TODO: Revisar si es correcto, VER SI ANTES HAY QUE HACER PAGINA++
+				frame = cpu_api.FrameEnTLB(pid, numeroPagina)
+			} else { 
+				frame = Frame_rcv(&globals.CurrentJob, numeroPagina)
+				cpu_api.ActualizarTLB(pid, numeroPagina, frame)
+			}
+			slice.Push(&direccion_y_tamanio, globals.DireccionTamanio{DireccionFisica: frame * tamPagina, Tamanio: tamanioRestante})
+		} else { //Paginas del medio sin tener en cuenta el desplazamiento
+			numeroPagina++
+			if(cpu_api.BuscarEnTLB(pid, numeroPagina)){
+				frame = cpu_api.FrameEnTLB(pid, numeroPagina)
+			} else { 
+				frame = Frame_rcv(&globals.CurrentJob, numeroPagina)
+				cpu_api.ActualizarTLB(pid, numeroPagina, frame)
+				}		
+			slice.Push(&direccion_y_tamanio, globals.DireccionTamanio{DireccionFisica: frame * tamPagina, Tamanio: tamPagina})
+			tamanioRestante -= tamPagina
+		}
+	}
 	return direccion_y_tamanio
 }

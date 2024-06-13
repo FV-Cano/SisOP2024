@@ -92,6 +92,7 @@ func BuscarEnTLB(pid int, pagina int) bool {
 func FrameEnTLB(pid int, pagina int) int {
 
 	if entry, exists := tlb.CurrentTLB[pid]; exists && entry.Pagina == pagina {
+		ActualizarTLB(pid, pagina, tlb.CurrentTLB[pid].Marco)
 		return tlb.CurrentTLB[pid].Marco
 	}
 	return -1
@@ -120,6 +121,7 @@ func CalcularDireccionFisica(frame int, offset int, tamanio int) int {
 }
 
 func ActualizarTLB(pid, pagina, marco int) {
+	if globals.Configcpu.Algorithm_tlb == "FIFO" {
 	if len(tlb.CurrentTLB) >= globals.Configcpu.Number_felling_tlb {
 		// Si la TLB está llena, eliminar la entrada más antigua (FIFO)
 		for key := range tlb.CurrentTLB {
@@ -128,6 +130,8 @@ func ActualizarTLB(pid, pagina, marco int) {
 		}
 	}
 	tlb.CurrentTLB[pid] = tlb.Pagina_marco{Pagina: pagina, Marco: marco}
+
+	}
 }
 
 

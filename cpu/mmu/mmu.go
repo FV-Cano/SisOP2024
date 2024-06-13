@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"strconv"
 
-	cpu_api "github.com/sisoputnfrba/tp-golang/cpu/API"
 	"github.com/sisoputnfrba/tp-golang/cpu/globals"
 	solicitudesmemoria "github.com/sisoputnfrba/tp-golang/cpu/solicitudesMemoria"
+	"github.com/sisoputnfrba/tp-golang/cpu/tlb"
 	"github.com/sisoputnfrba/tp-golang/utils/pcb"
 	"github.com/sisoputnfrba/tp-golang/utils/slice"
 )
@@ -144,21 +144,21 @@ func ObtenerDireccionesFisicasCHATGT(direccionLogica int, tamanio int, pid int) 
 	tamanioRestante := tamanio
 
 	for i := 0; i < cantidadPaginas; i++ {
-		numeroPagina := cpu_api.ObtenerPagina(direccionLogica, i, tamPagina)
-		offset := cpu_api.ObtenerOffset(direccionLogica, i, tamPagina)
+		numeroPagina := tlb.ObtenerPagina(direccionLogica, i, tamPagina)
+		offset := tlb.ObtenerOffset(direccionLogica, i, tamPagina)
 
 		var frame int
 		var direccionFisica int
 
 		// Verificar en la TLB
-		if cpu_api.BuscarEnTLB(pid, numeroPagina) {
-			frame = cpu_api.FrameEnTLB(pid, numeroPagina)
+		if tlb.BuscarEnTLB(pid, numeroPagina) {
+			frame = tlb.FrameEnTLB(pid, numeroPagina)
 			// Calcular dirección física usando la TLB
-			direccionFisica = cpu_api.CalcularDireccionFisica(frame, offset, tamPagina)
+			direccionFisica = tlb.CalcularDireccionFisica(frame, offset, tamPagina)
 		} else {
 			// TLB miss, calcular dirección física como antes
 			frame = Frame_rcv(&globals.CurrentJob, numeroPagina)
-			direccionFisica = cpu_api.CalcularDireccionFisica(frame, offset, tamPagina)
+			direccionFisica = tlb.CalcularDireccionFisica(frame, offset, tamPagina)
 		}
 
 		// Calcular el tamaño de la página actual
@@ -190,7 +190,7 @@ func ObtenerDireccionesFisicasCHATGT(direccionLogica int, tamanio int, pid int) 
 		// Actualizar TLB (opcionalmente)
 
 		
-			cpu_api.ActualizarTLB(pid, numeroPagina, frame)
+			tlb.ActualizarTLB(pid, numeroPagina, frame)
 		
 	}
 
@@ -209,11 +209,11 @@ func ObtenerDireccionesFisicas(direccionLogica int, tamanio int, pid int) []glob
 	desplazamiento := direccionLogica - numeroPagina*tamPagina 
 	cantidadPaginas := tamanio / tamPagina
 	var frame int
-	if(cpu_api.BuscarEnTLB(pid, numeroPagina)){
-		frame = cpu_api.FrameEnTLB(pid, numeroPagina)
+	if(tlb.BuscarEnTLB(pid, numeroPagina)){
+		frame = tlb.FrameEnTLB(pid, numeroPagina)
 	} else { 
 		frame = Frame_rcv(&globals.CurrentJob, numeroPagina)
-		cpu_api.ActualizarTLB(pid, numeroPagina, frame)
+		tlb.ActualizarTLB(pid, numeroPagina, frame)
 	}
 	
 	tamanioTotal := frame*tamPagina + desplazamiento + tamanio
@@ -227,20 +227,20 @@ func ObtenerDireccionesFisicas(direccionLogica int, tamanio int, pid int) []glob
 		if i == cantidadPaginas-1 {
 			//Ultima pagina teniendo en cuenta el tamanio
 			numeroPagina++
-			if(cpu_api.BuscarEnTLB(pid, numeroPagina)){ 			 //TODO: Revisar si es correcto, VER SI ANTES HAY QUE HACER PAGINA++
-				frame = cpu_api.FrameEnTLB(pid, numeroPagina)
+			if(tlb.BuscarEnTLB(pid, numeroPagina)){ 			 //TODO: Revisar si es correcto, VER SI ANTES HAY QUE HACER PAGINA++
+				frame = tlb.FrameEnTLB(pid, numeroPagina)
 			} else { 
 				frame = Frame_rcv(&globals.CurrentJob, numeroPagina)
-				cpu_api.ActualizarTLB(pid, numeroPagina, frame)
+				tlb.ActualizarTLB(pid, numeroPagina, frame)
 			}
 			slice.Push(&direccion_y_tamanio, globals.DireccionTamanio{DireccionFisica: frame * tamPagina, Tamanio: tamanioRestante})
 		} else { //Paginas del medio sin tener en cuenta el desplazamiento
 			numeroPagina++
-			if(cpu_api.BuscarEnTLB(pid, numeroPagina)){
-				frame = cpu_api.FrameEnTLB(pid, numeroPagina)
+			if(tlb.BuscarEnTLB(pid, numeroPagina)){
+				frame = tlb.FrameEnTLB(pid, numeroPagina)
 			} else { 
 				frame = Frame_rcv(&globals.CurrentJob, numeroPagina)
-				cpu_api.ActualizarTLB(pid, numeroPagina, frame)
+				tlb.ActualizarTLB(pid, numeroPagina, frame)
 				}		
 			slice.Push(&direccion_y_tamanio, globals.DireccionTamanio{DireccionFisica: frame * tamPagina, Tamanio: tamPagina})
 			tamanioRestante -= tamPagina

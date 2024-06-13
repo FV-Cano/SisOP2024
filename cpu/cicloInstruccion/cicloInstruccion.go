@@ -13,7 +13,8 @@ import (
 	"unsafe"
 
 	"github.com/sisoputnfrba/tp-golang/cpu/globals"
-	"github.com/sisoputnfrba/tp-golang/cpu/mmu"
+
+	mmu "github.com/sisoputnfrba/tp-golang/cpu/mmu"
 
 	solicitudesmemoria "github.com/sisoputnfrba/tp-golang/cpu/solicitudesMemoria"
 	"github.com/sisoputnfrba/tp-golang/utils/pcb"

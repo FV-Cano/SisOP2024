@@ -14,6 +14,7 @@ import (
 
 	"github.com/sisoputnfrba/tp-golang/cpu/globals"
 	"github.com/sisoputnfrba/tp-golang/cpu/mmu"
+
 	solicitudesmemoria "github.com/sisoputnfrba/tp-golang/cpu/solicitudesMemoria"
 	"github.com/sisoputnfrba/tp-golang/utils/pcb"
 )
@@ -351,7 +352,7 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		tamanio := globals.PasarAInt(instruccionDecodificada[1])
 		solicitudesmemoria.Resize(tamanio)
 		currentPCB.PC++
-
+		//TODO: REVISAR DESDE ACÁ Y DESDE KERNEL
 	}
 
 }
@@ -455,4 +456,4 @@ func ConvertirUint32(parametro string) uint32 {
 		log.Fatal("Error al convertir el parametro a uint32")
 	}
 	return uint32(parametroConvertido)
-}
+} 

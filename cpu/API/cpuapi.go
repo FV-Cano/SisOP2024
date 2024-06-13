@@ -120,7 +120,7 @@ func CalcularDireccionFisica(frame int, offset int, tamanio int) int {
 
 }
 
-func ActualizarTLB(pid, pagina, marco int) {
+func ActualizarTLB(pid, pagina, marco int) { //TODO: SI LA PAGINA YA EXISTE, LLEVARLA AL FINAL DE LA LISTA
 	if globals.Configcpu.Algorithm_tlb == "FIFO" {
 	if len(tlb.CurrentTLB) >= globals.Configcpu.Number_felling_tlb {
 		// Si la TLB está llena, eliminar la entrada más antigua (FIFO)
@@ -134,4 +134,27 @@ func ActualizarTLB(pid, pagina, marco int) {
 	}
 }
 
+/*
+func ActualizarTLB1(pid, pagina, marco int) { //TODO: SI LA PAGINA YA EXISTE, LLEVARLA AL FINAL DE LA LISTA
+	if globals.Configcpu.Algorithm_tlb == "FIFO" {
 
+		if (!BuscarEnTLB(pid, pagina)
+		if (len(tlb.CurrentTLB) < globals.Configcpu.Number_felling_tlb){
+			// Si la TLB no está llena, agregar la entrada
+			tlb.CurrentTLB[pid] = tlb.Pagina_marco{Pagina: pagina, Marco: marco}
+
+		} else {
+		// Si la TLB está llena, eliminar la entrada más antigua (FIFO)
+			for key := range tlb.CurrentTLB {
+				delete(tlb.CurrentTLB, key)
+				break
+			}
+
+		}
+	if len(tlb.CurrentTLB) >= globals.Configcpu.Number_felling_tlb {
+		
+		
+	}
+	
+	}
+}*/

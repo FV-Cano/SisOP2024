@@ -213,7 +213,7 @@ func EvictionManagement() {
 		if resource.Exists(globals.CurrentJob.RequestedResource) {
 			resource.ReleaseConsumption(globals.CurrentJob.RequestedResource)
 		}
-	case "OUT OF MEMORY":
+	case "OUT_OF_MEMORY":
 		globals.ChangeState(&globals.CurrentJob, "TERMINATED")
 		globals.JobExecBinary <- true
 		<- globals.MultiprogrammingCounter

@@ -11,12 +11,12 @@ import (
 )
 
 // Peticion para RESIZE de memoria (DESDE CPU A MEMORIA)
-func Resize(tamanio int) {
+func Resize(tamanio int) string {
 	cliente := &http.Client{}
 	url := fmt.Sprintf("http://%s:%d/resize", globals.Configcpu.IP_memory,globals.Configcpu.Port_memory)
 	req, err := http.NewRequest("PATCH", url, nil)
 	if err != nil {
-		return 
+		return "error"
 	}
 
 	q := req.URL.Query()
@@ -26,25 +26,21 @@ func Resize(tamanio int) {
 	req.Header.Set("Content-Type", "application/json")
 	respuesta, err := cliente.Do(req)
 	if err != nil {
-		return 
+		return  "error"
 	}
 
 	// Verificar el código de estado de la respuesta
 	if respuesta.StatusCode != http.StatusOK {
-		return 
+		return "Error al realizar la petición de resize"
 	}
 
 	bodyBytes, err := io.ReadAll(respuesta.Body)
 	if err != nil {
-		return 	
+		return	"error"
 	}
 	//En caso de que la respuesta de la memoria sea Out of Memory, se deberá devolver el contexto de ejecución al Kernel informando de esta situación
 	// Y Avisar que el error es por out of memory
-	var respuestaResize = string(bodyBytes)
-	if respuestaResize != "OK" {
-		globals.CurrentJob.EvictionReason = "OUT OF MEMORY"
-		// falta algo mas?
-	} 
+	return string(bodyBytes)
 }
 
 

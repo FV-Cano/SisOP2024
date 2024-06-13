@@ -351,11 +351,12 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 	case "RESIZE":
 
 		tamanio := globals.PasarAInt(instruccionDecodificada[1])
-		solicitudesmemoria.Resize(tamanio)
+		if(solicitudesmemoria.Resize(tamanio) != "OK"){
+			currentPCB.EvictionReason = "OUT_OF_MEMORY"
+			pcb.EvictionFlag = true
+		}
 		currentPCB.PC++
-		//TODO: REVISAR DESDE ACÁ Y DESDE KERNEL
 	}
-
 }
 
 type Uint interface{ ~uint8 | ~uint32 }
@@ -457,4 +458,4 @@ func ConvertirUint32(parametro string) uint32 {
 		log.Fatal("Error al convertir el parametro a uint32")
 	}
 	return uint32(parametroConvertido)
-} 
+}

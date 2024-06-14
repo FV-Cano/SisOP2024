@@ -34,6 +34,7 @@ func main() {
 	globals.MultiprogrammingCounter = make (chan int, globals.Configkernel.Multiprogramming)	// Inicializamos el contador de multiprogramación
 	resources.InitResourceMap()
 
+	globals.ControlMutex.Lock()
 	globals.EmptiedListMutex.Lock() // Bloqueamos la lista de jobs vacía
 	globals.PlanBinary <- false
 

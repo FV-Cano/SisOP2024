@@ -111,7 +111,7 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 	}
 
 	switch instruccionDecodificada[0] {
-	case "IO_GEN_SLEEP":
+	/*case "IO_GEN_SLEEP":
 		cond, err := HallarInterfaz(instruccionDecodificada[1], "GENERICA")
 		if err != nil {
 			log.Print("La interfaz no existe o no acepta operaciones de IO Genéricas")
@@ -142,7 +142,7 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		}
 		pcb.EvictionFlag = true
 		currentPCB.PC++ // Ver si aumenta siempre */
-
+		
 	case "IO_STDIN_READ":
 		interfazEncontrada, err := HallarInterfaz(instruccionDecodificada[1], "STDIN")
 		if err != nil {

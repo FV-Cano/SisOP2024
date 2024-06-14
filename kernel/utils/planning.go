@@ -18,24 +18,38 @@ import (
 func LTS_Plan() {
 	for {
 		// Si la lista de jobs está vacía, esperar a que tenga al menos uno
+		fmt.Print("La lista es: ",globals.LTS)
+		fmt.Print("La lista tiene longitud: ",len(globals.LTS))
+
 		if len(globals.LTS) == 0 {
 			globals.EmptiedListMutex.Lock()
+			continue
 		}
 		auxJob := slice.Shift(&globals.LTS)
-		//globals.MultiprogrammingCounter <- int(auxJob.PID)
+		globals.MultiprogrammingCounter <- int(auxJob.PID)
 		globals.ChangeState(&auxJob, "READY")
 		globals.STS = append(globals.STS, auxJob)
+		globals.ControlMutex.Unlock()
 
 		// Los procesos en READY, EXEC y BLOCKED afectan al grado de multiprogramación
-		globals.MultiprogrammingCounter <- int(auxJob.PID) // ! Lo cambiamos de linea porque tecnicamente debería ser después de ser agregado a la cola de listos
+		//globals.MultiprogrammingCounter <- int(auxJob.PID) // ! Lo cambiamos de linea porque tecnicamente debería ser después de ser agregado a la cola de listos
 	}
 }
 
 func STS_Plan() {
+
+	
 	switch globals.Configkernel.Planning_algorithm {
 	case "FIFO":
+		
 		log.Println("FIFO algorithm")
 		for {
+
+			if len(globals.STS) == 0 {
+				globals.ControlMutex.Lock()
+				continue
+			}
+
 			globals.PlanBinary <- true
 			//log.Println("FIFO Planificandoooo")
 			FIFO_Plan()

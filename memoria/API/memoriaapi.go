@@ -56,6 +56,14 @@ func BuscarInstruccionMap(pc int, pid int) string {
 	return resultado
 }
 
+/*func BuscarInstruccionMap(pc int, pid int) string {
+    if pid < len(globals.InstruccionesProceso) && pc < len(globals.InstruccionesProceso[pid]) {
+        resultado := globals.InstruccionesProceso[pid][pc]
+        return resultado
+    }
+    return ""
+}*/
+
 func PasarAInt(cadena string) int {
 	num, err := strconv.Atoi(cadena)
 	if err != nil {
@@ -96,7 +104,11 @@ func CargarInstrucciones(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Instrucciones cargadas para el PID %d ", pid)
 
 	//acá debemos inicializar vacía la tabla de páginas para el proceso
-	globals.Tablas_de_paginas[int(pid)] = []globals.Frame{}
+	if globals.Tablas_de_paginas == nil {
+		globals.Tablas_de_paginas = make(map[int]globals.TablaPaginas)
+	}
+	
+	globals.Tablas_de_paginas[int(pid)] = globals.TablaPaginas{}
 	log.Printf("Tabla cargada para el PID %d ", pid)
 
 	respuesta, err := json.Marshal((BuscarInstruccionMap(int(pc), int(pid))))

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 
 	"github.com/sisoputnfrba/tp-golang/cpu/globals"
 )
@@ -13,20 +14,22 @@ import (
 // Peticion para RESIZE de memoria (DESDE CPU A MEMORIA)
 func Resize(tamanio int) string {
 	cliente := &http.Client{}
-	url := fmt.Sprintf("http://%s:%d/resize", globals.Configcpu.IP_memory,globals.Configcpu.Port_memory)
+	url := fmt.Sprintf("http://%s:%d/resize", globals.Configcpu.IP_memory, globals.Configcpu.Port_memory)
 	req, err := http.NewRequest("PATCH", url, nil)
 	if err != nil {
 		return "error"
 	}
 
 	q := req.URL.Query()
-	q.Add("tamanio", "tamanio")
+	tamanioEnString := strconv.Itoa(tamanio)
+	q.Add("tamanio", tamanioEnString)
+	q.Add("pid", strconv.Itoa(int(globals.CurrentJob.PID)))
 	req.URL.RawQuery = q.Encode()
 
 	req.Header.Set("Content-Type", "application/json")
 	respuesta, err := cliente.Do(req)
 	if err != nil {
-		return  "error"
+		return "error"
 	}
 
 	// Verificar el código de estado de la respuesta
@@ -36,26 +39,25 @@ func Resize(tamanio int) string {
 
 	bodyBytes, err := io.ReadAll(respuesta.Body)
 	if err != nil {
-		return	"error"
+		return "error"
 	}
 	//En caso de que la respuesta de la memoria sea Out of Memory, se deberá devolver el contexto de ejecución al Kernel informando de esta situación
 	// Y Avisar que el error es por out of memory
 	return string(bodyBytes)
 }
 
-
 type BodyRequestEscribir struct {
 	DireccionesTamanios []globals.DireccionTamanio `json:"direcciones_tamanios"`
-	Valor_a_escribir    string             `json:"valor_a_escribir"`
-	Pid                 int                `json:"pid"`
+	Valor_a_escribir    string                     `json:"valor_a_escribir"`
+	Pid                 int                        `json:"pid"`
 }
 
 func SolicitarEscritura(direccionesTamanios []globals.DireccionTamanio, valorAEscribir string, pid int) {
 	body, err := json.Marshal(BodyRequestEscribir{
-		DireccionesTamanios : direccionesTamanios,
-		Valor_a_escribir    : valorAEscribir,
-		Pid                 : pid,
-	})          
+		DireccionesTamanios: direccionesTamanios,
+		Valor_a_escribir:    valorAEscribir,
+		Pid:                 pid,
+	})
 	if err != nil {
 		return
 	}
@@ -92,7 +94,6 @@ func SolicitarEscritura(direccionesTamanios []globals.DireccionTamanio, valorAEs
 	}
 }
 
-
 type BodyRequestLeer struct {
 	DireccionesTamanios []globals.DireccionTamanio `json:"direcciones_tamanios"`
 }
@@ -121,7 +122,7 @@ func SolicitarLectura(direccionesFisicas []globals.DireccionTamanio) string {
 	}
 
 	if respuesta.StatusCode != http.StatusOK {
-		return "Error al realizar la lectura"	
+		return "Error al realizar la lectura"
 	}
 
 	bodyBytes, err := io.ReadAll(respuesta.Body)

@@ -216,7 +216,7 @@ func ObtenerDireccionesFisicas(direccionLogica int, tamanio int, pid int) []glob
 		tlb.ActualizarTLB(pid, numeroPagina, frame)
 	}
 	
-	tamanioTotal := frame*tamPagina + desplazamiento + tamanio
+	tamanioTotal := frame * tamPagina + desplazamiento + tamanio
 	if tamanioTotal > PedirTamTablaPaginas(pid)*tamPagina {
 		solicitudesmemoria.Resize(tamanioTotal)
 	}

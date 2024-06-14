@@ -142,7 +142,7 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		}
 		pcb.EvictionFlag = true
 		currentPCB.PC++ // Ver si aumenta siempre */
-		
+
 	case "IO_STDIN_READ":
 		interfazEncontrada, err := HallarInterfaz(instruccionDecodificada[1], "STDIN")
 		if err != nil {
@@ -367,10 +367,14 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 	case "RESIZE":
 
 		tamanio := globals.PasarAInt(instruccionDecodificada[1])
+		fmt.Print("MIRA EL TAMNIOOO: ", tamanio)
+
 		if(solicitudesmemoria.Resize(tamanio) != "OK"){
+			fmt.Print("ME LAS TOMO DE CPU")
 			currentPCB.EvictionReason = "OUT_OF_MEMORY"
 			pcb.EvictionFlag = true
 		}
+		fmt.Print("sigoo en cpu")
 		currentPCB.PC++
 	}
 }

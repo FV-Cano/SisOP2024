@@ -147,21 +147,26 @@ func RealizarResize(tamanio int, pid int) string {
 	   make(globals.TablaPaginas, cantPaginas) crea una nueva tabla de páginas con una cantidad específica de páginas (cantPaginas).
 	   Cada página en la tabla es un Frame.
 	*/
-	ModificarTamanioProceso(cantPaginasActual, cantPaginas, pid)
+	resultado := ModificarTamanioProceso(cantPaginasActual, cantPaginas, pid)
 	log.Printf("Tabla de páginas del PID %d redimensionada a %d páginas", pid, cantPaginas)
-	return "OK"
+	return resultado
 }
 
-func ModificarTamanioProceso(tamanioProcesoActual int, tamanioProcesoNuevo int, pid int) {
+func ModificarTamanioProceso(tamanioProcesoActual int, tamanioProcesoNuevo int, pid int) string {
+
+	//tamanioMemEnPaginas := globals.Configmemory.Memory_size / globals.Configmemory.Page_size
+
 	if tamanioProcesoActual < tamanioProcesoNuevo { //ampliar proceso
 		var diferenciaEnPaginas = tamanioProcesoNuevo - tamanioProcesoActual
 		log.Printf("PID: %d - Tamanio Actual: %d - Tamanio a Ampliar: %d", pid, tamanioProcesoActual, tamanioProcesoNuevo) // verificar si en el último parámetro va diferenciaEnPaginas
-		AmpliarProceso(diferenciaEnPaginas, pid)
+		fmt.Print("MOSTRAMELON EN PAGINAS EL TAMANIO")
+		return AmpliarProceso(diferenciaEnPaginas, pid)
 
 	} else { // reducir proceso
 		var diferenciaEnPaginas = tamanioProcesoActual - tamanioProcesoNuevo
 		log.Printf("PID: %d - Tamanio Actual: %d - Tamanio a Reducir: %d", pid, tamanioProcesoActual, tamanioProcesoNuevo) // verificar si en el último parámetro va diferenciaEnPaginas
-		ReducirProceso(diferenciaEnPaginas, pid)
+		fmt.Print("MOSTRAMELON EN PAGINAS EL TAMANIO")
+		return ReducirProceso(diferenciaEnPaginas, pid)
 	}
 }
 
@@ -187,7 +192,7 @@ func AmpliarProceso(diferenciaEnPaginas int, pid int) string {
 
 }
 
-func ReducirProceso(diferenciaEnPaginas int, pid int) {
+func ReducirProceso(diferenciaEnPaginas int, pid int) string {
 	for diferenciaEnPaginas > 0 {
 		//obtener el marco que le corresponde a la página
 		marco := BuscarMarco(pid, diferenciaEnPaginas)
@@ -196,6 +201,7 @@ func ReducirProceso(diferenciaEnPaginas int, pid int) {
 		Clear(marco)
 		diferenciaEnPaginas--
 	}
+	return "OK"
 }
 
 // --------------------------------------------------------------------------------------//

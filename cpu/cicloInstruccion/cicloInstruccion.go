@@ -367,14 +367,15 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 	case "RESIZE":
 
 		tamanio := globals.PasarAInt(instruccionDecodificada[1])
-		fmt.Print("MIRA EL TAMNIOOO: ", tamanio)
+		fmt.Println("MIRA EL TAMNIOOO: ", tamanio)
 
-		if(solicitudesmemoria.Resize(tamanio) != "OK"){
-			fmt.Print("ME LAS TOMO DE CPU")
+		fmt.Println("el resize devuelve" , solicitudesmemoria.Resize(tamanio))
+		if(solicitudesmemoria.Resize(tamanio) != "\"OK\""){
+			fmt.Println("ME LAS TOMO DE CPU")
 			currentPCB.EvictionReason = "OUT_OF_MEMORY"
 			pcb.EvictionFlag = true
 		}
-		fmt.Print("sigoo en cpu")
+		fmt.Println("sigoo en cpu")
 		currentPCB.PC++
 	}
 }

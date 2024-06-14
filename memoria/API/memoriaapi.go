@@ -156,17 +156,19 @@ func ModificarTamanioProceso(tamanioProcesoActual int, tamanioProcesoNuevo int, 
 
 	//tamanioMemEnPaginas := globals.Configmemory.Memory_size / globals.Configmemory.Page_size
 
-	if tamanioProcesoActual < tamanioProcesoNuevo { //ampliar proceso
+	if (tamanioProcesoActual < tamanioProcesoNuevo) { //ampliar proceso
 		var diferenciaEnPaginas = tamanioProcesoNuevo - tamanioProcesoActual
 		log.Printf("PID: %d - Tamanio Actual: %d - Tamanio a Ampliar: %d", pid, tamanioProcesoActual, tamanioProcesoNuevo) // verificar si en el último parámetro va diferenciaEnPaginas
-		fmt.Print("MOSTRAMELON EN PAGINAS EL TAMANIO")
+		fmt.Println("MOSTRAMELON EN PAGINAS EL TAMANIO")
 		return AmpliarProceso(diferenciaEnPaginas, pid)
-
+	} else if (tamanioProcesoActual == tamanioProcesoNuevo) {
+		return "OK"
 	} else { // reducir proceso
 		var diferenciaEnPaginas = tamanioProcesoActual - tamanioProcesoNuevo
 		log.Printf("PID: %d - Tamanio Actual: %d - Tamanio a Reducir: %d", pid, tamanioProcesoActual, tamanioProcesoNuevo) // verificar si en el último parámetro va diferenciaEnPaginas
-		fmt.Print("MOSTRAMELON EN PAGINAS EL TAMANIO")
+		fmt.Println("MOSTRAMELON EN PAGINAS EL TAMANIO")
 		return ReducirProceso(diferenciaEnPaginas, pid)
+		
 	}
 }
 
@@ -200,6 +202,7 @@ func ReducirProceso(diferenciaEnPaginas int, pid int) string {
 		globals.Tablas_de_paginas[pid] = append(globals.Tablas_de_paginas[pid][:diferenciaEnPaginas], globals.Tablas_de_paginas[pid][diferenciaEnPaginas+1:]...)
 		Clear(marco)
 		diferenciaEnPaginas--
+		fmt.Println("TAMANIO REDUCIDO")
 	}
 	return "OK"
 }

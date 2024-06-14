@@ -18,8 +18,8 @@ import (
 func LTS_Plan() {
 	for {
 		// Si la lista de jobs está vacía, esperar a que tenga al menos uno
-		fmt.Print("La lista es: ",globals.LTS)
-		fmt.Print("La lista tiene longitud: ",len(globals.LTS))
+		fmt.Println("La lista es: ",globals.LTS)
+		fmt.Println("La lista tiene longitud: ",len(globals.LTS))
 
 		if len(globals.LTS) == 0 {
 			globals.EmptiedListMutex.Lock()

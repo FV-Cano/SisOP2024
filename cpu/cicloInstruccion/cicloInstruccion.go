@@ -112,7 +112,23 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 
 	switch instruccionDecodificada[0] {
 	case "IO_GEN_SLEEP":
+		cond, err := HallarInterfaz(instruccionDecodificada[1], "GENERICA")
+		if err != nil {
+			log.Print("La interfaz no existe o no acepta operaciones de IO Genéricas")
+		}
 		tiempo_esp, err := strconv.Atoi(instruccionDecodificada[2])
+		if err != nil {
+			log.Fatal("Error al convertir el tiempo de espera a entero")
+		}
+		if cond {
+			currentPCB.EvictionReason = "BLOCKED_IO_GEN"
+			ComunicarTiempoEspera(instruccionDecodificada[1], tiempo_esp)
+		} else {
+			currentPCB.EvictionReason = "EXIT"
+		}
+		
+		
+		/* tiempo_esp, err := strconv.Atoi(instruccionDecodificada[2])
 		if err != nil {
 			log.Fatal("Error al convertir el tiempo de espera a entero")
 		}
@@ -125,7 +141,7 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 			ComunicarTiempoEspera(instruccionDecodificada[1], tiempo_esp)
 		}
 		pcb.EvictionFlag = true
-		currentPCB.PC++ // Ver si aumenta siempre
+		currentPCB.PC++ // Ver si aumenta siempre */
 
 	case "IO_STDIN_READ":
 		interfazEncontrada, err := HallarInterfaz(instruccionDecodificada[1], "STDIN")

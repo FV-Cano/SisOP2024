@@ -112,36 +112,36 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 
 	switch instruccionDecodificada[0] {
 	/*case "IO_GEN_SLEEP":
-		cond, err := HallarInterfaz(instruccionDecodificada[1], "GENERICA")
-		if err != nil {
-			log.Print("La interfaz no existe o no acepta operaciones de IO Genéricas")
-		}
-		tiempo_esp, err := strconv.Atoi(instruccionDecodificada[2])
-		if err != nil {
-			log.Fatal("Error al convertir el tiempo de espera a entero")
-		}
-		if cond {
-			currentPCB.EvictionReason = "BLOCKED_IO_GEN"
-			ComunicarTiempoEspera(instruccionDecodificada[1], tiempo_esp)
-		} else {
-			currentPCB.EvictionReason = "EXIT"
-		}
-		
-		
-		/* tiempo_esp, err := strconv.Atoi(instruccionDecodificada[2])
-		if err != nil {
-			log.Fatal("Error al convertir el tiempo de espera a entero")
-		}
-		_, err = HallarInterfaz(instruccionDecodificada[1], "GENERICA")
-		if err != nil {
-			log.Print("Error al verificar la existencia de la interfaz genérica")
-			currentPCB.EvictionReason = "NOT_FOUND_IO"
-		} else {
-			currentPCB.EvictionReason = "BLOCKED_IO_GEN"
-			ComunicarTiempoEspera(instruccionDecodificada[1], tiempo_esp)
-		}
-		pcb.EvictionFlag = true
-		currentPCB.PC++ // Ver si aumenta siempre */
+	cond, err := HallarInterfaz(instruccionDecodificada[1], "GENERICA")
+	if err != nil {
+		log.Print("La interfaz no existe o no acepta operaciones de IO Genéricas")
+	}
+	tiempo_esp, err := strconv.Atoi(instruccionDecodificada[2])
+	if err != nil {
+		log.Fatal("Error al convertir el tiempo de espera a entero")
+	}
+	if cond {
+		currentPCB.EvictionReason = "BLOCKED_IO_GEN"
+		ComunicarTiempoEspera(instruccionDecodificada[1], tiempo_esp)
+	} else {
+		currentPCB.EvictionReason = "EXIT"
+	}
+
+
+	/* tiempo_esp, err := strconv.Atoi(instruccionDecodificada[2])
+	if err != nil {
+		log.Fatal("Error al convertir el tiempo de espera a entero")
+	}
+	_, err = HallarInterfaz(instruccionDecodificada[1], "GENERICA")
+	if err != nil {
+		log.Print("Error al verificar la existencia de la interfaz genérica")
+		currentPCB.EvictionReason = "NOT_FOUND_IO"
+	} else {
+		currentPCB.EvictionReason = "BLOCKED_IO_GEN"
+		ComunicarTiempoEspera(instruccionDecodificada[1], tiempo_esp)
+	}
+	pcb.EvictionFlag = true
+	currentPCB.PC++ // Ver si aumenta siempre */
 
 	case "IO_STDIN_READ":
 		interfazEncontrada, err := HallarInterfaz(instruccionDecodificada[1], "STDIN")
@@ -296,16 +296,24 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		//(Registro Dirección, Registro Datos): Lee el valor del Registro Datos y lo escribe en la dirección física de memoria
 		//obtenida a partir de la Dirección Lógica almacenada en el Registro Dirección.
 		tamanio := int(unsafe.Sizeof(currentPCB.CPU_reg[instruccionDecodificada[2]])) //ver de usar el switch que tenemos en globals
+		direc_log := Convertir[uint32]("uint32", currentPCB.CPU_reg[instruccionDecodificada[1]])
 
-		direc_logica, ok := currentPCB.CPU_reg[instruccionDecodificada[1]].(int)
+		fmt.Println("LA INST DECODIFICADA 1 ES", instruccionDecodificada[1])
+		fmt.Println("LA INST DECODIFICADA 2 ES", instruccionDecodificada[2])
+
+		/*direc_logica, ok := currentPCB.CPU_reg[instruccionDecodificada[1]].(int)
 		if !ok {
-			log.Fatalf("Error: el valor en el registro no es de tipo string")
+			fmt.Printf("El tipo de valor es %T\n", direc_logica)
+			log.Fatalf("Error: el valor en el registro no es de tipo int")
 		}
+*/
+		direcsFisicas := mmu.ObtenerDireccionesFisicas(int(direc_log), tamanio, int(currentPCB.PID))
 
-		direcsFisicas := mmu.ObtenerDireccionesFisicas(direc_logica, tamanio, int(currentPCB.PID))
+		//valor := int(Convertir[uint32]("uint32", currentPCB.CPU_reg[instruccionDecodificada[2]]))
 
 		valor, ok := currentPCB.CPU_reg[instruccionDecodificada[2]].(string)
 		if !ok {
+			fmt.Printf("El tipo de valor es %T\n", valor)
 			log.Fatalf("Error: el valor en el registro no es de tipo string")
 		}
 
@@ -323,13 +331,15 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		// MOV_IN (Registro Destino, Registro Dirección): Mueve el contenido del Registro Dirección (DL) al Registro Destino.
 
 		tamanio := int(unsafe.Sizeof(currentPCB.CPU_reg[instruccionDecodificada[1]]))
-
-		direc_logica, ok := currentPCB.CPU_reg[instruccionDecodificada[2]].(int)
+		direc_log := Convertir[uint32]("uint32", currentPCB.CPU_reg[instruccionDecodificada[2]])
+		/*direc_logica, ok := currentPCB.CPU_reg[instruccionDecodificada[2]].(int)
 		if !ok {
 			log.Fatalf("Error: el valor en el registro no es de tipo string")
-		}
+		}*/
 
-		direcsFisicas := mmu.ObtenerDireccionesFisicas(direc_logica, tamanio, int(currentPCB.PID))
+		fmt.Println("El valor de la direc logica es", int(direc_log))
+
+		direcsFisicas := mmu.ObtenerDireccionesFisicas(int(direc_log), tamanio, int(currentPCB.PID))
 
 		datos := solicitudesmemoria.SolicitarLectura(direcsFisicas)
 		currentPCB.CPU_reg[instruccionDecodificada[1]] = datos
@@ -369,8 +379,8 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		tamanio := globals.PasarAInt(instruccionDecodificada[1])
 		fmt.Println("MIRA EL TAMNIOOO: ", tamanio)
 
-		fmt.Println("el resize devuelve" , solicitudesmemoria.Resize(tamanio))
-		if(solicitudesmemoria.Resize(tamanio) != "\"OK\""){
+		fmt.Println("el resize devuelve", solicitudesmemoria.Resize(tamanio))
+		if solicitudesmemoria.Resize(tamanio) != "\"OK\"" {
 			fmt.Println("ME LAS TOMO DE CPU")
 			currentPCB.EvictionReason = "OUT_OF_MEMORY"
 			pcb.EvictionFlag = true
@@ -397,6 +407,9 @@ func Convertir[T Uint](tipo string, parametro interface{}) T {
 		return T(valor)
 	case "float64":
 		valor := parametro.(float64)
+		return T(valor)
+	case "int":
+		valor := parametro.(int)
 		return T(valor)
 	}
 	return T(0)

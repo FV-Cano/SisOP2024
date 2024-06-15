@@ -342,7 +342,6 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		// en el Registro Dirección y lo almacena en el Registro Datos.
 
 	case "MOV_IN":
-
 		var tamanio int
 
 		valorReg2 := currentPCB.CPU_reg[instruccionDecodificada[2]]
@@ -364,10 +363,15 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		tipoReg1 := pcb.TipoReg(instruccionDecodificada[1])
 
 		var datosAAlmacenar interface{} // Declarar la variable con un tipo
+
+		fmt.Println("Los datos MOSTRAMELLON son: ", datos)
 		
 		if tipoReg1 == "uint32" {
+			fmt.Println("QUE ONDA SOY UINT 32: ",tipoReg1)
 			datosAAlmacenar = ConvertirUint32(datos) // Usar una función para la conversión
+
 		} else if tipoReg1 == "uint8" {
+			fmt.Println("ACA EL TIPO DEL REG1 ES: ", tipoReg1)
 			datosAAlmacenar = ConvertirUint8(datos) // Usar una función para la conversión
 		}
 		currentPCB.CPU_reg[instruccionDecodificada[1]] = datosAAlmacenar

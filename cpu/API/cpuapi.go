@@ -7,7 +7,6 @@ import (
 
 	"github.com/sisoputnfrba/tp-golang/cpu/cicloInstruccion"
 	"github.com/sisoputnfrba/tp-golang/cpu/globals"
-	"github.com/sisoputnfrba/tp-golang/cpu/tlb"
 	"github.com/sisoputnfrba/tp-golang/utils/pcb"
 )
 
@@ -81,7 +80,7 @@ func HandleInterruption(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 }
-
+/*
 func BuscarEnTLB(pid int, pagina int) bool {
 
 	if entry, exists := tlb.CurrentTLB[pid]; exists && entry.Pagina == pagina {
@@ -133,7 +132,7 @@ func CalcularDireccionFisica(frame int, offset int, tamanio int) int {
 	tlb.CurrentTLB[pid] = tlb.Pagina_marco{Pagina: pagina, Marco: marco}
 
 	}
-}*/
+}
 
 func ActualizarTLB(pid, pagina, marco int) { 
 	switch globals.Configcpu.Algorithm_tlb {
@@ -180,4 +179,4 @@ func ActualizarTLB(pid, pagina, marco int) {
 				tlb.OrderedKeys = append(tlb.OrderedKeys, pid) // Agregar la nueva clave al final de la lista
 			}
 	}
-}
+}*/

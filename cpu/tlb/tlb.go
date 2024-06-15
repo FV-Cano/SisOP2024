@@ -1,6 +1,10 @@
 package tlb
 
-import "github.com/sisoputnfrba/tp-golang/cpu/globals"
+import (
+	"fmt"
+
+	"github.com/sisoputnfrba/tp-golang/cpu/globals"
+)
 
 type Pagina_marco struct {
 	Pagina int
@@ -73,6 +77,7 @@ func ActualizarTLB(pid, pagina, marco int) {
                 // Si la TLB no está llena, agregar la entrada
                 CurrentTLB[pid] = Pagina_marco{Pagina: pagina, Marco: marco}
                 OrderedKeys = append(OrderedKeys, pid) // Agregar la clave al final de la lista
+				fmt.Println("ACTUALIZANDO EN LA TLB PIBE")
             } else {
                 // Si la TLB está llena, eliminar la entrada más antigua (FIFO)
                 oldestKey := OrderedKeys[0] // Obtener la clave más antigua
@@ -80,6 +85,7 @@ func ActualizarTLB(pid, pagina, marco int) {
                 OrderedKeys = OrderedKeys[1:] // Eliminar la clave más antigua de la lista
                 CurrentTLB[pid] = Pagina_marco{Pagina: pagina, Marco: marco} // Agregar la nueva entrada
                 OrderedKeys = append(OrderedKeys, pid) // Agregar la nueva clave al final de la lista
+				fmt.Println("ACTUALIZANDO EN LA TLB PIBE2")
             } 
         } 
 			

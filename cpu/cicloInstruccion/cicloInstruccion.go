@@ -295,30 +295,46 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 
 		//(Registro Dirección, Registro Datos): Lee el valor del Registro Datos y lo escribe en la dirección física de memoria
 		//obtenida a partir de la Dirección Lógica almacenada en el Registro Dirección.
-		tamanio := int(unsafe.Sizeof(currentPCB.CPU_reg[instruccionDecodificada[2]])) //ver de usar el switch que tenemos en globals
-		direc_log := Convertir[uint32]("uint32", currentPCB.CPU_reg[instruccionDecodificada[1]])
 
+		// Leer el valor y tamaño del registro de datos (2)
+		var tamanio2 int
+		tipoReg2 := pcb.TipoReg(instruccionDecodificada[2])
+		if (tipoReg2 == "uint32") {
+			tamanio2 = 4
+		} else if (tipoReg2 == "uint8") {
+			tamanio2 = 1
+		}
+		
+		// Leer la dirección lógica del registro de dirección (1)
+		valorReg1 := currentPCB.CPU_reg[instruccionDecodificada[1]]
+		tipoActualReg1 := reflect.TypeOf(valorReg1).String()
+
+		direc_log := Convertir[uint32](tipoActualReg1, valorReg1)
+
+		
 		fmt.Println("LA INST DECODIFICADA 1 ES", instruccionDecodificada[1])
 		fmt.Println("LA INST DECODIFICADA 2 ES", instruccionDecodificada[2])
 
-		/*direc_logica, ok := currentPCB.CPU_reg[instruccionDecodificada[1]].(int)
-		if !ok {
-			fmt.Printf("El tipo de valor es %T\n", direc_logica)
-			log.Fatalf("Error: el valor en el registro no es de tipo int")
+		fmt.Println("ACA LLEGO", instruccionDecodificada[2])
+
+		direcsFisicas := mmu.ObtenerDireccionesFisicas(int(direc_log), tamanio2, int(currentPCB.PID))
+		fmt.Println("ACA TAMBIEN LLEGO", direcsFisicas)
+
+
+		valorReg2 := currentPCB.CPU_reg[instruccionDecodificada[2]]
+		tipoActualReg2 := reflect.TypeOf(valorReg2).String()
+		
+		var valor2EnString string
+
+		if tipoReg2 == "uint32" {
+			valor2EnString = string(Convertir[uint32](tipoActualReg2, valorReg2))
+		} else {
+			valor2EnString = string(Convertir[uint8](tipoActualReg2, valorReg2))
 		}
-*/
-		direcsFisicas := mmu.ObtenerDireccionesFisicas(int(direc_log), tamanio, int(currentPCB.PID))
 
-		//valor := int(Convertir[uint32]("uint32", currentPCB.CPU_reg[instruccionDecodificada[2]]))
+		solicitudesmemoria.SolicitarEscritura(direcsFisicas, valor2EnString, int(currentPCB.PID)) //([direccion fisica y tamanio], valorAEscribir, pid
 
-		valor, ok := currentPCB.CPU_reg[instruccionDecodificada[2]].(string)
-		if !ok {
-			fmt.Printf("El tipo de valor es %T\n", valor)
-			log.Fatalf("Error: el valor en el registro no es de tipo string")
-		}
-
-		solicitudesmemoria.SolicitarEscritura(direcsFisicas, valor, int(currentPCB.PID)) //([direccion fisica y tamanio], valorAEscribir, pid
-
+	
 		currentPCB.PC++
 
 		//----------------------------------------------------------------------------
@@ -375,12 +391,12 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 
 	//RESIZE (Tamaño)
 	case "RESIZE":
-
 		tamanio := globals.PasarAInt(instruccionDecodificada[1])
 		fmt.Println("MIRA EL TAMNIOOO: ", tamanio)
 
-		fmt.Println("el resize devuelve", solicitudesmemoria.Resize(tamanio))
-		if solicitudesmemoria.Resize(tamanio) != "\"OK\"" {
+		respuestaResize := solicitudesmemoria.Resize(tamanio)
+		fmt.Println("el resize devuelve", respuestaResize)
+		if respuestaResize != "\"OK\"" {
 			fmt.Println("ME LAS TOMO DE CPU")
 			currentPCB.EvictionReason = "OUT_OF_MEMORY"
 			pcb.EvictionFlag = true

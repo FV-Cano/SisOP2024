@@ -26,13 +26,13 @@ func LTS_Plan() {
 			continue
 		}
 		auxJob := slice.Shift(&globals.LTS)
-		globals.MultiprogrammingCounter <- int(auxJob.PID)
+		//globals.MultiprogrammingCounter <- int(auxJob.PID)
 		globals.ChangeState(&auxJob, "READY")
 		globals.STS = append(globals.STS, auxJob)
-		globals.ControlMutex.Unlock()
+		//globals.ControlMutex.Unlock()
 
 		// Los procesos en READY, EXEC y BLOCKED afectan al grado de multiprogramación
-		//globals.MultiprogrammingCounter <- int(auxJob.PID) // ! Lo cambiamos de linea porque tecnicamente debería ser después de ser agregado a la cola de listos
+		globals.MultiprogrammingCounter <- int(auxJob.PID) // ! Lo cambiamos de linea porque tecnicamente debería ser después de ser agregado a la cola de listos
 	}
 }
 
@@ -46,8 +46,8 @@ func STS_Plan() {
 		for {
 
 			if len(globals.STS) == 0 {
-				globals.ControlMutex.Lock()
-				continue
+				//globals.ControlMutex.Lock()
+				//continue
 			}
 
 			globals.PlanBinary <- true

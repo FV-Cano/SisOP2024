@@ -142,13 +142,17 @@ func RealizarResize(tamanio int, pid int) string {
 	//ver cuantas paginas tiene el proceso en la tabla
 	cantPaginas := tamanio / globals.Configmemory.Page_size
 	// agregar a la tabla de páginas del proceso la cantidad de páginas que se le asignaron
+	log.Printf("Tabla de paginas ANTES DE REDIM del PID %d: %v", pid, globals.Tablas_de_paginas[pid])
+
 	globals.Tablas_de_paginas[int(pid)] = make(globals.TablaPaginas, cantPaginas)
 	/*
 	   make(globals.TablaPaginas, cantPaginas) crea una nueva tabla de páginas con una cantidad específica de páginas (cantPaginas).
 	   Cada página en la tabla es un Frame.
 	*/
+
 	resultado := ModificarTamanioProceso(cantPaginasActual, cantPaginas, pid)
 	log.Printf("Tabla de páginas del PID %d redimensionada a %d páginas", pid, cantPaginas)
+	log.Printf("Tabla de paginas del PID %d: %v", pid, globals.Tablas_de_paginas[pid])
 	return resultado
 }
 
@@ -211,7 +215,9 @@ func ReducirProceso(diferenciaEnPaginas int, pid int) string {
 // ACCESO A TABLA DE PAGINAS: PETICION DESDE CPU (GET)
 // Busca el marco que pertenece al proceso y a la página que envía CPU, dentro del diccionario
 func BuscarMarco(pid int, pagina int) int {
+	fmt.Println("Estoy buscandolon")
 	resultado := globals.Tablas_de_paginas[pid][pagina]
+	fmt.Println("El resultado es: ", resultado)
 	return int(resultado)
 }
 
@@ -221,12 +227,13 @@ func EnviarMarco(w http.ResponseWriter, r *http.Request) {
 	queryParams := r.URL.Query()
 	pid := queryParams.Get("pid")
 	pagina := queryParams.Get("pagina")
-	respuesta, err := json.Marshal(BuscarMarco(PasarAInt(pid), PasarAInt(pagina)))
+	buscarMarco:= BuscarMarco(PasarAInt(pid), PasarAInt(pagina))
+	respuesta, err := json.Marshal(buscarMarco)
 	if err != nil {
 		http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
 		return
 	}
-	log.Printf("PID: %d - Pagina %d - Marco %d", PasarAInt(pid), PasarAInt(pagina), BuscarMarco(PasarAInt(pid), PasarAInt(pagina)))
+	log.Printf("PID: %d - Pagina %d - Marco %d", PasarAInt(pid), PasarAInt(pagina), buscarMarco)
 	w.WriteHeader(http.StatusOK)
 	w.Write(respuesta)
 }
@@ -305,6 +312,8 @@ func EscribirMemoria(w http.ResponseWriter, r *http.Request) {
 
 	time.Sleep(time.Duration(globals.Configmemory.Delay_response) * time.Millisecond) //nos dan los milisegundos o lo dejamos así?
 
+	fmt.Println("LA MEMORIAN QUEDO ASII ", globals.User_Memory)
+	
 	w.WriteHeader(http.StatusOK)
 	w.Write(respuesta)
 }
@@ -369,7 +378,13 @@ func Page_size(w http.ResponseWriter, r *http.Request) {
 func PedirTamTablaPaginas(w http.ResponseWriter, r *http.Request) {
 	queryParams := r.URL.Query()
 	pid := queryParams.Get("pid")
-	respuesta, err := json.Marshal(len(globals.Tablas_de_paginas[PasarAInt(pid)]))
+
+	tableishon := globals.Tablas_de_paginas[PasarAInt(pid)]
+	largoTableishon := len(tableishon)
+
+	fmt.Println("TAMANIO DE TABLEISHON: ", largoTableishon)
+
+	respuesta, err := json.Marshal(largoTableishon)
 	if err != nil {
 		http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
 		return

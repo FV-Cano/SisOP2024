@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -90,8 +91,16 @@ func SolicitarEscritura(direccionesTamanios []globals.DireccionTamanio, valorAEs
 	if respuestaEnString != "OK" {
 		fmt.Println("Se produjo un error al escribir", respuestaEnString)
 	} else {
-		fmt.Println("Se realizó la escritura correctamente", respuestaEnString)
+		log.Printf("PID: %d - Acción: ESCRIBIR - Dirección Física: %s - Valor: %s", pid, DireccionesFisicasAString(direccionesTamanios) ,valorAEscribir)
 	}
+}
+//Hacemos esta funcion para que quede prolijo loguearla en el log xd
+func DireccionesFisicasAString(direccionesFisicas []globals.DireccionTamanio) string {
+	var direccionesString string
+	for i, direc := range direccionesFisicas {
+		direccionesString += fmt.Sprintf("Dirección física %d: %d - Tamaño: %d\n", i, direc.DireccionFisica, direc.Tamanio)
+	}
+	return direccionesString
 }
 
 type BodyRequestLeer struct {
@@ -129,6 +138,9 @@ func SolicitarLectura(direccionesFisicas []globals.DireccionTamanio) string {
 	if err != nil {
 		return "error"
 	}
+	contenidoLeido := string(bodyBytes)
+	//TODO nosotras no le pasamos el PID cuando lee, emtomses se lo pasamos para poder loguear?
+	//log.Printf("PID: %d - Acción: LEER - Dirección Física: %s - Valor: %s", pid, DireccionesFisicasAString(direccionesTamanios) ,contenidoLeido) 
 
-	return string(bodyBytes)
+	return contenidoLeido
 }

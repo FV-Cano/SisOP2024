@@ -112,11 +112,9 @@ func Frame_rcv(currentPCB *pcb.T_PCB, pagina int) int {
 
 	frameEnString := string(frame)
 	frameEnInt := globals.PasarAInt(frameEnString)
-	fmt.Println("QUE RECIBISTE VERSION INT FRAMEEEE: ", frameEnInt)
-
+	log.Printf("PID: %d - OBTENER MARCO - Página: %d - Marco: %d", pid, pagina, frameEnInt)
 	return frameEnInt
 }
-
 
 //------------------------------------------------------------------------------------------
 
@@ -143,14 +141,14 @@ func ObtenerDireccionesFisicas(direccionLogica int, tamanio int, pid int) []glob
 
 	if(tlb.BuscarEnTLB(pid, numeroPagina)){
 		fmt.Println("ACA ENTROOOOOOOON")
-		frame = tlb.FrameEnTLB(pid, numeroPagina)
+		log.Printf("PID: %d - TLB HIT - Pagina: %d", pid, numeroPagina)
 	} else { 
 		fmt.Println("ACA ENTROOOOOOOON TAMBIEN")
+		log.Printf("PID: %d - TLB MISS - Pagina: %d", pid, numeroPagina)
 		frame = Frame_rcv(&globals.CurrentJob, numeroPagina)
 		fmt.Println("ACA SALIOOOOOOOOOOOOON")
 		tlb.ActualizarTLB(pid, numeroPagina, frame)
 	}
-	
 
 	//Primer pagina teniendo en cuenta el desplazamiento
 	slice.Push(&direccion_y_tamanio, globals.DireccionTamanio{DireccionFisica: frame*tamPagina + desplazamiento, Tamanio: tamPagina - desplazamiento})
@@ -169,7 +167,6 @@ func ObtenerDireccionesFisicas(direccionLogica int, tamanio int, pid int) []glob
 				frame = Frame_rcv(&globals.CurrentJob, numeroPagina)
 				tlb.ActualizarTLB(pid, numeroPagina, frame)
 				fmt.Println("ACA ENTROOOOOOOON 1 Y EL FRAME ES ", frame)
-
 			}
 			slice.Push(&direccion_y_tamanio, globals.DireccionTamanio{DireccionFisica: frame * tamPagina, Tamanio: tamanioRestante})
 		} else { //Paginas del medio sin tener en cuenta el desplazamiento

@@ -56,6 +56,14 @@ func BuscarInstruccionMap(pc int, pid int) string {
 	return resultado
 }
 
+/*func BuscarInstruccionMap(pc int, pid int) string {
+    if pid < len(globals.InstruccionesProceso) && pc < len(globals.InstruccionesProceso[pid]) {
+        resultado := globals.InstruccionesProceso[pid][pc]
+        return resultado
+    }
+    return ""
+}*/
+
 func PasarAInt(cadena string) int {
 	num, err := strconv.Atoi(cadena)
 	if err != nil {
@@ -96,7 +104,11 @@ func CargarInstrucciones(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Instrucciones cargadas para el PID %d ", pid)
 
 	//acá debemos inicializar vacía la tabla de páginas para el proceso
-	globals.Tablas_de_paginas[int(pid)] = []globals.Frame{}
+	if globals.Tablas_de_paginas == nil {
+		globals.Tablas_de_paginas = make(map[int]globals.TablaPaginas)
+	}
+	
+	globals.Tablas_de_paginas[int(pid)] = globals.TablaPaginas{}
 	log.Printf("Tabla cargada para el PID %d ", pid)
 
 	respuesta, err := json.Marshal((BuscarInstruccionMap(int(pc), int(pid))))
@@ -130,26 +142,37 @@ func RealizarResize(tamanio int, pid int) string {
 	//ver cuantas paginas tiene el proceso en la tabla
 	cantPaginas := tamanio / globals.Configmemory.Page_size
 	// agregar a la tabla de páginas del proceso la cantidad de páginas que se le asignaron
+	log.Printf("Tabla de paginas ANTES DE REDIM del PID %d: %v", pid, globals.Tablas_de_paginas[pid])
+
 	globals.Tablas_de_paginas[int(pid)] = make(globals.TablaPaginas, cantPaginas)
 	/*
 	   make(globals.TablaPaginas, cantPaginas) crea una nueva tabla de páginas con una cantidad específica de páginas (cantPaginas).
 	   Cada página en la tabla es un Frame.
 	*/
-	ModificarTamanioProceso(cantPaginasActual, cantPaginas, pid)
+
+	resultado := ModificarTamanioProceso(cantPaginasActual, cantPaginas, pid)
 	log.Printf("Tabla de páginas del PID %d redimensionada a %d páginas", pid, cantPaginas)
-	return "OK"
+	log.Printf("Tabla de paginas del PID %d: %v", pid, globals.Tablas_de_paginas[pid])
+	return resultado
 }
 
-func ModificarTamanioProceso(tamanioProcesoActual int, tamanioProcesoNuevo int, pid int) {
-	if tamanioProcesoActual < tamanioProcesoNuevo { //ampliar proceso
+func ModificarTamanioProceso(tamanioProcesoActual int, tamanioProcesoNuevo int, pid int) string {
+
+	//tamanioMemEnPaginas := globals.Configmemory.Memory_size / globals.Configmemory.Page_size
+
+	if (tamanioProcesoActual < tamanioProcesoNuevo) { //ampliar proceso
 		var diferenciaEnPaginas = tamanioProcesoNuevo - tamanioProcesoActual
 		log.Printf("PID: %d - Tamanio Actual: %d - Tamanio a Ampliar: %d", pid, tamanioProcesoActual, tamanioProcesoNuevo) // verificar si en el último parámetro va diferenciaEnPaginas
-		AmpliarProceso(diferenciaEnPaginas, pid)
-
+		fmt.Println("MOSTRAMELON EN PAGINAS EL TAMANIO")
+		return AmpliarProceso(diferenciaEnPaginas, pid)
+	} else if (tamanioProcesoActual == tamanioProcesoNuevo) {
+		return "OK"
 	} else { // reducir proceso
 		var diferenciaEnPaginas = tamanioProcesoActual - tamanioProcesoNuevo
 		log.Printf("PID: %d - Tamanio Actual: %d - Tamanio a Reducir: %d", pid, tamanioProcesoActual, tamanioProcesoNuevo) // verificar si en el último parámetro va diferenciaEnPaginas
-		ReducirProceso(diferenciaEnPaginas, pid)
+		fmt.Println("MOSTRAMELON EN PAGINAS EL TAMANIO")
+		return ReducirProceso(diferenciaEnPaginas, pid)
+		
 	}
 }
 
@@ -175,7 +198,7 @@ func AmpliarProceso(diferenciaEnPaginas int, pid int) string {
 
 }
 
-func ReducirProceso(diferenciaEnPaginas int, pid int) {
+func ReducirProceso(diferenciaEnPaginas int, pid int) string {
 	for diferenciaEnPaginas > 0 {
 		//obtener el marco que le corresponde a la página
 		marco := BuscarMarco(pid, diferenciaEnPaginas)
@@ -183,14 +206,18 @@ func ReducirProceso(diferenciaEnPaginas int, pid int) {
 		globals.Tablas_de_paginas[pid] = append(globals.Tablas_de_paginas[pid][:diferenciaEnPaginas], globals.Tablas_de_paginas[pid][diferenciaEnPaginas+1:]...)
 		Clear(marco)
 		diferenciaEnPaginas--
+		fmt.Println("TAMANIO REDUCIDO")
 	}
+	return "OK"
 }
 
 // --------------------------------------------------------------------------------------//
 // ACCESO A TABLA DE PAGINAS: PETICION DESDE CPU (GET)
 // Busca el marco que pertenece al proceso y a la página que envía CPU, dentro del diccionario
 func BuscarMarco(pid int, pagina int) int {
+	fmt.Println("Estoy buscandolon")
 	resultado := globals.Tablas_de_paginas[pid][pagina]
+	fmt.Println("El resultado es: ", resultado)
 	return int(resultado)
 }
 
@@ -200,12 +227,13 @@ func EnviarMarco(w http.ResponseWriter, r *http.Request) {
 	queryParams := r.URL.Query()
 	pid := queryParams.Get("pid")
 	pagina := queryParams.Get("pagina")
-	respuesta, err := json.Marshal(BuscarMarco(PasarAInt(pid), PasarAInt(pagina)))
+	buscarMarco:= BuscarMarco(PasarAInt(pid), PasarAInt(pagina))
+	respuesta, err := json.Marshal(buscarMarco)
 	if err != nil {
 		http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
 		return
 	}
-	log.Printf("PID: %d - Pagina %d - Marco %d", PasarAInt(pid), PasarAInt(pagina), BuscarMarco(PasarAInt(pid), PasarAInt(pagina)))
+	log.Printf("PID: %d - Pagina %d - Marco %d", PasarAInt(pid), PasarAInt(pagina), buscarMarco)
 	w.WriteHeader(http.StatusOK)
 	w.Write(respuesta)
 }
@@ -284,6 +312,8 @@ func EscribirMemoria(w http.ResponseWriter, r *http.Request) {
 
 	time.Sleep(time.Duration(globals.Configmemory.Delay_response) * time.Millisecond) //nos dan los milisegundos o lo dejamos así?
 
+	fmt.Println("LA MEMORIAN QUEDO ASII ", globals.User_Memory)
+	
 	w.WriteHeader(http.StatusOK)
 	w.Write(respuesta)
 }
@@ -348,7 +378,13 @@ func Page_size(w http.ResponseWriter, r *http.Request) {
 func PedirTamTablaPaginas(w http.ResponseWriter, r *http.Request) {
 	queryParams := r.URL.Query()
 	pid := queryParams.Get("pid")
-	respuesta, err := json.Marshal(len(globals.Tablas_de_paginas[PasarAInt(pid)]))
+
+	tableishon := globals.Tablas_de_paginas[PasarAInt(pid)]
+	largoTableishon := len(tableishon)
+
+	fmt.Println("TAMANIO DE TABLEISHON: ", largoTableishon)
+
+	respuesta, err := json.Marshal(largoTableishon)
 	if err != nil {
 		http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
 		return

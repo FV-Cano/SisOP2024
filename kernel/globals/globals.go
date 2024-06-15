@@ -31,7 +31,8 @@ var (
 	// * Mutex
 		PidMutex 				sync.Mutex
 		ProcessesMutex 			sync.Mutex
-		STSMutex 				sync.Mutex
+		STSMutex 				sync.Mutex //!chequear
+		ControlMutex 			sync.Mutex
 		LTSMutex 				sync.Mutex
 		MapMutex 				sync.Mutex
 		EmptiedListMutex		sync.Mutex
@@ -44,6 +45,7 @@ var (
 	// * Contadores
 		// Chequea si hay procesos en la cola de listos, lo usamos en EvictionManagement y en ProcessInit
 		MultiprogrammingCounter chan int
+		STSCounter chan int
 )
 
 // CurrentJob (kernel_api funcion PCB_Send) se lee

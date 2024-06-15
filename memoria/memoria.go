@@ -23,6 +23,7 @@ func main() {
 	}
 	log.Println("Configuracion MEMORIA cargada")
 
+	globals.User_Memory = make([]byte, globals.Configmemory.Memory_size)
 	//verificar si estan bien los punteros
 	// Calculo la cantidad de frames que tendrá la memoria
 	globals.Frames = globals.Configmemory.Memory_size / globals.Configmemory.Page_size //ver si hay que ponerle puntero

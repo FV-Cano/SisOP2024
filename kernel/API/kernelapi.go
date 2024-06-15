@@ -56,7 +56,6 @@ func ProcessInit(w http.ResponseWriter, r *http.Request) {
     }
 	pathInstString := string(pathInst)
 	
-
 	newPcb := &pcb.T_PCB{
 		PID: 			generatePID(),
 		PC: 			0,
@@ -79,17 +78,16 @@ func ProcessInit(w http.ResponseWriter, r *http.Request) {
 		RequestedResource: "",
 	}
 
+	// Si la lista está vacía, la desbloqueo
+	if len(globals.LTS) == 0 {
+		globals.EmptiedListMutex.Unlock()
+	}
+
 	globals.LTSMutex.Lock()
 	slice.Push(&globals.LTS, *newPcb)
 	defer globals.LTSMutex.Unlock()
 
-	// Si la lista estaba vacía, la desbloqueo
-	if len(globals.LTS) == 1 {
-		globals.EmptiedListMutex.Unlock()
-	}
-
 	var respBody ProcessStart_BRS = ProcessStart_BRS{PID: newPcb.PID}
-
 	response, err := json.Marshal(respBody)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

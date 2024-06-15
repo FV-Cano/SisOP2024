@@ -32,6 +32,7 @@ func main() {
 
 	// Execution Config
 	globals.MultiprogrammingCounter = make (chan int, globals.Configkernel.Multiprogramming)	// Inicializamos el contador de multiprogramación
+	globals.STSCounter = make (chan int, globals.Configkernel.Multiprogramming)	// Inicializamos el contador de STS
 	resources.InitResourceMap()
 
 	globals.ControlMutex.Lock()

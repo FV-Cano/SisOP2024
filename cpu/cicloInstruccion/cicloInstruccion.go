@@ -10,7 +10,6 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
-	"unsafe"
 
 	"github.com/sisoputnfrba/tp-golang/cpu/globals"
 
@@ -310,7 +309,6 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		tipoActualReg1 := reflect.TypeOf(valorReg1).String()
 
 		direc_log := Convertir[uint32](tipoActualReg1, valorReg1)
-
 		
 		fmt.Println("LA INST DECODIFICADA 1 ES", instruccionDecodificada[1])
 		fmt.Println("LA INST DECODIFICADA 2 ES", instruccionDecodificada[2])
@@ -344,47 +342,67 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		// en el Registro Dirección y lo almacena en el Registro Datos.
 
 	case "MOV_IN":
-		// MOV_IN (Registro Destino, Registro Dirección): Mueve el contenido del Registro Dirección (DL) al Registro Destino.
 
-		tamanio := int(unsafe.Sizeof(currentPCB.CPU_reg[instruccionDecodificada[1]]))
-		direc_log := Convertir[uint32]("uint32", currentPCB.CPU_reg[instruccionDecodificada[2]])
-		/*direc_logica, ok := currentPCB.CPU_reg[instruccionDecodificada[2]].(int)
-		if !ok {
-			log.Fatalf("Error: el valor en el registro no es de tipo string")
-		}*/
+		var tamanio int
 
+		valorReg2 := currentPCB.CPU_reg[instruccionDecodificada[2]]
+		
+		tipoActualReg2 := reflect.TypeOf(valorReg2).String()
+		
+		direc_log := Convertir[uint32](tipoActualReg2, valorReg2)
+		
 		fmt.Println("El valor de la direc logica es", int(direc_log))
 
+		// Obtenemos la direcion fisica del reg direccion
+		
 		direcsFisicas := mmu.ObtenerDireccionesFisicas(int(direc_log), tamanio, int(currentPCB.PID))
-
+		//Leemos el valor de la direccion fisica
 		datos := solicitudesmemoria.SolicitarLectura(direcsFisicas)
-		currentPCB.CPU_reg[instruccionDecodificada[1]] = datos
+		
+		
+		// Almacenamos lo leido en el registro destino
+		tipoReg1 := pcb.TipoReg(instruccionDecodificada[1])
 
+		var datosAAlmacenar interface{} // Declarar la variable con un tipo
+		
+		if tipoReg1 == "uint32" {
+			datosAAlmacenar = ConvertirUint32(datos) // Usar una función para la conversión
+		} else if tipoReg1 == "uint8" {
+			datosAAlmacenar = ConvertirUint8(datos) // Usar una función para la conversión
+		}
+		currentPCB.CPU_reg[instruccionDecodificada[1]] = datosAAlmacenar
+		
 		currentPCB.PC++
+		
 		//-----------------------------------------------------------------------------
 		//COPY_STRING (Tamaño): Toma del string apuntado por el registro SI y
 		//copia la cantidad de bytes indicadas en el parámetro tamaño a la
 		//posición de memoria apuntada por el registro DI.
 
 	case "COPY_STRING":
-		// COPY_STRING (Longitud): Copia la cantidad de bytes indicadas por la Longitud desde el Registro SI (que apunta a un string) al Registro Destino DI (que apunta a una posicion de memoria).
+		
 		tamanio := globals.PasarAInt(instruccionDecodificada[1])
+		//Buscar la direccion logica del registro SI
+		valorRegSI := currentPCB.CPU_reg["SI"]
+		tipoActualRegSI := reflect.TypeOf(valorRegSI).String()
 
-		direc_logicaSI, ok := currentPCB.CPU_reg["SI"].(int)
-		if !ok {
-			log.Fatalf("Error: el valor en el registro no es de tipo string")
-		}
-
+		direc_logicaSI := int(Convertir[uint32](tipoActualRegSI, valorRegSI))
+		
 		direcsFisicasSI := mmu.ObtenerDireccionesFisicas(direc_logicaSI, tamanio, int(currentPCB.PID))
+
+		//  Lee lo que hay en esa direccion fisica pero no todo, lees lo que te pasaron x param
 		datos := solicitudesmemoria.SolicitarLectura(direcsFisicasSI)
 
-		direc_logicaDI, ok := currentPCB.CPU_reg["DI"].(int)
-		if !ok {
-			log.Fatalf("Error: el valor en el registro no es de tipo string")
-		}
+		// Busca la direccion logica del registro DI
+		valorRegDI := currentPCB.CPU_reg["DI"]
+		tipoActualRegDI := reflect.TypeOf(valorRegDI).String()
 
+		direc_logicaDI := int(Convertir[uint32](tipoActualRegDI, valorRegDI))
+		
+		// Obtiene la direccion Fisica asociada
 		direcsFisicasDI := mmu.ObtenerDireccionesFisicas(direc_logicaDI, tamanio, int(currentPCB.PID))
-
+		
+		// Carga en esa direccion fisica lo que leiste antes
 		solicitudesmemoria.SolicitarEscritura(direcsFisicasDI, datos, int(currentPCB.PID)) //([direccion fisica y tamanio], valorAEscribir, pid)
 
 		currentPCB.PC++

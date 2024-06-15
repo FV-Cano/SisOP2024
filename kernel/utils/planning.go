@@ -18,18 +18,19 @@ import (
 func LTS_Plan() {
 	for {
 		// Si la lista de jobs está vacía, esperar a que tenga al menos uno
-		fmt.Println("La lista es: ",globals.LTS)
-		fmt.Println("La lista tiene longitud: ",len(globals.LTS))
+		fmt.Println("La lista es: ", globals.LTS)
+		fmt.Println("La lista tiene longitud: ", len(globals.LTS))
 
 		if len(globals.LTS) == 0 {
 			globals.EmptiedListMutex.Lock()
-			continue
+			//continue
 		}
 		auxJob := slice.Shift(&globals.LTS)
 		//globals.MultiprogrammingCounter <- int(auxJob.PID)
 		globals.ChangeState(&auxJob, "READY")
-		globals.STS = append(globals.STS, auxJob)
+		slice.Push(&globals.STS, auxJob)
 		//globals.ControlMutex.Unlock()
+		globals.STSCounter <- int(auxJob.PID)
 
 		// Los procesos en READY, EXEC y BLOCKED afectan al grado de multiprogramación
 		globals.MultiprogrammingCounter <- int(auxJob.PID) // ! Lo cambiamos de linea porque tecnicamente debería ser después de ser agregado a la cola de listos
@@ -37,20 +38,18 @@ func LTS_Plan() {
 }
 
 func STS_Plan() {
-
-	
 	switch globals.Configkernel.Planning_algorithm {
 	case "FIFO":
 		
 		log.Println("FIFO algorithm")
 		for {
-
-			if len(globals.STS) == 0 {
+			//if len(globals.STS) == 0 {
 				//globals.ControlMutex.Lock()
 				//continue
-			}
+			//}
 
 			globals.PlanBinary <- true
+			<- globals.STSCounter
 			//log.Println("FIFO Planificandoooo")
 			FIFO_Plan()
 			<- globals.JobExecBinary
@@ -62,6 +61,7 @@ func STS_Plan() {
 		quantum := uint32(globals.Configkernel.Quantum * int(time.Millisecond))
 		for {
 			globals.PlanBinary <- true
+			<- globals.STSCounter
 			//log.Println("RR Planificandoooo")
 			RR_Plan(quantum)
 			<- globals.JobExecBinary
@@ -72,6 +72,7 @@ func STS_Plan() {
 		log.Println("VIRTUAL ROUND ROBIN algorithm")
 		for {
 			globals.PlanBinary <- true
+			<- globals.STSCounter
 			VRR_Plan()
 			<- globals.JobExecBinary
 			<- globals.PlanBinary

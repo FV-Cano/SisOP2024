@@ -11,22 +11,24 @@ type Pagina_marco struct {
 	Marco  int
 }
 
-type TLB map[int]Pagina_marco
+type TLB []map[int]Pagina_marco
 
 var CurrentTLB TLB = make(TLB)
 var OrderedKeys []int //mantiene el orden de las claves en la TLB
 
 func BuscarEnTLB(pid int, pagina int) bool {
 
-	if entry, exists := CurrentTLB[pid]; exists && entry.Pagina == pagina {
-		return true
+	for _ := range CurrentTLB{
+		if _, exists := CurrentTLB[pid]; exists && CurrentTLB[pid].Pagina == pagina {
+			return true
+		}
 	}
 	return false
 }
 
 func FrameEnTLB(pid int, pagina int) int {
 
-	if entry, exists := CurrentTLB[pid]; exists && entry.Pagina == pagina {
+	if _, exists := CurrentTLB[pid]; exists && CurrentTLB[pid].Pagina == pagina {
 		ActualizarTLB(pid, pagina, CurrentTLB[pid].Marco)
 		return CurrentTLB[pid].Marco
 	}
@@ -73,30 +75,23 @@ func ActualizarTLB(pid, pagina, marco int) {
 	switch globals.Configcpu.Algorithm_tlb {
 		case "FIFO":
         if !BuscarEnTLB(pid, pagina) { //Si la página no está en la tlb
-            if len(CurrentTLB) < globals.Configcpu.Number_felling_tlb {
-                // Si la TLB no está llena, agregar la entrada
-                CurrentTLB[pid] = Pagina_marco{Pagina: pagina, Marco: marco}
-                OrderedKeys = append(OrderedKeys, pid) // Agregar la clave al final de la lista
-				fmt.Println("ACTUALIZANDO EN LA TLB PIBE")
-				fmt.Println("LA TLB EN LA POS DEL PID ES ",CurrentTLB[pid])
+			if len(CurrentTLB) < globals.Configcpu.Number_felling_tlb {
+                nuevoElemento:= map[int]Pagina_marco{
+                    pid: {Pagina: pagina, Marco: marco},
+                }
+                CurrentTLB = append(CurrentTLB, nuevoElemento)
             } else {
-                // Si la TLB está llena, eliminar la entrada más antigua (FIFO)
-                oldestKey := OrderedKeys[0] // Obtener la clave más antigua
-                delete(CurrentTLB, oldestKey) // Eliminar la entrada más antigua
-                OrderedKeys = OrderedKeys[1:] // Eliminar la clave más antigua de la lista
-                CurrentTLB[pid] = Pagina_marco{Pagina: pagina, Marco: marco} // Agregar la nueva entrada
-                OrderedKeys = append(OrderedKeys, pid) // Agregar la nueva clave al final de la lista
-				fmt.Println("ACTUALIZANDO EN LA TLB PIBE2")
-				fmt.Println("LA TLB EN LA POS DEL PID ES ",CurrentTLB[pid])
-            } 
-			
-			fmt.Println("LA TLB QUEDO ASI: ")
-			for pid, paginaMarco := range CurrentTLB {
-				fmt.Printf("PID: %d, Página: %d, Marco: %d\n", pid, paginaMarco.Pagina, paginaMarco.Marco)
-			}
+                // Remover el primer elemento (FIFO) y agregar el nuevo
+                CurrentTLB = append(CurrentTLB[1:], map[int]Pagina_marco{
+                    pid: {Pagina: pagina, Marco: marco},
+                })
+				fmt.Println("LA TLB QUEDO ASI: ")
+				for i:= range CurrentTLB { 
+				fmt.Println("QUEDO ASIM" , CurrentTLB[i])
+				}
         } 
 			
-		case "LRU":
+		/*case "LRU":
 			 if !BuscarEnTLB(pid, pagina) { //Si la página no está en la tlb
 				if len(CurrentTLB) < globals.Configcpu.Number_felling_tlb {
 					// Si la TLB no está llena, agregar la entrada
@@ -120,7 +115,7 @@ func ActualizarTLB(pid, pagina, marco int) {
 					}
 				}
 				CurrentTLB[pid] = Pagina_marco{Pagina: pagina, Marco: marco} // Agregar la nueva entrada
-				OrderedKeys = append(OrderedKeys, pid) // Agregar la nueva clave al final de la lista
+				OrderedKeys = append(OrderedKeys, pid) // Agregar la nueva clave al final de la lista*/
 			}
 	}
 }

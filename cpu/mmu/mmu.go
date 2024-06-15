@@ -125,37 +125,32 @@ func ObtenerDireccionesFisicas(direccionLogica int, tamanio int, pid int) []glob
 	desplazamiento := direccionLogica - numeroPagina * tamPagina 
 	cantidadPaginas := tamanio / tamPagina
 	var frame int
+	var tamanioTotal int
 
-	fmt.Println("OLAAA YA ESTOY ACA QUE ONDAA")
-
-	tamanioTotal := frame * tamPagina + desplazamiento + tamanio //todo: a qué tomamos como frame?
-	fmt.Println("TAMANIOTOTAL", tamanioTotal)
-
-	//fmt.Println("TABLA DE PAGINAS: ", PedirTamTablaPaginas(pid))
-	
-	if tamanioTotal > PedirTamTablaPaginas(pid) * tamPagina {
-		fmt.Println("ACA ENTROOOOOOOON TAMBIENx222")
+	if (PedirTamTablaPaginas(pid) == 0){
+		tamanioTotal = desplazamiento + tamanio 
+		fmt.Println("ME METI X PRIM VEZ A LA TABLA, TAMANIO", tamanioTotal)
+		} else { 
+		if(tlb.BuscarEnTLB(pid, numeroPagina)){
+			frame = tlb.FrameEnTLB(pid, numeroPagina)
+			log.Printf("PID: %d - TLB HIT - Pagina: %d", pid, numeroPagina)
+			} else { 
+				log.Printf("PID: %d - TLB MISS - Pagina: %d", pid, numeroPagina)
+				frame = Frame_rcv(&globals.CurrentJob, numeroPagina)
+				tlb.ActualizarTLB(pid, numeroPagina, frame)
+				}		
+				tamanioTotal = frame * tamPagina + desplazamiento + tamanio
+			}
+			
+	if (tamanioTotal > PedirTamTablaPaginas(pid) * tamPagina) {	
+		fmt.Println("VOY A SOLICITAR RESIZE")
 		solicitudesmemoria.Resize(tamanioTotal)
 	}
-	fmt.Println("PASE POR ACA")
-
-	if(tlb.BuscarEnTLB(pid, numeroPagina)){
-		fmt.Println("ACA ENTROOOOOOOON")
-		frame = tlb.FrameEnTLB(pid, numeroPagina)
-		log.Printf("PID: %d - TLB HIT - Pagina: %d", pid, numeroPagina)
-
-	} else { 
-		fmt.Println("ACA ENTROOOOOOOON TAMBIEN")
-		log.Printf("PID: %d - TLB MISS - Pagina: %d", pid, numeroPagina)
-		frame = Frame_rcv(&globals.CurrentJob, numeroPagina)
-		fmt.Println("ACA SALIOOOOOOOOOOOOON")
-		tlb.ActualizarTLB(pid, numeroPagina, frame)
-	}
-
+	
 	//Primer pagina teniendo en cuenta el desplazamiento
 	slice.Push(&direccion_y_tamanio, globals.DireccionTamanio{DireccionFisica: frame*tamPagina + desplazamiento, Tamanio: tamPagina - desplazamiento})
 	tamanioRestante := tamanio - (tamPagina - desplazamiento)
-	fmt.Println("ACA ENTROOOOOOOON TAMBIENx333")
+	fmt.Println("AGREGUE DIREC FISICA A LA LISTA")
 
 	for i := 1; i < cantidadPaginas; i++ {
 		if i == cantidadPaginas-1 {
@@ -164,13 +159,13 @@ func ObtenerDireccionesFisicas(direccionLogica int, tamanio int, pid int) []glob
 			if(tlb.BuscarEnTLB(pid, numeroPagina)){ 			 //TODO: Revisar si es correcto, VER SI ANTES HAY QUE HACER PAGINA++
 				frame = tlb.FrameEnTLB(pid, numeroPagina)
 				log.Printf("PID: %d - TLB HIT - Pagina: %d", pid, numeroPagina)
-				fmt.Println("ACA ENTROOOOOOOON 0 Y EL FRAME ES ", frame)
+				fmt.Printf("BUSQUE EN TLB PARA EL PID %d LA PAG %d EL FRAME %d ", pid, numeroPagina, frame)
 
 			} else { 
 				log.Printf("PID: %d - TLB MISS - Pagina: %d", pid, numeroPagina)
 				frame = Frame_rcv(&globals.CurrentJob, numeroPagina)
 				tlb.ActualizarTLB(pid, numeroPagina, frame)
-				fmt.Println("ACA ENTROOOOOOOON 1 Y EL FRAME ES ", frame)
+				fmt.Printf("Busco FRAME MEMORIA para el PID %d Y EL FRAME ES %d ",pid,frame)
 			}
 			slice.Push(&direccion_y_tamanio, globals.DireccionTamanio{DireccionFisica: frame * tamPagina, Tamanio: tamanioRestante})
 		} else { //Paginas del medio sin tener en cuenta el desplazamiento
@@ -178,12 +173,12 @@ func ObtenerDireccionesFisicas(direccionLogica int, tamanio int, pid int) []glob
 			if(tlb.BuscarEnTLB(pid, numeroPagina)){
 				log.Printf("PID: %d - TLB HIT - Pagina: %d", pid, numeroPagina)
 				frame = tlb.FrameEnTLB(pid, numeroPagina)
-				fmt.Println("ACA ENTROOOOOOOON 2 Y EL FRAME ES ", frame)
+				fmt.Printf("BUSQUE EN TLB PARA EL PID %d LA PAG %d EL FRAME %d ", pid, numeroPagina, frame)
 
 			} else { 
 				log.Printf("PID: %d - TLB MISS - Pagina: %d", pid, numeroPagina)
 				frame = Frame_rcv(&globals.CurrentJob, numeroPagina)
-				fmt.Println("ACA ENTROOOOOOOON 3 Y EL FRAME ES ", frame)
+				fmt.Printf("Busco FRAME MEMORIA para el PID %d Y EL FRAME ES %d ",pid,frame)
 				tlb.ActualizarTLB(pid, numeroPagina, frame)
 				}		
 			slice.Push(&direccion_y_tamanio, globals.DireccionTamanio{DireccionFisica: frame * tamPagina, Tamanio: tamPagina})

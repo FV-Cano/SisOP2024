@@ -98,7 +98,7 @@ func SolicitarEscritura(direccionesTamanios []globals.DireccionTamanio, valorAEs
 func DireccionesFisicasAString(direccionesFisicas []globals.DireccionTamanio) string {
 	var direccionesString string
 	for i, direc := range direccionesFisicas {
-		direccionesString += fmt.Sprintf("Dirección física %d: %d - Tamaño: %d\n", i, direc.DireccionFisica, direc.Tamanio)
+		direccionesString += fmt.Sprintf("Dirección física número %d: %d - Tamaño: %d\n", i, direc.DireccionFisica, direc.Tamanio)
 	}
 	return direccionesString
 }

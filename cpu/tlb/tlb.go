@@ -78,6 +78,7 @@ func ActualizarTLB(pid, pagina, marco int) {
                 CurrentTLB[pid] = Pagina_marco{Pagina: pagina, Marco: marco}
                 OrderedKeys = append(OrderedKeys, pid) // Agregar la clave al final de la lista
 				fmt.Println("ACTUALIZANDO EN LA TLB PIBE")
+				fmt.Println("LA TLB EN LA POS DEL PID ES ",CurrentTLB[pid])
             } else {
                 // Si la TLB está llena, eliminar la entrada más antigua (FIFO)
                 oldestKey := OrderedKeys[0] // Obtener la clave más antigua
@@ -86,7 +87,13 @@ func ActualizarTLB(pid, pagina, marco int) {
                 CurrentTLB[pid] = Pagina_marco{Pagina: pagina, Marco: marco} // Agregar la nueva entrada
                 OrderedKeys = append(OrderedKeys, pid) // Agregar la nueva clave al final de la lista
 				fmt.Println("ACTUALIZANDO EN LA TLB PIBE2")
+				fmt.Println("LA TLB EN LA POS DEL PID ES ",CurrentTLB[pid])
             } 
+			
+			fmt.Println("LA TLB QUEDO ASI: ")
+			for pid, paginaMarco := range CurrentTLB {
+				fmt.Printf("PID: %d, Página: %d, Marco: %d\n", pid, paginaMarco.Pagina, paginaMarco.Marco)
+			}
         } 
 			
 		case "LRU":

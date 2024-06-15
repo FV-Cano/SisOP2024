@@ -128,7 +128,7 @@ func ObtenerDireccionesFisicas(direccionLogica int, tamanio int, pid int) []glob
 
 	fmt.Println("OLAAA YA ESTOY ACA QUE ONDAA")
 
-	tamanioTotal := frame * tamPagina + desplazamiento + tamanio
+	tamanioTotal := frame * tamPagina + desplazamiento + tamanio //todo: a qué tomamos como frame?
 	fmt.Println("TAMANIOTOTAL", tamanioTotal)
 
 	//fmt.Println("TABLA DE PAGINAS: ", PedirTamTablaPaginas(pid))
@@ -141,7 +141,9 @@ func ObtenerDireccionesFisicas(direccionLogica int, tamanio int, pid int) []glob
 
 	if(tlb.BuscarEnTLB(pid, numeroPagina)){
 		fmt.Println("ACA ENTROOOOOOOON")
+		frame = tlb.FrameEnTLB(pid, numeroPagina)
 		log.Printf("PID: %d - TLB HIT - Pagina: %d", pid, numeroPagina)
+
 	} else { 
 		fmt.Println("ACA ENTROOOOOOOON TAMBIEN")
 		log.Printf("PID: %d - TLB MISS - Pagina: %d", pid, numeroPagina)
@@ -161,9 +163,11 @@ func ObtenerDireccionesFisicas(direccionLogica int, tamanio int, pid int) []glob
 			numeroPagina++
 			if(tlb.BuscarEnTLB(pid, numeroPagina)){ 			 //TODO: Revisar si es correcto, VER SI ANTES HAY QUE HACER PAGINA++
 				frame = tlb.FrameEnTLB(pid, numeroPagina)
+				log.Printf("PID: %d - TLB HIT - Pagina: %d", pid, numeroPagina)
 				fmt.Println("ACA ENTROOOOOOOON 0 Y EL FRAME ES ", frame)
 
 			} else { 
+				log.Printf("PID: %d - TLB MISS - Pagina: %d", pid, numeroPagina)
 				frame = Frame_rcv(&globals.CurrentJob, numeroPagina)
 				tlb.ActualizarTLB(pid, numeroPagina, frame)
 				fmt.Println("ACA ENTROOOOOOOON 1 Y EL FRAME ES ", frame)
@@ -172,10 +176,12 @@ func ObtenerDireccionesFisicas(direccionLogica int, tamanio int, pid int) []glob
 		} else { //Paginas del medio sin tener en cuenta el desplazamiento
 			numeroPagina++
 			if(tlb.BuscarEnTLB(pid, numeroPagina)){
+				log.Printf("PID: %d - TLB HIT - Pagina: %d", pid, numeroPagina)
 				frame = tlb.FrameEnTLB(pid, numeroPagina)
 				fmt.Println("ACA ENTROOOOOOOON 2 Y EL FRAME ES ", frame)
 
 			} else { 
+				log.Printf("PID: %d - TLB MISS - Pagina: %d", pid, numeroPagina)
 				frame = Frame_rcv(&globals.CurrentJob, numeroPagina)
 				fmt.Println("ACA ENTROOOOOOOON 3 Y EL FRAME ES ", frame)
 				tlb.ActualizarTLB(pid, numeroPagina, frame)

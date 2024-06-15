@@ -88,10 +88,10 @@ func SolicitarEscritura(direccionesTamanios []globals.DireccionTamanio, valorAEs
 	// La respuesta puede ser un "Ok" o u "Error: dirección o tamanio fuera de rango"
 
 	respuestaEnString := string(bodyBytes)
-	if respuestaEnString != "OK" {
+	if respuestaEnString != "\"OK\"" {
 		fmt.Println("Se produjo un error al escribir", respuestaEnString)
 	} else {
-		log.Printf("PID: %d - Acción: ESCRIBIR - Dirección Física: %s - Valor: %s", pid, DireccionesFisicasAString(direccionesTamanios) ,valorAEscribir)
+		log.Printf("PID: %d - Acción: ESCRIBIR - %s - Valor: %s", pid, DireccionesFisicasAString(direccionesTamanios) ,valorAEscribir)
 	}
 }
 //Hacemos esta funcion para que quede prolijo loguearla en el log xd

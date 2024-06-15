@@ -393,6 +393,15 @@ func GetIOInterface(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("Interface received, type: %s, port: %d\n", interf.InterfaceType, interf.InterfacePort)
 
+	response := globals.Configkernel.Multiprogramming
+
+	jsonResp, err := json.Marshal(response)
+	if err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonResp)
 	w.WriteHeader(http.StatusOK)
 }
 type SearchInterface struct {

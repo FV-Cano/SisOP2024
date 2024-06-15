@@ -34,6 +34,7 @@ func main() {
 	// Handshake con kernel
 	log.Println("Handshake con Kernel")
 	IO_api.HandshakeKernel(os.Args[1])
+	globals.QueueChannel = make(chan int, globals.QueueDegree)
 
 	select {}
 }

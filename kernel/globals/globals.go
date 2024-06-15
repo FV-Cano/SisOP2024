@@ -45,7 +45,7 @@ var (
 	// * Contadores
 		// Chequea si hay procesos en la cola de listos, lo usamos en EvictionManagement y en ProcessInit
 		MultiprogrammingCounter chan int
-		STSCounter chan int
+		STSCounter 				chan int
 )
 
 // CurrentJob (kernel_api funcion PCB_Send) se lee

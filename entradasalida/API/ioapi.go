@@ -43,6 +43,10 @@ func HandshakeKernel(nombre string) error {
 		return fmt.Errorf("unexpected response status: %s", resp.Status)
 	}
 
+	// Decode response from kernel
+	err = json.NewDecoder(resp.Body).Decode(&globals.QueueDegree)
+
+
 	log.Println("Handshake con Kernel exitoso")
 
 	return nil

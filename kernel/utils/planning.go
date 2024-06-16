@@ -27,13 +27,15 @@ func LTS_Plan() {
 		}
 		auxJob := slice.Shift(&globals.LTS)
 		//globals.MultiprogrammingCounter <- int(auxJob.PID)
+		globals.MultiprogrammingCounter <- int(auxJob.PID) // !?
 		globals.ChangeState(&auxJob, "READY")
 		slice.Push(&globals.STS, auxJob)
-		//globals.ControlMutex.Unlock()
 		globals.STSCounter <- int(auxJob.PID)
+		//globals.ControlMutex.Unlock()
 
 		// Los procesos en READY, EXEC y BLOCKED afectan al grado de multiprogramación
-		globals.MultiprogrammingCounter <- int(auxJob.PID) // ! Lo cambiamos de linea porque tecnicamente debería ser después de ser agregado a la cola de listos
+		// ! Lo cambiamos de linea porque tecnicamente debería ser después de ser agregado a la cola de listos
+		// ? No debería ser antes? Cosa que verifique si puede agregar un proceso a la cola, o si se lo impide el grado multiprogramación?
 	}
 }
 
@@ -194,19 +196,41 @@ func EvictionManagement() {
 		globals.EnganiaPichangaMutex.Lock()
 		globals.ChangeState(&globals.CurrentJob, "BLOCKED")
 		slice.Push(&globals.Blocked, globals.CurrentJob)
+		<- globals.MultiprogrammingCounter
 		go func(){
 			kernel_api.SolicitarGenSleep(globals.CurrentJob)
 		}()
 		globals.JobExecBinary <- true
 		
-	case "BLOCKED_IO_STD":
+	case "BLOCKED_IO_STDIN":
+		globals.EnganiaPichangaMutex.Lock()
+		globals.ChangeState(&globals.CurrentJob, "BLOCKED")
+		slice.Push(&globals.Blocked, globals.CurrentJob)
+		<- globals.MultiprogrammingCounter
+		go func(){
+			kernel_api.SolicitarStdinRead(globals.CurrentJob)
+		}()
+		globals.JobExecBinary <- true
+
+	case "BLOCKED_IO_STDOUT":
+		globals.EnganiaPichangaMutex.Lock()
+		globals.ChangeState(&globals.CurrentJob, "BLOCKED")
+		slice.Push(&globals.Blocked, globals.CurrentJob)
+		<- globals.MultiprogrammingCounter
+		go func(){
+			kernel_api.SolicitarStdoutWrite(globals.CurrentJob)
+		}()
+		globals.JobExecBinary <- true
+		
+	// ? Ver con autoras	
+	/* case "BLOCKED_IO_STD":
 		globals.ChangeState(&globals.CurrentJob, "BLOCKED")
 		
 		<- globals.AvailablePcb
 
 		globals.ChangeState(&globals.CurrentJob, "READY")
 		globals.STS = append(globals.STS, globals.CurrentJob) // diferente en el caso de VRR
-		globals.JobExecBinary <- true
+		globals.JobExecBinary <- true */
 
 	case "TIMEOUT":
 		globals.ChangeState(&globals.CurrentJob, "READY")

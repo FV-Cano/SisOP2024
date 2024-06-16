@@ -111,123 +111,109 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 	}
 
 	switch instruccionDecodificada[0] {
-	/*case "IO_GEN_SLEEP":
-	cond, err := HallarInterfaz(instruccionDecodificada[1], "GENERICA")
-	if err != nil {
-		log.Print("La interfaz no existe o no acepta operaciones de IO Genéricas")
-	}
-	tiempo_esp, err := strconv.Atoi(instruccionDecodificada[2])
-	if err != nil {
-		log.Fatal("Error al convertir el tiempo de espera a entero")
-	}
-	if cond {
-		currentPCB.EvictionReason = "BLOCKED_IO_GEN"
-		ComunicarTiempoEspera(instruccionDecodificada[1], tiempo_esp)
-	} else {
-		currentPCB.EvictionReason = "EXIT"
-	}
-
-
-	/* tiempo_esp, err := strconv.Atoi(instruccionDecodificada[2])
-	if err != nil {
-		log.Fatal("Error al convertir el tiempo de espera a entero")
-	}
-	_, err = HallarInterfaz(instruccionDecodificada[1], "GENERICA")
-	if err != nil {
-		log.Print("Error al verificar la existencia de la interfaz genérica")
-		currentPCB.EvictionReason = "NOT_FOUND_IO"
-	} else {
-		currentPCB.EvictionReason = "BLOCKED_IO_GEN"
-		ComunicarTiempoEspera(instruccionDecodificada[1], tiempo_esp)
-	}
-	pcb.EvictionFlag = true
-	currentPCB.PC++ // Ver si aumenta siempre */
+	case "IO_GEN_SLEEP":
+		cond, err := HallarInterfaz(instruccionDecodificada[1], "GENERICA")
+		if err != nil {
+			log.Print("La interfaz no existe o no acepta operaciones de IO Genéricas")
+			currentPCB.EvictionReason = "EXIT"
+		} else {
+			tiempo_esp, err := strconv.Atoi(instruccionDecodificada[2])
+			if err != nil {
+				log.Fatal("Error al convertir el tiempo de espera a entero")
+			}
+			if cond {
+				
+				var genSleepBody = struct {
+					InterfaceName string
+					SleepTime     int
+					}{
+						InterfaceName: instruccionDecodificada[1],
+						SleepTime:     tiempo_esp,
+					}
+					
+					SendIOData(genSleepBody, "iodata-gensleep")
+					currentPCB.EvictionReason = "BLOCKED_IO_GEN"
+			} else {
+				currentPCB.EvictionReason = "EXIT"
+			}
+		}
+		pcb.EvictionFlag = true
+		currentPCB.PC++
 
 	case "IO_STDIN_READ":
-		interfazEncontrada, err := HallarInterfaz(instruccionDecodificada[1], "STDIN")
+		cond, err := HallarInterfaz(instruccionDecodificada[1], "STDIN")
+		// interfazEncontrada
 		if err != nil {
-			log.Print("Error al verificar la existencia de la interfaz STDIN")
-			currentPCB.EvictionReason = "NOT_FOUND_IO"
+			log.Print("La interfaz no existe o no acepta operaciones de IO de lectura")
+			currentPCB.EvictionReason = "EXIT"
 		} else {
-			// Obtener la dirección de memoria desde el registro
-			memoryAddress := currentPCB.CPU_reg[instruccionDecodificada[2]]
-			tipoActualReg2 := reflect.TypeOf(currentPCB.CPU_reg[instruccionDecodificada[3]]).String()
-			memoryAddressInt := int(Convertir[uint32](tipoActualReg2, memoryAddress))
-
-			// Obtener la cantidad de datos a leer desde el registro
-			dataSize := currentPCB.CPU_reg[instruccionDecodificada[3]]
-			tipoActualReg3 := reflect.TypeOf(currentPCB.CPU_reg[instruccionDecodificada[3]]).String()
-			dataSizeInt := int(Convertir[uint32](tipoActualReg3, dataSize))
-
-			// ? Chequear como lo implementaron en mmu
-			direccionesFisicas := mmu.ObtenerDireccionesFisicas(memoryAddressInt, dataSizeInt, int(currentPCB.PID))
-
-			// Mandar a leer a la interfaz (a través de kernel)
-			url := fmt.Sprintf("http://%s:%d/io-stdin-read", globals.Configcpu.IP_kernel, globals.Configcpu.Port_kernel)
-
-			bodyStdin, err := json.Marshal(struct {
-				DireccionesFisicas []globals.DireccionTamanio
-				Interfaz           globals.InterfaceController
-				Tamanio            int
-			}{direccionesFisicas, interfazEncontrada, dataSizeInt})
-			if err != nil {
-				log.Printf("Failed to encode adresses: %v", err)
+			if cond {
+				// Obtener la dirección de memoria desde el registro
+				memoryAddress := currentPCB.CPU_reg[instruccionDecodificada[2]]
+				tipoActualReg2 := reflect.TypeOf(currentPCB.CPU_reg[instruccionDecodificada[3]]).String()
+				memoryAddressInt := int(Convertir[uint32](tipoActualReg2, memoryAddress))
+	
+				// Obtener la cantidad de datos a leer desde el registro
+				dataSize := currentPCB.CPU_reg[instruccionDecodificada[3]]
+				tipoActualReg3 := reflect.TypeOf(currentPCB.CPU_reg[instruccionDecodificada[3]]).String()
+				dataSizeInt := int(Convertir[uint32](tipoActualReg3, dataSize))
+	
+				direccionesFisicas := mmu.ObtenerDireccionesFisicas(memoryAddressInt, dataSizeInt, int(currentPCB.PID))
+	
+				var stdinreadBody = struct {
+					DireccionesFisicas	[]globals.DireccionTamanio
+					InterfaceName		string
+					Tamanio				int	
+				}{
+					DireccionesFisicas: direccionesFisicas,
+					InterfaceName: 		instruccionDecodificada[1],
+					Tamanio: 			dataSizeInt,
+				}
+				
+				SendIOData(stdinreadBody, "iodata-stdin")
+				currentPCB.EvictionReason = "BLOCKED_IO_STDIN"
+	
+			} else {
+				currentPCB.EvictionReason = "EXIT"
 			}
-
-			response, err := http.Post(url, "application/json", bytes.NewBuffer(bodyStdin))
-			if err != nil {
-				log.Printf("Failed to send adresses: %v", err)
-			}
-
-			if response.StatusCode != http.StatusOK {
-				log.Printf("Unexpected response status: %s", response.Status)
-			}
-
-			currentPCB.EvictionReason = "BLOCKED_IO_STD"
 		}
 		pcb.EvictionFlag = true
 		currentPCB.PC++
 
 	case "IO_STDOUT_WRITE":
-		interfazEncontrada, err := HallarInterfaz(instruccionDecodificada[1], "STDOUT")
+		cond, err := HallarInterfaz(instruccionDecodificada[1], "STDOUT")
 		if err != nil {
-			log.Print("Error al verificar la existencia de la interfaz STDOUT")
-			currentPCB.EvictionReason = "NOT_FOUND_IO"
+			log.Print("La interfaz no existe o no acepta operaciones de IO de escritura")
+			currentPCB.EvictionReason = "EXIT"
 		} else {
-			// Obtener la dirección de memoria desde el registro
-			memoryAddress := currentPCB.CPU_reg[instruccionDecodificada[2]]
-			tipoActualReg2 := reflect.TypeOf(currentPCB.CPU_reg[instruccionDecodificada[3]]).String()
-			memoryAddressInt := int(Convertir[uint32](tipoActualReg2, memoryAddress))
+			if cond {
+				// Obtener la dirección de memoria desde el registro
+				memoryAddress := currentPCB.CPU_reg[instruccionDecodificada[2]]
+				tipoActualReg2 := reflect.TypeOf(currentPCB.CPU_reg[instruccionDecodificada[3]]).String()
+				memoryAddressInt := int(Convertir[uint32](tipoActualReg2, memoryAddress))
+	
+				// Obtener la cantidad de datos a leer desde el registro
+				dataSize := currentPCB.CPU_reg[instruccionDecodificada[3]]
+				tipoActualReg3 := reflect.TypeOf(currentPCB.CPU_reg[instruccionDecodificada[3]]).String()
+				dataSizeInt := int(Convertir[uint32](tipoActualReg3, dataSize))
+	
+				// ? Chequear como lo implementaron en mmu
+				direccionesFisicas := mmu.ObtenerDireccionesFisicas(memoryAddressInt, dataSizeInt, int(currentPCB.PID))
 
-			// Obtener la cantidad de datos a leer desde el registro
-			dataSize := currentPCB.CPU_reg[instruccionDecodificada[3]]
-			tipoActualReg3 := reflect.TypeOf(currentPCB.CPU_reg[instruccionDecodificada[3]]).String()
-			dataSizeInt := int(Convertir[uint32](tipoActualReg3, dataSize))
+				var stdoutBody = struct {
+					DireccionesFisicas	[]globals.DireccionTamanio
+					InterfaceName		string
+				}{
+					DireccionesFisicas: direccionesFisicas,
+					InterfaceName: 		instruccionDecodificada[1],
+				}
 
-			// ? Chequear como lo implementaron en mmu
-			direccionesFisicas := mmu.ObtenerDireccionesFisicas(memoryAddressInt, dataSizeInt, int(currentPCB.PID))
+				SendIOData(stdoutBody, "iodata-stdout")
+				currentPCB.EvictionReason = "BLOCKED_IO_STDOUT"
 
-			// Mandar a escribir a la interfaz (a través de kernel)
-			url := fmt.Sprintf("http://%s:%d/io-stdout-write", globals.Configcpu.IP_kernel, globals.Configcpu.Port_kernel)
-
-			bodyStdout, err := json.Marshal(struct {
-				DireccionesFisicas []globals.DireccionTamanio
-				Interfaz           globals.InterfaceController
-			}{direccionesFisicas, interfazEncontrada})
-			if err != nil {
-				log.Printf("Failed to encode adresses: %v", err)
+			} else {
+				currentPCB.EvictionReason = "EXIT"
 			}
-
-			response, err := http.Post(url, "application/json", bytes.NewBuffer(bodyStdout))
-			if err != nil {
-				log.Printf("Failed to send adresses: %v", err)
-			}
-
-			if response.StatusCode != http.StatusOK {
-				log.Printf("Unexpected response status: %s", response.Status)
-			}
-
-			currentPCB.EvictionReason = "BLOCKED_IO_STD"
 		}
 		pcb.EvictionFlag = true
 		currentPCB.PC++
@@ -465,7 +451,7 @@ type SearchInterface struct {
 	Type string `json:"type"`
 }
 
-func HallarInterfaz(nombre string, tipo string) (globals.InterfaceController, error) {
+func HallarInterfaz(nombre string, tipo string) (bool, error) {
 	interf := SearchInterface{
 		Name: nombre,
 		Type: tipo,
@@ -475,42 +461,45 @@ func HallarInterfaz(nombre string, tipo string) (globals.InterfaceController, er
 
 	jsonData, err := json.Marshal(interf)
 	if err != nil {
-		return globals.InterfaceController{}, fmt.Errorf("failed to encode interface: %v", err)
+		return false, fmt.Errorf("failed to encode interface: %v", err)
 	}
 
 	url := fmt.Sprintf("http://%s:%d/io-interface", globals.Configcpu.IP_kernel, globals.Configcpu.Port_kernel)
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
-		return globals.InterfaceController{}, fmt.Errorf("POST request failed. Failed to send interface: %v", err)
+		return false, fmt.Errorf("POST request failed. Failed to send interface: %v", err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return globals.InterfaceController{}, fmt.Errorf("unexpected response status: %s", resp.Status)
+		return false, fmt.Errorf("unexpected response status: %s", resp.Status)
 	}
 
-	var response globals.InterfaceController
+	var response bool
 	err = json.NewDecoder(resp.Body).Decode(&response)
 	if err != nil {
-		return globals.InterfaceController{}, fmt.Errorf("failed to decode response: %v", err)
+		return false, fmt.Errorf("failed to decode response: %v", err)
 	}
 
 	return response, nil
 }
 
-type Interfac_Time struct {
-	Name  string `json:"name"`
-	WTime int    `json:"wtime"`
-}
+/*
+ SendIOData: Comunica la información necesaria a kernel para el uso de cualquier body de interfaz de entrada/salida
 
-func ComunicarTiempoEspera(nombre string, tiempo_esp int) error {
-	int_time := Interfac_Time{Name: nombre, WTime: tiempo_esp}
-
-	jsonData, err := json.Marshal(int_time)
+ @param datum: Estructura con la información necesaria para la comunicación (La estructura usada va a depender de la interfaz a utilizar)
+ @param endpoint: Endpoint al que se va a enviar la información
+	- "iodata-gensleep"
+	- "iodata-stdin"
+	- "iodata-stdout"
+ @return error: Error en caso de que la comunicación falle
+**/
+func SendIOData(datum interface{}, endpoint string) error {
+	jsonData, err := json.Marshal(datum)
 	if err != nil {
 		return fmt.Errorf("failed to encode interface: %v", err)
 	}
 
-	url := fmt.Sprintf("http://%s:%d/tiempo-bloq", globals.Configcpu.IP_kernel, globals.Configcpu.Port_kernel)
+	url := fmt.Sprintf("http://%s:%d/%s", globals.Configcpu.IP_kernel, globals.Configcpu.Port_kernel, endpoint)
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		return fmt.Errorf("POST request failed. Failed to send interface: %v", err)

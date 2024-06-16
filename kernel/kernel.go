@@ -13,8 +13,6 @@ import (
 	"github.com/sisoputnfrba/tp-golang/utils/server-Functions"
 )
 
-// ? Handshake IO?
-
 func main() {
 	// Iniciar loggers
 	logger.ConfigurarLogger("kernel.log")
@@ -64,9 +62,13 @@ func RegisteredModuleRoutes() http.Handler {
 			"GET /process": 			kernel_api.ProcessList,
 			"POST /io-handshake": 		kernel_api.GetIOInterface,
 			"POST /io-interface": 		kernel_api.ExisteInterfaz,
-			"POST /tiempo-bloq":		kernel_api.Resp_TiempoEspera,
-			"POST /io-stdin-read":		kernel_api.IOStdinRead,
-			"POST /io-stdout-write":	kernel_api.IOStdoutWrite,
+			// "POST /tiempo-bloq":		kernel_api.Resp_TiempoEspera,	 Deprecated
+			// "POST /io-stdin-read":		kernel_api.IOStdinRead,		 Deprecated
+			// "POST /io-stdout-write":	kernel_api.IOStdoutWrite,		 Deprecated
+			"POST /iodata-gensleep":	kernel_api.RecvData_gensleep,
+			"POST /iodata-stdin":		kernel_api.RecvData_stdin,
+			"POST /iodata-stdout":		kernel_api.RecvData_stdout,
+			"POST /io-return-pcb":		kernel_api.RecvPCB_IO,
 		},
 	}
 	return moduleHandler

@@ -34,6 +34,9 @@ func main() {
 	// Handshake con kernel
 	log.Println("Handshake con Kernel")
 	IO_api.HandshakeKernel(os.Args[1])
+	globals.Generic_QueueChannel = make(chan globals.GenSleep, 1)
+
+	go IO_api.IOWork()
 
 	select {}
 }
@@ -41,7 +44,10 @@ func main() {
 func RegisteredModuleRoutes() http.Handler {
 	moduleHandler := &server.ModuleHandler{
 		RouteHandlers: map[string]http.HandlerFunc{
-			"POST /io-gen-sleep": 	IO_api.IOGenSleep,
+			"POST /io-operate":	IO_api.InterfaceQueuePCB,
+			// "POST /io-gen-sleep": 	IO_api.IOGenSleep, 	Deprecated
+			// "POST /io-stdin-read": 	IO_api.IOStdinRead,
+			// "POST /io-stdin-write": IO_api.IOStdoutWrite,
 		},
 	}
 	return moduleHandler

@@ -23,6 +23,13 @@ func main() {
 	}
 	log.Println("Configuracion MEMORIA cargada")
 
+	globals.User_Memory = make([]byte, globals.Configmemory.Memory_size)
+	//verificar si estan bien los punteros
+	// Calculo la cantidad de frames que tendrá la memoria
+	globals.Frames = globals.Configmemory.Memory_size / globals.Configmemory.Page_size //ver si hay que ponerle puntero
+
+	globals.CurrentBitMap = memoria_api.NewBitMap(globals.Frames)
+
 	// Handlers
 	// Iniciar servidor
 
@@ -37,8 +44,15 @@ func main() {
 func RegisteredModuleRoutes() http.Handler {
 	moduleHandler := &server.ModuleHandler{
 		RouteHandlers: map[string]http.HandlerFunc{
-			"GET /instrucciones": 		 memoria_api.InstruccionActual,
-			"POST /instrucciones":    	 memoria_api.CargarInstrucciones,
+			"GET /instrucciones":      memoria_api.InstruccionActual,
+			"POST /instrucciones":     memoria_api.CargarInstrucciones,
+			"GET /enviarMarco":        memoria_api.EnviarMarco,      //implementada en la MMU
+			"PATCH /resize":           memoria_api.Resize,           //implementada en CPU
+			"PATCH /finalizarProceso": memoria_api.FinalizarProceso, //falta implementar desde KERNEL
+			"GET /read":               memoria_api.LeerMemoria,      // implementada en cpu
+			"POST /write":             memoria_api.EscribirMemoria, // implementada en cpu
+			"GET /tamPagina":          memoria_api.Page_size,
+			"GET /tamTabla":           memoria_api.PedirTamTablaPaginas,        //falta implementar desde cliente
 		},
 	}
 	return moduleHandler

@@ -6,6 +6,7 @@ import (
 
 	kernel_api "github.com/sisoputnfrba/tp-golang/kernel/API"
 	"github.com/sisoputnfrba/tp-golang/kernel/globals"
+	resources "github.com/sisoputnfrba/tp-golang/kernel/resources"
 	kernelutils "github.com/sisoputnfrba/tp-golang/kernel/utils"
 	cfg "github.com/sisoputnfrba/tp-golang/utils/config"
 	logger "github.com/sisoputnfrba/tp-golang/utils/log"
@@ -27,13 +28,22 @@ func main() {
 	// Handlers
 	kernelRoutes := RegisteredModuleRoutes()
 
+	// Execution Config
+	globals.MultiprogrammingCounter = make (chan int, globals.Configkernel.Multiprogramming)	// Inicializamos el contador de multiprogramación
+	globals.STSCounter = make (chan int, globals.Configkernel.Multiprogramming)	// Inicializamos el contador de STS
+	resources.InitResourceMap()
+
+	globals.ControlMutex.Lock()
+	globals.EmptiedListMutex.Lock() // Bloqueamos la lista de jobs vacía
 	globals.PlanBinary <- false
+
 
 	// Iniciar servidor
 	go server.ServerStart(globals.Configkernel.Port, kernelRoutes)
 
 	// * Planificación
-	go kernelutils.Plan()
+	go kernelutils.LTS_Plan()
+	go kernelutils.STS_Plan()
 
 	select {}		// Deja que la goroutine principal siga corriendo
 }
@@ -52,7 +62,13 @@ func RegisteredModuleRoutes() http.Handler {
 			"GET /process": 			kernel_api.ProcessList,
 			"POST /io-handshake": 		kernel_api.GetIOInterface,
 			"POST /io-interface": 		kernel_api.ExisteInterfaz,
-			"POST /tiempo-bloq":		kernel_api.Resp_TiempoEspera,
+			// "POST /tiempo-bloq":		kernel_api.Resp_TiempoEspera,	 Deprecated
+			// "POST /io-stdin-read":		kernel_api.IOStdinRead,		 Deprecated
+			// "POST /io-stdout-write":	kernel_api.IOStdoutWrite,		 Deprecated
+			"POST /iodata-gensleep":	kernel_api.RecvData_gensleep,
+			"POST /iodata-stdin":		kernel_api.RecvData_stdin,
+			"POST /iodata-stdout":		kernel_api.RecvData_stdout,
+			"POST /io-return-pcb":		kernel_api.RecvPCB_IO,
 		},
 	}
 	return moduleHandler

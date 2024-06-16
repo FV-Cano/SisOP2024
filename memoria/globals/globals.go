@@ -38,6 +38,9 @@ var  Tablas_de_paginas map[int]TablaPaginas //ver nombre
 // Inicializo la memoria
 var User_Memory []byte // de 0 a 15 corresponde a una página, marco compuesto por 16 bytes (posiciones)
 
-
+type DireccionTamanio struct {
+	DireccionFisica int 
+	Tamanio         int 
+}
 
 

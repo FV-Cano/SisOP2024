@@ -461,11 +461,11 @@ type StdoutWrite struct {
 
 func SolicitarGenSleep(pcb pcb.T_PCB) {
 	genSleepDataDecoded := genericInterfaceBody.(struct {
-		Interfac_Name string
+		InterfaceName string
 		SleepTime     int
 	})
 
-	newInter, err := SearchDeviceByName(genSleepDataDecoded.Interfac_Name)
+	newInter, err := SearchDeviceByName(genSleepDataDecoded.InterfaceName)
 	if err != nil {
 		log.Printf("Device not found: %v", err)
 	}
@@ -501,6 +501,8 @@ func SolicitarStdinRead(pcb pcb.T_PCB) {
 		Tamanio 			int
 	})
 
+	fmt.Println("RECIBE STDIN READ: ", stdinDataDecoded)
+
 	newInter, err := SearchDeviceByName(stdinDataDecoded.InterfaceName)
 	if err != nil {
 		log.Printf("Device not found: %v", err)
@@ -508,10 +510,12 @@ func SolicitarStdinRead(pcb pcb.T_PCB) {
 
 	stdinRead := StdinRead {
 		Pcb: 					pcb,
-		Inter	: 				newInter,
+		Inter:	 				newInter,
 		DireccionesFisicas:		stdinDataDecoded.DireccionesFisicas,
 		Tamanio: 				stdinDataDecoded.Tamanio,
 	}
+
+	fmt.Println("LE QUIERE MANDAR A IO: ", stdinRead)
 
 	globals.EnganiaPichangaMutex.Unlock()
 
@@ -526,6 +530,8 @@ func SolicitarStdinRead(pcb pcb.T_PCB) {
 	if err != nil {
 		log.Printf("Failed to send PCB: %v", err)
 	}
+
+	log.Println("IO STDIN FUE AVISADO POR KERNEL")
 
 	if resp.StatusCode != http.StatusOK {
 		log.Printf("Unexpected response status: %s", resp.Status)
@@ -657,7 +663,7 @@ var genericInterfaceBody 	interface{}
 **/
 func RecvData_gensleep(w http.ResponseWriter, r *http.Request) {
 	var received_data struct {
-		Interfac_Name 	string
+		InterfaceName 	string
 		SleepTime 		int
 	}
 
@@ -666,9 +672,10 @@ func RecvData_gensleep(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
+	
 	genericInterfaceBody = received_data
-	// TODO: conectar con llamada iogen
+	
+	w.WriteHeader(http.StatusOK)
 }
 
 /*
@@ -692,7 +699,10 @@ func RecvData_stdin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	fmt.Println("Received data: ", received_data)
 	genericInterfaceBody = received_data
+
+	w.WriteHeader(http.StatusOK)
 }
 
 /*
@@ -715,6 +725,8 @@ func RecvData_stdout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	genericInterfaceBody = received_data
+
+	w.WriteHeader(http.StatusOK)
 }
 
 /*
@@ -729,9 +741,9 @@ func RecvPCB_IO(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	
-	globals.MultiprogrammingCounter <- 1
 	globals.ChangeState(&received_pcb, "READY")
 	slice.Push(&globals.STS, received_pcb)
+	globals.STSCounter <- int(received_pcb.PID)
 
 	w.WriteHeader(http.StatusOK)
 }

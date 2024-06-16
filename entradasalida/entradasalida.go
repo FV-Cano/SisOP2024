@@ -35,6 +35,8 @@ func main() {
 	log.Println("Handshake con Kernel")
 	IO_api.HandshakeKernel(os.Args[1])
 	globals.Generic_QueueChannel = make(chan globals.GenSleep, 1)
+	globals.Stdin_QueueChannel = make(chan globals.StdinRead, 1)
+	globals.Stdout_QueueChannel = make(chan globals.StdoutWrite, 1)
 
 	go IO_api.IOWork()
 

@@ -196,7 +196,7 @@ func EvictionManagement() {
 		globals.EnganiaPichangaMutex.Lock()
 		globals.ChangeState(&globals.CurrentJob, "BLOCKED")
 		slice.Push(&globals.Blocked, globals.CurrentJob)
-		<- globals.MultiprogrammingCounter
+		log.Printf("PID: %d - Bloqueado por I/O genérico\n", globals.CurrentJob.PID)
 		go func(){
 			kernel_api.SolicitarGenSleep(globals.CurrentJob)
 		}()
@@ -206,7 +206,7 @@ func EvictionManagement() {
 		globals.EnganiaPichangaMutex.Lock()
 		globals.ChangeState(&globals.CurrentJob, "BLOCKED")
 		slice.Push(&globals.Blocked, globals.CurrentJob)
-		<- globals.MultiprogrammingCounter
+		log.Printf("PID: %d - Bloqueado por I/O de entrada\n", globals.CurrentJob.PID)
 		go func(){
 			kernel_api.SolicitarStdinRead(globals.CurrentJob)
 		}()
@@ -216,7 +216,6 @@ func EvictionManagement() {
 		globals.EnganiaPichangaMutex.Lock()
 		globals.ChangeState(&globals.CurrentJob, "BLOCKED")
 		slice.Push(&globals.Blocked, globals.CurrentJob)
-		<- globals.MultiprogrammingCounter
 		go func(){
 			kernel_api.SolicitarStdoutWrite(globals.CurrentJob)
 		}()

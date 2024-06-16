@@ -169,7 +169,8 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 					InterfaceName: 		instruccionDecodificada[1],
 					Tamanio: 			dataSizeInt,
 				}
-				
+
+				fmt.Println("LE MANDA LA INFO A Kernel (CicloInstruccion) ", stdinreadBody)
 				SendIOData(stdinreadBody, "iodata-stdin")
 				currentPCB.EvictionReason = "BLOCKED_IO_STDIN"
 	
@@ -208,6 +209,7 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 					InterfaceName: 		instruccionDecodificada[1],
 				}
 
+				fmt.Println("LE MANDA LA INFO A Kernel (CicloInstruccion) ", stdoutBody)
 				SendIOData(stdoutBody, "iodata-stdout")
 				currentPCB.EvictionReason = "BLOCKED_IO_STDOUT"
 
@@ -312,7 +314,7 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		var valor2EnString string
 
 		if tipoReg2 == "uint32" {
-			valor2EnString = string(Convertir[uint32](tipoActualReg2, valorReg2))
+			valor2EnString = fmt.Sprint(Convertir[uint32](tipoActualReg2, valorReg2))
 		} else {
 			valor2EnString = string(Convertir[uint8](tipoActualReg2, valorReg2))
 		}

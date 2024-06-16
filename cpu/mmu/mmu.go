@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"net/http"
 	"strconv"
 
@@ -123,25 +124,25 @@ func ObtenerDireccionesFisicas(direccionLogica int, tamanio int, pid int) []glob
 	tamPagina := SolicitarTamPagina()
 	numeroPagina := direccionLogica / tamPagina
 	desplazamiento := direccionLogica - numeroPagina * tamPagina 
-	cantidadPaginas := tamanio / tamPagina
+	cantidadPaginas := int(math.Ceil(float64(tamanio) / float64(tamPagina)))
 	var frame int
 	var tamanioTotal int
 
 	if (PedirTamTablaPaginas(pid) == 0){
-		tamanioTotal = desplazamiento + tamanio 
+		tamanioTotal = desplazamiento + tamanio
 		fmt.Println("ME METI X PRIM VEZ A LA TABLA, TAMANIO", tamanioTotal)
-		} else { 
+	} else {
 		if(tlb.BuscarEnTLB(pid, numeroPagina)){
 			log.Printf("PID: %d - TLB HIT - Pagina: %d", pid, numeroPagina)
 			frame = tlb.FrameEnTLB(pid, numeroPagina)
-			} else { 
-				log.Printf("PID: %d - TLB MISS - Pagina: %d", pid, numeroPagina)
-				frame = Frame_rcv(&globals.CurrentJob, numeroPagina)
-				tlb.ActualizarTLB(pid, numeroPagina, frame)
-				}		
-				tamanioTotal = frame * tamPagina + desplazamiento + tamanio
-			}
-			
+		} else { 
+			log.Printf("PID: %d - TLB MISS - Pagina: %d", pid, numeroPagina)
+			frame = Frame_rcv(&globals.CurrentJob, numeroPagina)
+			tlb.ActualizarTLB(pid, numeroPagina, frame)
+			}		
+			tamanioTotal = frame * tamPagina + desplazamiento + tamanio
+		}
+	
 	if (tamanioTotal > PedirTamTablaPaginas(pid) * tamPagina) {	
 		fmt.Println("VOY A SOLICITAR RESIZE")
 		solicitudesmemoria.Resize(tamanioTotal)

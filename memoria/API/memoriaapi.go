@@ -243,18 +243,13 @@ func FinalizarProceso(w http.ResponseWriter, r *http.Request) {
 
 // --------------------------------------------------------------------------------------//
 // ACCESO A ESPACIO DE USUARIO: Esta petición puede venir tanto de la CPU como de un Módulo de Interfaz de I/O
-type DireccionTamanio struct {
-	DireccionFisica int 
-	Tamanio         int 
-}
-
 type BodyRequestLeer struct {
-	DireccionesTamanios []DireccionTamanio `json:"direcciones_tamanios"`
+	DireccionesTamanios []globals.DireccionTamanio `json:"direcciones_tamanios"`
 }
 // le va a llegar la lista de struct de direccionfisica y tamanio
 // por cada struct va a leer la memoria en el tamaño que le pide y devolver el contenido
 func LeerMemoria(w http.ResponseWriter, r *http.Request) {
-	var request []DireccionTamanio
+	var request []globals.DireccionTamanio
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -290,7 +285,7 @@ func LeerMemoria(w http.ResponseWriter, r *http.Request) {
 	}
 	return string(contenido)
 } */
-func LeerDeMemoria(direccionesTamanios []DireccionTamanio) []byte {
+func LeerDeMemoria(direccionesTamanios []globals.DireccionTamanio) []byte {
 	/*Ante un pedido de lectura, devolver el valor que se encuentra a partir de la dirección física pedida.*/
 	var contenido []byte
 	for _, dt := range direccionesTamanios {
@@ -300,9 +295,10 @@ func LeerDeMemoria(direccionesTamanios []DireccionTamanio) []byte {
 }
 
 type BodyRequestEscribir struct {
-	DireccionesTamanios []DireccionTamanio `json:"direcciones_tamanios"`
-	Valor_a_escribir    string             `json:"valor_a_escribir"`
-	Pid                 int                `json:"pid"`
+	DireccionesTamanios []globals.DireccionTamanio
+	Valor_a_escribir    string       
+	TamanioLimite       int
+	Pid                 int      
 }
 
 func EscribirMemoria(w http.ResponseWriter, r *http.Request) {
@@ -313,9 +309,7 @@ func EscribirMemoria(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	escribioEnMemoria := EscribirEnMemoria(request.DireccionesTamanios, request.Valor_a_escribir, request.Pid)
-
-	fmt.Println("Escribio cosas raras?: ", escribioEnMemoria)
+	escribioEnMemoria := EscribirEnMemoria(request.DireccionesTamanios, request.Valor_a_escribir, request.Pid, request.TamanioLimite)
 
 	respuesta, err := json.Marshal(escribioEnMemoria)
 	if err != nil {
@@ -332,17 +326,38 @@ func EscribirMemoria(w http.ResponseWriter, r *http.Request) {
 }
 
 // por cada struct va a ESCRIBIR la memoria en el tamaño que le pide
-func EscribirEnMemoria(direccionesTamanios []DireccionTamanio, valor_a_escribir string, pid int) string { //TODO: tenemos que validar que al proceso le corresponda escribir ahí o ya la validación la hizo cpu al traducir la dirección?
+func EscribirEnMemoria(direccionesTamanios []globals.DireccionTamanio, valor_a_escribir string, pid int, tamanioLimite int) string { //TODO: tenemos que validar que al proceso le corresponda escribir ahí o ya la validación la hizo cpu al traducir la dirección?
 	/*Ante un pedido de escritura, escribir lo indicado a partir de la dirección física pedida.
-	  En caso satisfactorio se responderá un mensaje de ‘OK’.*/
-
+	En caso satisfactorio se responderá un mensaje de ‘OK’.*/
+	
+	bytesValor := []byte(valor_a_escribir)
+	fmt.Println("VALOR EN BYTES: ", bytesValor)
+	
+	cantEscrita := 0
+	
 	for _, dt := range direccionesTamanios {
+		for cantEscrita < tamanioLimite {
+			valorAEscribir := takeAndRemove(dt.Tamanio, &bytesValor)
+			fmt.Println("VALOR TRUNCADO: ", valorAEscribir)
+			
+			copy(globals.User_Memory[dt.DireccionFisica:], valorAEscribir)
+
+			cantEscrita += dt.Tamanio
+
+			log.Printf("PID: %d - Accion: ESCRIBIR - Direccion fisica: %d - Tamaño %d", pid, dt.DireccionFisica, dt.Tamanio)
+		}
+	}
+
+
+	/* for _, dt := range direccionesTamanios {
 		bytesValor := []byte(valor_a_escribir)
+		fmt.Println("VALOR EN BYTES: ", bytesValor)
 		valorAEscribir := takeAndRemove(dt.Tamanio, &bytesValor)
+		fmt.Println("VALOR TRUNCADO: ", valorAEscribir)
 		copy(globals.User_Memory[dt.DireccionFisica:], valorAEscribir)
 		log.Printf("PID: %d - Accion: ESCRIBIR - Direccion fisica: %d - Tamaño %d", pid, dt.DireccionFisica, dt.Tamanio)
+	} */
 
-	}
 	return "OK"
 }
 	

@@ -330,7 +330,6 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		} else {
 			valor2EnString = string(Convertir[uint8](tipoActualReg2, valorReg2))
 		}
-
 		solicitudesmemoria.SolicitarEscritura(direcsFisicas, valor2EnString, int(currentPCB.PID)) //([direccion fisica y tamanio], valorAEscribir, pid
 
 	
@@ -346,6 +345,7 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		// valorReg1 registro donde tenemos que guardar el valor que esta en la D fisica
 
 	case "MOV_IN":
+
 		var tamanio int
 
 		valorReg2 := currentPCB.CPU_reg[instruccionDecodificada[2]]
@@ -369,7 +369,9 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 
 		var datosAAlmacenar uint64
 		
+	
 		if tipoReg1 == "uint32" {
+
 			bigInt := big.NewInt(0).SetBytes(datos)
     		datosAAlmacenar = bigInt.Uint64()
 

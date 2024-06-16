@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -88,6 +89,7 @@ func SolicitarEscritura(direccionesTamanios []globals.DireccionTamanio, valorAEs
 	// La respuesta puede ser un "Ok" o u "Error: dirección o tamanio fuera de rango"
 
 	respuestaEnString := string(bodyBytes)
+
 	respuestaSinComillas := strings.Trim(respuestaEnString, `"`)
 
 	fmt.Println("Respuesta de memoria: ", respuestaSinComillas)
@@ -96,7 +98,21 @@ func SolicitarEscritura(direccionesTamanios []globals.DireccionTamanio, valorAEs
 		fmt.Println("Se produjo un error al escribir", respuestaSinComillas)
 	} else {
 		fmt.Println("Se realizó la escritura correctamente", respuestaSinComillas)
+    
+	if respuestaEnString != "\"OK\"" {
+		fmt.Println("Se realizó la escritura correctamente", respuestaEnString)
+	} else {
+		log.Printf("PID: %d - Acción: ESCRIBIR - %s - Valor: %s", pid, DireccionesFisicasAString(direccionesTamanios) ,valorAEscribir)
+
 	}
+}
+//Hacemos esta funcion para que quede prolijo loguearla en el log xd
+func DireccionesFisicasAString(direccionesFisicas []globals.DireccionTamanio) string {
+	var direccionesString string
+	for i, direc := range direccionesFisicas {
+		direccionesString += fmt.Sprintf("Dirección física número %d: %d - Tamaño: %d\n", i, direc.DireccionFisica, direc.Tamanio)
+	}
+	return direccionesString
 }
 
 type BodyRequestLeer struct {
@@ -139,6 +155,9 @@ func SolicitarLectura(direccionesFisicas []globals.DireccionTamanio) []byte {
 	if err != nil {
 		return []byte("error")
 	}
+	contenidoLeido := string(bodyBytes)
+	//TODO nosotras no le pasamos el PID cuando lee, emtomses se lo pasamos para poder loguear?
+	//log.Printf("PID: %d - Acción: LEER - Dirección Física: %s - Valor: %s", pid, DireccionesFisicasAString(direccionesTamanios) ,contenidoLeido) 
 
 	return bodyBytes
 }

@@ -57,13 +57,6 @@ func BuscarInstruccionMap(pc int, pid int) string {
 	return resultado
 }
 
-/*func BuscarInstruccionMap(pc int, pid int) string {
-    if pid < len(globals.InstruccionesProceso) && pc < len(globals.InstruccionesProceso[pid]) {
-        resultado := globals.InstruccionesProceso[pid][pc]
-        return resultado
-    }
-    return ""
-}*/
 
 func PasarAInt(cadena string) int {
 	num, err := strconv.Atoi(cadena)
@@ -110,8 +103,7 @@ func CargarInstrucciones(w http.ResponseWriter, r *http.Request) {
 	}
 	
 	globals.Tablas_de_paginas[int(pid)] = globals.TablaPaginas{}
-	log.Printf("Tabla cargada para el PID %d ", pid)
-
+	log.Printf("PID: %d - Tamaño: %d", pid, len(globals.Tablas_de_paginas[int(pid)]))
 	respuesta, err := json.Marshal((BuscarInstruccionMap(int(pc), int(pid))))
 	if err != nil {
 		http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
@@ -162,13 +154,11 @@ func ModificarTamanioProceso(tamanioProcesoActual int, tamanioProcesoNuevo int, 
 
 	//tamanioMemEnPaginas := globals.Configmemory.Memory_size / globals.Configmemory.Page_size
 
-	if (tamanioProcesoActual < tamanioProcesoNuevo) { //ampliar proceso
+	if (tamanioProcesoActual <= tamanioProcesoNuevo) { //ampliar proceso
 		var diferenciaEnPaginas = tamanioProcesoNuevo - tamanioProcesoActual
 		log.Printf("PID: %d - Tamanio Actual: %d - Tamanio a Ampliar: %d", pid, tamanioProcesoActual, tamanioProcesoNuevo) // verificar si en el último parámetro va diferenciaEnPaginas
 		fmt.Println("MOSTRAMELON EN PAGINAS EL TAMANIO")
 		return AmpliarProceso(diferenciaEnPaginas, pid)
-	} else if (tamanioProcesoActual == tamanioProcesoNuevo) {
-		return "OK"
 	} else { // reducir proceso
 		var diferenciaEnPaginas = tamanioProcesoActual - tamanioProcesoNuevo
 		log.Printf("PID: %d - Tamanio Actual: %d - Tamanio a Reducir: %d", pid, tamanioProcesoActual, tamanioProcesoNuevo) // verificar si en el último parámetro va diferenciaEnPaginas
@@ -208,7 +198,7 @@ func ReducirProceso(diferenciaEnPaginas int, pid int) string {
 		globals.Tablas_de_paginas[pid] = append(globals.Tablas_de_paginas[pid][:diferenciaEnPaginas], globals.Tablas_de_paginas[pid][diferenciaEnPaginas+1:]...)
 		Clear(marco)
 		diferenciaEnPaginas--
-		fmt.Println("TAMANIO REDUCIDO")
+		
 	}
 	return "OK"
 }
@@ -242,11 +232,12 @@ func EnviarMarco(w http.ResponseWriter, r *http.Request) {
 
 //--------------------------------------------------------------------------------------//
 //FINALIZACION DE PROCESO: PETICION DESDE KERNEL (PATCH) 
-//TODO: falta implementar desde el kernel
+//TODO: falta implementar desde el kernel?
 func FinalizarProceso(w http.ResponseWriter, r *http.Request) {
 	queryParams := r.URL.Query()
 	pid := queryParams.Get("pid")
 	ReducirProceso(len(globals.Tablas_de_paginas[PasarAInt(pid)]), PasarAInt(pid))
+	log.Printf("PID: %d - Tamaño reducido: %d", PasarAInt(pid), len(globals.Tablas_de_paginas[PasarAInt(pid)]))
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -294,6 +285,8 @@ func LeerMemoria(w http.ResponseWriter, r *http.Request) {
 	var contenido []byte
 	for _, dt := range direccionesTamanios {
 		contenido = append(contenido, globals.User_Memory[dt.DireccionFisica:dt.DireccionFisica+dt.Tamanio]...)
+		//todo ver que es el mismo problema desde CPU de no pasarle el pid
+		//log.Printf("PID: %d - Accion: LEER - Direccion fisica: %d - Tamaño %d", pid, dt.DireccionFisica, dt.Tamanio)
 	}
 	return string(contenido)
 } */
@@ -347,6 +340,8 @@ func EscribirEnMemoria(direccionesTamanios []DireccionTamanio, valor_a_escribir 
 		bytesValor := []byte(valor_a_escribir)
 		valorAEscribir := takeAndRemove(dt.Tamanio, &bytesValor)
 		copy(globals.User_Memory[dt.DireccionFisica:], valorAEscribir)
+		log.Printf("PID: %d - Accion: ESCRIBIR - Direccion fisica: %d - Tamaño %d", pid, dt.DireccionFisica, dt.Tamanio)
+
 	}
 	return "OK"
 }

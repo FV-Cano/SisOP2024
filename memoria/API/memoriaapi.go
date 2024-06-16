@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math"
 	"net/http"
 	"os"
 	"strconv"
@@ -56,13 +57,6 @@ func BuscarInstruccionMap(pc int, pid int) string {
 	return resultado
 }
 
-/*func BuscarInstruccionMap(pc int, pid int) string {
-    if pid < len(globals.InstruccionesProceso) && pc < len(globals.InstruccionesProceso[pid]) {
-        resultado := globals.InstruccionesProceso[pid][pc]
-        return resultado
-    }
-    return ""
-}*/
 
 func PasarAInt(cadena string) int {
 	num, err := strconv.Atoi(cadena)
@@ -109,8 +103,7 @@ func CargarInstrucciones(w http.ResponseWriter, r *http.Request) {
 	}
 	
 	globals.Tablas_de_paginas[int(pid)] = globals.TablaPaginas{}
-	log.Printf("Tabla cargada para el PID %d ", pid)
-
+	log.Printf("PID: %d - Tamaño: %d", pid, len(globals.Tablas_de_paginas[int(pid)]))
 	respuesta, err := json.Marshal((BuscarInstruccionMap(int(pc), int(pid))))
 	if err != nil {
 		http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
@@ -140,7 +133,8 @@ func Resize(w http.ResponseWriter, r *http.Request) { //hay que hacer un patch y
 func RealizarResize(tamanio int, pid int) string {
 	cantPaginasActual := len(globals.Tablas_de_paginas[int(pid)])
 	//ver cuantas paginas tiene el proceso en la tabla
-	cantPaginas := tamanio / globals.Configmemory.Page_size
+	//cantPaginas := tamanio / globals.Configmemory.Page_size
+	cantPaginas := int(math.Ceil(float64(tamanio) / float64(globals.Configmemory.Page_size)))
 	// agregar a la tabla de páginas del proceso la cantidad de páginas que se le asignaron
 	log.Printf("Tabla de paginas ANTES DE REDIM del PID %d: %v", pid, globals.Tablas_de_paginas[pid])
 
@@ -160,13 +154,11 @@ func ModificarTamanioProceso(tamanioProcesoActual int, tamanioProcesoNuevo int, 
 
 	//tamanioMemEnPaginas := globals.Configmemory.Memory_size / globals.Configmemory.Page_size
 
-	if (tamanioProcesoActual < tamanioProcesoNuevo) { //ampliar proceso
+	if (tamanioProcesoActual <= tamanioProcesoNuevo) { //ampliar proceso
 		var diferenciaEnPaginas = tamanioProcesoNuevo - tamanioProcesoActual
 		log.Printf("PID: %d - Tamanio Actual: %d - Tamanio a Ampliar: %d", pid, tamanioProcesoActual, tamanioProcesoNuevo) // verificar si en el último parámetro va diferenciaEnPaginas
 		fmt.Println("MOSTRAMELON EN PAGINAS EL TAMANIO")
 		return AmpliarProceso(diferenciaEnPaginas, pid)
-	} else if (tamanioProcesoActual == tamanioProcesoNuevo) {
-		return "OK"
 	} else { // reducir proceso
 		var diferenciaEnPaginas = tamanioProcesoActual - tamanioProcesoNuevo
 		log.Printf("PID: %d - Tamanio Actual: %d - Tamanio a Reducir: %d", pid, tamanioProcesoActual, tamanioProcesoNuevo) // verificar si en el último parámetro va diferenciaEnPaginas
@@ -206,7 +198,7 @@ func ReducirProceso(diferenciaEnPaginas int, pid int) string {
 		globals.Tablas_de_paginas[pid] = append(globals.Tablas_de_paginas[pid][:diferenciaEnPaginas], globals.Tablas_de_paginas[pid][diferenciaEnPaginas+1:]...)
 		Clear(marco)
 		diferenciaEnPaginas--
-		fmt.Println("TAMANIO REDUCIDO")
+		
 	}
 	return "OK"
 }
@@ -240,11 +232,12 @@ func EnviarMarco(w http.ResponseWriter, r *http.Request) {
 
 //--------------------------------------------------------------------------------------//
 //FINALIZACION DE PROCESO: PETICION DESDE KERNEL (PATCH) 
-//TODO: falta implementar desde el kernel
+//TODO: falta implementar desde el kernel?
 func FinalizarProceso(w http.ResponseWriter, r *http.Request) {
 	queryParams := r.URL.Query()
 	pid := queryParams.Get("pid")
 	ReducirProceso(len(globals.Tablas_de_paginas[PasarAInt(pid)]), PasarAInt(pid))
+	log.Printf("PID: %d - Tamaño reducido: %d", PasarAInt(pid), len(globals.Tablas_de_paginas[PasarAInt(pid)]))
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -261,33 +254,49 @@ type BodyRequestLeer struct {
 // le va a llegar la lista de struct de direccionfisica y tamanio
 // por cada struct va a leer la memoria en el tamaño que le pide y devolver el contenido
 func LeerMemoria(w http.ResponseWriter, r *http.Request) {
-	var request BodyRequestLeer
+	var request []DireccionTamanio
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	respuesta, err := json.Marshal(LeerDeMemoria(request.DireccionesTamanios))
+
+	fmt.Println("Me mandaron a leer :)")
+
+	contenidoLeido := LeerDeMemoria(request)
+	fmt.Println("CONTENIDO LEIDO: ", contenidoLeido)
+
+	/* respuesta, err := json.Marshal(contenidoLeido)
 	if err != nil {
 		http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
 		return
-	}
+	} */
 
 	time.Sleep(time.Duration(globals.Configmemory.Delay_response) * time.Millisecond) //nos dan los milisegundos o lo dejamos así?
 
 	w.WriteHeader(http.StatusOK)
-	w.Write(respuesta)
+	w.Write(contenidoLeido)
 }
 
 // le va a llegar la lista de struct de direccionfisica y tamanio (O LE LLEGA DE A UNA? ES DECIR DE A UNA PETICION)
 // por cada struct va a leer la memoria en el tamaño que le pide y devolver el contenido
-func LeerDeMemoria(direccionesTamanios []DireccionTamanio) string {
+/* func LeerDeMemoria(direccionesTamanios []DireccionTamanio) string {
+	//Ante un pedido de lectura, devolver el valor que se encuentra a partir de la dirección física pedida.
+	var contenido []byte
+	for _, dt := range direccionesTamanios {
+		contenido = append(contenido, globals.User_Memory[dt.DireccionFisica:dt.DireccionFisica+dt.Tamanio]...)
+		//todo ver que es el mismo problema desde CPU de no pasarle el pid
+		//log.Printf("PID: %d - Accion: LEER - Direccion fisica: %d - Tamaño %d", pid, dt.DireccionFisica, dt.Tamanio)
+	}
+	return string(contenido)
+} */
+func LeerDeMemoria(direccionesTamanios []DireccionTamanio) []byte {
 	/*Ante un pedido de lectura, devolver el valor que se encuentra a partir de la dirección física pedida.*/
 	var contenido []byte
 	for _, dt := range direccionesTamanios {
 		contenido = append(contenido, globals.User_Memory[dt.DireccionFisica:dt.DireccionFisica+dt.Tamanio]...)
 	}
-	return string(contenido)
+	return contenido
 }
 
 type BodyRequestEscribir struct {
@@ -304,7 +313,11 @@ func EscribirMemoria(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respuesta, err := json.Marshal(EscribirEnMemoria(request.DireccionesTamanios, request.Valor_a_escribir, request.Pid))
+	escribioEnMemoria := EscribirEnMemoria(request.DireccionesTamanios, request.Valor_a_escribir, request.Pid)
+
+	fmt.Println("Escribio cosas raras?: ", escribioEnMemoria)
+
+	respuesta, err := json.Marshal(escribioEnMemoria)
 	if err != nil {
 		http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
 		return
@@ -327,6 +340,8 @@ func EscribirEnMemoria(direccionesTamanios []DireccionTamanio, valor_a_escribir 
 		bytesValor := []byte(valor_a_escribir)
 		valorAEscribir := takeAndRemove(dt.Tamanio, &bytesValor)
 		copy(globals.User_Memory[dt.DireccionFisica:], valorAEscribir)
+		log.Printf("PID: %d - Accion: ESCRIBIR - Direccion fisica: %d - Tamaño %d", pid, dt.DireccionFisica, dt.Tamanio)
+
 	}
 	return "OK"
 }

@@ -98,7 +98,33 @@ func ActualizarTLB(pid, pagina, marco int) {
 		}
 
 	case "LRU":
-		if !BuscarEnTLB(pid, pagina) { // Si la página no está en la TLB
+		/**Lista “jenga” con números de págs -> con cada referencia se coloca (o se mueve, si ya existe) la pág al final de la lista.
+		 Se elige como víctima la primera de la lista.*/
+	
+		if !BuscarEnTLB(pid, pagina) { // La página no está en la TLB
+			if len(CurrentTLB) < globals.Configcpu.Number_felling_tlb { // Hay lugar en la TLB
+				CurrentTLB = append(CurrentTLB, map[int]Pagina_marco{pid: {Pagina: pagina, Marco: marco}})
+			} else { // No hay lugar en la TLB, se reemplaza la página menos recientemente utilizada
+				CurrentTLB = append(CurrentTLB[1:], map[int]Pagina_marco{pid: {Pagina: pagina, Marco: marco}})
+			}
+		} else { // La página está en la TLB, se mueve al final de la lista
+			var indice int
+			for i := range CurrentTLB {
+				if BuscarEnTLB(pid, pagina) {
+					indice = i				//indica el valor de la lista de mápas en donde se encuentra la pagina
+					break
+				}
+			}
+			CurrentTLB = append(CurrentTLB[:indice], CurrentTLB[indice+1:]...)
+			CurrentTLB = append(CurrentTLB, map[int]Pagina_marco{pid: {Pagina: pagina, Marco: marco}})
+		}
+
+		// Imprimir la TLB
+		fmt.Println("LA TLB QUEDO ASI: ")
+		for i := range CurrentTLB {
+			fmt.Println(CurrentTLB[i])
+		}
+		/* if !BuscarEnTLB(pid, pagina) { // Si la página no está en la TLB
 			if len(CurrentTLB) < globals.Configcpu.Number_felling_tlb {
 				nuevoElemento := map[int]Pagina_marco{
 					pid: {Pagina: pagina, Marco: marco},
@@ -137,34 +163,11 @@ func ActualizarTLB(pid, pagina, marco int) {
 			}
 			ActualizarOrdenDeAcceso(pid, pagina, marco) // Actualizar el orden de acceso
 		}
+		*/
 
-		/*case "LRU":
-		 if !BuscarEnTLB(pid, pagina) { //Si la página no está en la tlb
-			if len(CurrentTLB) < globals.Configcpu.Number_felling_tlb {
-				// Si la TLB no está llena, agregar la entrada
-				CurrentTLB[pid] = Pagina_marco{Pagina: pagina, Marco: marco}
-				OrderedKeys = append(OrderedKeys, pid) // Agregar la clave al final de la lista
-			} else {
-				// Si la TLB está llena, eliminar la entrada más antigua (FIFO)
-				oldestKey := OrderedKeys[0] // Obtener la clave más antigua
-				delete(CurrentTLB, oldestKey) // Eliminar la entrada más antigua
-				OrderedKeys = OrderedKeys[1:] // Eliminar la clave más antigua de la lista
-				CurrentTLB[pid] = Pagina_marco{Pagina: pagina, Marco: marco} // Agregar la nueva entrada
-				OrderedKeys = append(OrderedKeys, pid) // Agregar la nueva clave al final de la lista
-			}
-		} else { //SI LA PAGINA YA EXISTE EN LA TLB, LLEVARLA AL FINAL DE LA LISTA
-			// Eliminar la entrada existente y agregarla nuevamente
-			for i, key := range OrderedKeys {
-				if key == pid {
-					// Eliminar la clave de la lista
-					OrderedKeys = append(OrderedKeys[:i], OrderedKeys[i+1:]...)
-					break
-				}
-			}
-			CurrentTLB[pid] = Pagina_marco{Pagina: pagina, Marco: marco} // Agregar la nueva entrada
-			OrderedKeys = append(OrderedKeys, pid) // Agregar la nueva clave al final de la lista*/
 	}
 }
+
 
 func ActualizarOrdenDeAcceso(pid, pagina, marco int) {
 	// Elimina la clave si ya existe

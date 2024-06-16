@@ -93,17 +93,11 @@ func SolicitarEscritura(direccionesTamanios []globals.DireccionTamanio, valorAEs
 	respuestaSinComillas := strings.Trim(respuestaEnString, `"`)
 
 	fmt.Println("Respuesta de memoria: ", respuestaSinComillas)
-
+	
 	if respuestaSinComillas != "OK" {
 		fmt.Println("Se produjo un error al escribir", respuestaSinComillas)
 	} else {
-		fmt.Println("Se realizó la escritura correctamente", respuestaSinComillas)
-    
-	if respuestaEnString != "\"OK\"" {
-		fmt.Println("Se realizó la escritura correctamente", respuestaEnString)
-	} else {
 		log.Printf("PID: %d - Acción: ESCRIBIR - %s - Valor: %s", pid, DireccionesFisicasAString(direccionesTamanios) ,valorAEscribir)
-
 	}
 }
 //Hacemos esta funcion para que quede prolijo loguearla en el log xd
@@ -155,7 +149,7 @@ func SolicitarLectura(direccionesFisicas []globals.DireccionTamanio) []byte {
 	if err != nil {
 		return []byte("error")
 	}
-	contenidoLeido := string(bodyBytes)
+	//contenidoLeido := string(bodyBytes)
 	//TODO nosotras no le pasamos el PID cuando lee, emtomses se lo pasamos para poder loguear?
 	//log.Printf("PID: %d - Acción: LEER - Dirección Física: %s - Valor: %s", pid, DireccionesFisicasAString(direccionesTamanios) ,contenidoLeido) 
 

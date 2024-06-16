@@ -10,18 +10,13 @@ import (
 	"github.com/sisoputnfrba/tp-golang/utils/pcb"
 )
 
-type InterfaceController struct {
-	IoInterf 					device.T_IOInterface
-	Controller 					chan bool
-}
-
 var (
 	NextPID 					uint32 = 0
 	LTS 						[]pcb.T_PCB
 	STS 						[]pcb.T_PCB
 	Blocked 					[]pcb.T_PCB
 	STS_Priority 				[]pcb.T_PCB
-	Interfaces 					[]InterfaceController
+	Interfaces 					[]device.T_IOInterface
 	ResourceMap					map[string][]pcb.T_PCB
 	Resource_instances  		map[string]int
 )

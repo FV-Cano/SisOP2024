@@ -387,21 +387,10 @@ func GetIOInterface(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newInterface := globals.InterfaceController{IoInterf: interf, Controller: make(chan bool, 1)}
-
-	globals.Interfaces = append(globals.Interfaces, newInterface)
+	slice.Push(&globals.Interfaces, interf)
 
 	log.Printf("Interface received, type: %s, port: %d\n", interf.InterfaceType, interf.InterfacePort)
 
-	response := globals.Configkernel.Multiprogramming
-
-	jsonResp, err := json.Marshal(response)
-	if err != nil {
-		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(jsonResp)
 	w.WriteHeader(http.StatusOK)
 }
 type SearchInterface struct {
@@ -422,14 +411,13 @@ func ExisteInterfaz(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Device not found", http.StatusNotFound)
 	}
 	
-	var response globals.InterfaceController
-	if aux.IoInterf.InterfaceType == received_data.Type {
-		response = aux
+	var response bool
+	if aux.InterfaceType == received_data.Type {
+		response = true
 	} else {
-		http.Error(w, "Device type not match", http.StatusNotFound)
+		response = false
 	}
 
-	//TODO: Ahora que las interfaces devuelven un canal no se puede hacer el Marshal
 	jsonResp, err := json.Marshal(response)
 	if err != nil {
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
@@ -439,69 +427,63 @@ func ExisteInterfaz(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonResp)
 }
 
-func SearchDeviceByName(deviceName string) (globals.InterfaceController, error) {
+func SearchDeviceByName(deviceName string) (device.T_IOInterface, error) {
 	for _, interf := range globals.Interfaces {
-		if interf.IoInterf.InterfaceName == deviceName  {
+		if interf.InterfaceName == deviceName  {
 			fmt.Println("Interfaz encontrada: ", interf)
 			return interf, nil
 		}
 	}
-	return globals.InterfaceController{}, fmt.Errorf("device not found")
+	return device.T_IOInterface{}, fmt.Errorf("device not found")
 }
 
-type Interfac_Time struct {
-	Name 	string 	`json:"name"`
-	WTime 	int 	`json:"wtime"`
-}
 
-var genIntTime Interfac_Time
-
-func Resp_TiempoEspera (w http.ResponseWriter, r *http.Request) {
-	var received_data Interfac_Time
-	
-	err := json.NewDecoder(r.Body).Decode(&received_data)
-	if err != nil {
-		http.Error(w, "Bad request", http.StatusBadRequest)
-		return
-	}
-
-	//globals.ITimeSem.Lock()
-	genIntTime = received_data
-
-	w.WriteHeader(http.StatusOK)
-}
-
-// Me veo forzado a poner esta variable porque por alguna razón no puedo declarar una pcb dentro de la función
-var genPCB pcb.T_PCB
-
+// * Types para realizar solicitudes a IO
 type GenSleep struct {
-	Pcb	 		pcb.T_PCB
-	Inter 		device.T_IOInterface
-	TimeToSleep int
+	Pcb	 				pcb.T_PCB
+	Inter 				device.T_IOInterface
+	TimeToSleep 		int
 }
+
+type StdinRead struct {
+	Pcb 				pcb.T_PCB
+	Inter 				device.T_IOInterface
+	DireccionesFisicas 	[]globals.DireccionTamanio
+	Tamanio 			int
+}
+
+type StdoutWrite struct {
+	Pcb 				pcb.T_PCB
+	Inter 				device.T_IOInterface
+	DireccionesFisicas 	[]globals.DireccionTamanio
+}
+
 
 func SolicitarGenSleep(pcb pcb.T_PCB) {
-	newInter, err := SearchDeviceByName(genIntTime.Name)
+	genSleepDataDecoded := genericInterfaceBody.(struct {
+		Interfac_Name string
+		SleepTime     int
+	})
+
+	newInter, err := SearchDeviceByName(genSleepDataDecoded.Interfac_Name)
 	if err != nil {
 		log.Printf("Device not found: %v", err)
 	}
 	
-	newInter.Controller <- true
-
 	genSleep := GenSleep{
-		Pcb: pcb,
-		Inter: newInter.IoInterf, 
-		TimeToSleep: genIntTime.WTime,
+		Pcb: 			pcb,
+		Inter: 			newInter, 
+		TimeToSleep: 	genSleepDataDecoded.SleepTime,
 	}
 
 	globals.EnganiaPichangaMutex.Unlock()
 	
 	jsonData, err := json.Marshal(genSleep)
 	if err != nil {
-		log.Printf("Failed to encode PCB: %v", err)
+		log.Printf("Failed to encode GenSleep request: %v", err)
 	}
 
-	url := fmt.Sprintf("http://%s:%d/io-gen-sleep", newInter.IoInterf.InterfaceIP, newInter.IoInterf.InterfacePort)
+	url := fmt.Sprintf("http://%s:%d/io-operate", newInter.InterfaceIP, newInter.InterfacePort)
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		log.Printf("Failed to send PCB: %v", err)
@@ -510,23 +492,88 @@ func SolicitarGenSleep(pcb pcb.T_PCB) {
 	if resp.StatusCode != http.StatusOK {
 		log.Printf("Unexpected response status: %s", resp.Status)
 	}
-
-	err = json.NewDecoder(resp.Body).Decode(&genPCB)
-	if err != nil {
-		log.Printf("Failed to decode PCB response: %v", err)
-	}
-
-	RemoveFromBlocked(genPCB.PID)
-	genPCB.State = "READY"
-	slice.Push(&globals.STS, genPCB)
-	globals.MultiprogrammingCounter <- 1
-	<- newInter.Controller
 }
 
-func IOStdinRead(w http.ResponseWriter, r *http.Request) {
+func SolicitarStdinRead(pcb pcb.T_PCB) {
+	stdinDataDecoded := genericInterfaceBody.(struct {
+		DireccionesFisicas 	[]globals.DireccionTamanio
+		InterfaceName 		string
+		Tamanio 			int
+	})
+
+	newInter, err := SearchDeviceByName(stdinDataDecoded.InterfaceName)
+	if err != nil {
+		log.Printf("Device not found: %v", err)
+	}
+
+	stdinRead := StdinRead {
+		Pcb: 					pcb,
+		Inter	: 				newInter,
+		DireccionesFisicas:		stdinDataDecoded.DireccionesFisicas,
+		Tamanio: 				stdinDataDecoded.Tamanio,
+	}
+
+	globals.EnganiaPichangaMutex.Unlock()
+
+	jsonData, err := json.Marshal(stdinRead)
+	if err != nil {
+		log.Printf("Failed to encode StdinRead request: %v", err)
+	}
+
+	url := fmt.Sprintf("http://%s:%d/io-operate", newInter.InterfaceIP, newInter.InterfacePort)
+
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		log.Printf("Failed to send PCB: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		log.Printf("Unexpected response status: %s", resp.Status)
+	}
+}
+
+func SolicitarStdoutWrite(pcb pcb.T_PCB) {
+	stdoutDataDecoded := genericInterfaceBody.(struct {
+		DireccionesFisicas 	[]globals.DireccionTamanio
+		InterfaceName 		string
+	})
+
+	newInter, err := SearchDeviceByName(stdoutDataDecoded.InterfaceName)
+	if err != nil {
+		log.Printf("Device not found: %v", err)
+	}
+
+	stdoutWrite := StdoutWrite {
+		Pcb: 					pcb,
+		Inter: 					newInter,
+		DireccionesFisicas: 	stdoutDataDecoded.DireccionesFisicas,
+	}
+
+	globals.EnganiaPichangaMutex.Unlock()
+
+	jsonData, err := json.Marshal(stdoutWrite)
+	if err != nil {
+		log.Printf("Failed to encode StdoutWrite request: %v", err)
+	}
+
+	url := fmt.Sprintf("http://%s:%d/io-operate", newInter.InterfaceIP, newInter.InterfacePort)
+
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		log.Printf("Failed to send PCB: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		log.Printf("Unexpected response status: %s", resp.Status)
+	}
+}
+
+// TODO: No entiendo que hace el available.pcb
+
+/* func IOStdinRead(w http.ResponseWriter, r *http.Request) {
 	var infoRecibida struct {
 		DireccionesFisicas []globals.DireccionTamanio
-		Interfaz globals.InterfaceController
+		Interfaz device.T_IOInterface
 		Tamanio int
 	}
 	
@@ -537,7 +584,7 @@ func IOStdinRead(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Da la orden a la interfaz STDIN de leer			
-	url := fmt.Sprintf("http://%s:%d/io-stdin-read", infoRecibida.Interfaz.IoInterf.InterfaceIP, infoRecibida.Interfaz.IoInterf.InterfacePort)
+	url := fmt.Sprintf("http://%s:%d/io-operate", infoRecibida.Interfaz.InterfaceIP, infoRecibida.Interfaz.InterfacePort)
 
 	bodyStdin, err := json.Marshal(struct {
 		DireccionesFisicas []globals.DireccionTamanio
@@ -556,16 +603,16 @@ func IOStdinRead(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Unexpected response status: %s", response.Status)
 	}
 
-	log.Println("Kernel mandó a leer a la interfaz: ", infoRecibida.Interfaz.IoInterf.InterfaceType, infoRecibida.Interfaz.IoInterf.InterfacePort)
+	log.Println("Kernel mandó a leer a la interfaz: ", infoRecibida.Interfaz.InterfaceType, infoRecibida.Interfaz.InterfacePort)
 
 	globals.AvailablePcb <- true // TODO: Chequear si con la nueva implementacion se delega a la lista de bloqueados
 	w.WriteHeader(http.StatusOK)
-}
+} */
 
-func IOStdoutWrite(w http.ResponseWriter, r *http.Request) {
+/* func IOStdoutWrite(w http.ResponseWriter, r *http.Request) {
 	var infoRecibida struct {
 		DireccionesFisicas []globals.DireccionTamanio
-		Interfaz globals.InterfaceController
+		Interfaz device.T_IOInterface
 	}
 	
 	err := json.NewDecoder(r.Body).Decode(&infoRecibida)
@@ -575,7 +622,7 @@ func IOStdoutWrite(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Da la orden a la interfaz STDOUT de mostrar por pantalla la salida			
-	url := fmt.Sprintf("http://%s:%d/io-stdout-write", infoRecibida.Interfaz.IoInterf.InterfaceIP, infoRecibida.Interfaz.IoInterf.InterfacePort)
+	url := fmt.Sprintf("http://%s:%d/io-operate", infoRecibida.Interfaz.InterfaceIP, infoRecibida.Interfaz.InterfacePort)
 
 	bodyStdout, err := json.Marshal(infoRecibida.DireccionesFisicas)
 	if err != nil {
@@ -591,8 +638,100 @@ func IOStdoutWrite(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Unexpected response status: %s", response.Status)
 	}
 
-	log.Println("Kernel mandó a escribir a la interfaz: ", infoRecibida.Interfaz.IoInterf.InterfaceIP, infoRecibida.Interfaz.IoInterf.InterfacePort)
+	log.Println("Kernel mandó a escribir a la interfaz: ", infoRecibida.Interfaz.InterfaceIP, infoRecibida.Interfaz.InterfacePort)
 
 	globals.AvailablePcb <- true
+	w.WriteHeader(http.StatusOK)
+} */
+
+// -------------------------- Caos de Interfaces --------------------------
+
+var genericInterfaceBody 	interface{}
+
+/*
+ RecvData_gensleep: Recibe desde CPU la información necesaria para solicitar un GEN_SLEEP.
+
+ Opera con estructura:
+	- Nombre de la interfaz
+	- Tiempo de espera
+**/
+func RecvData_gensleep(w http.ResponseWriter, r *http.Request) {
+	var received_data struct {
+		Interfac_Name 	string
+		SleepTime 		int
+	}
+
+	err := json.NewDecoder(r.Body).Decode(&received_data)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	genericInterfaceBody = received_data
+	// TODO: conectar con llamada iogen
+}
+
+/*
+ RecvData_stdin: Recibe desde CPU la información necesaria para solicitar un STDIN_READ.
+
+ Opera con estructura:
+	- Direcciones físicas
+	- Nombre de Interfaz
+	- Tamaño
+**/
+func RecvData_stdin(w http.ResponseWriter, r *http.Request) {
+	var received_data struct {
+		DireccionesFisicas 	[]globals.DireccionTamanio
+		InterfaceName		string
+		Tamanio 			int
+	}
+
+	err := json.NewDecoder(r.Body).Decode(&received_data)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	genericInterfaceBody = received_data
+}
+
+/*
+ RecvData_stdout: Recibe desde CPU la información necesaria para solicitar un STDOUT_WRITE.
+
+ Opera con estructura:
+	- Direcciones físicas
+	- Nombre de Interfaz
+**/
+func RecvData_stdout(w http.ResponseWriter, r *http.Request) {
+	var received_data struct {
+		DireccionesFisicas 	[]globals.DireccionTamanio
+		InterfaceName		string
+	}
+
+	err := json.NewDecoder(r.Body).Decode(&received_data)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	genericInterfaceBody = received_data
+}
+
+/*
+ RecvPCB_IO: Recibe el PCB bloqueado por IO, lo desbloquea y lo agrega a la cola de STS.
+**/
+func RecvPCB_IO(w http.ResponseWriter, r *http.Request) {
+	var received_pcb pcb.T_PCB
+
+	err := json.NewDecoder(r.Body).Decode(&received_pcb)
+	if err != nil {
+		http.Error(w, "Failed to decode PCB", http.StatusBadRequest)
+		return
+	}
+	
+	globals.MultiprogrammingCounter <- 1
+	globals.ChangeState(&received_pcb, "READY")
+	slice.Push(&globals.STS, received_pcb)
+
 	w.WriteHeader(http.StatusOK)
 }

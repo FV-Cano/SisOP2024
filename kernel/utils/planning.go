@@ -220,16 +220,6 @@ func EvictionManagement() {
 			kernel_api.SolicitarStdoutWrite(globals.CurrentJob)
 		}()
 		globals.JobExecBinary <- true
-		
-	// ? Ver con autoras	
-	/* case "BLOCKED_IO_STD":
-		globals.ChangeState(&globals.CurrentJob, "BLOCKED")
-		
-		<- globals.AvailablePcb
-
-		globals.ChangeState(&globals.CurrentJob, "READY")
-		globals.STS = append(globals.STS, globals.CurrentJob) // diferente en el caso de VRR
-		globals.JobExecBinary <- true */
 
 	case "TIMEOUT":
 		globals.ChangeState(&globals.CurrentJob, "READY")
@@ -251,6 +241,7 @@ func EvictionManagement() {
 		if resource.Exists(globals.CurrentJob.RequestedResource) {
 			resource.ReleaseConsumption(globals.CurrentJob.RequestedResource)
 		}
+		
 	case "OUT_OF_MEMORY":
 		globals.ChangeState(&globals.CurrentJob, "TERMINATED")
 		globals.JobExecBinary <- true

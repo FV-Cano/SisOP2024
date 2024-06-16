@@ -170,7 +170,6 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 					Tamanio: 			dataSizeInt,
 				}
 
-				fmt.Println("LE MANDA LA INFO A Kernel (CicloInstruccion) ", stdinreadBody)
 				SendIOData(stdinreadBody, "iodata-stdin")
 				currentPCB.EvictionReason = "BLOCKED_IO_STDIN"
 	
@@ -209,7 +208,6 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 					InterfaceName: 		instruccionDecodificada[1],
 				}
 
-				fmt.Println("LE MANDA LA INFO A Kernel (CicloInstruccion) ", stdoutBody)
 				SendIOData(stdoutBody, "iodata-stdout")
 				currentPCB.EvictionReason = "BLOCKED_IO_STDOUT"
 
@@ -273,10 +271,12 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 	case "WAIT":
 		currentPCB.RequestedResource = instruccionDecodificada[1]
 		currentPCB.EvictionReason = "WAIT"
+		//currentPCB.PC++
 
 	case "SIGNAL":
 		currentPCB.RequestedResource = instruccionDecodificada[1]
 		currentPCB.EvictionReason = "SIGNAL"
+		//currentPCB.PC++
 
 	case "MOV_OUT":
 		// MOV_OUT (Registro Dirección, Registro Origen): Mueve el contenido del Registro Origen al Registro Dirección (DL).

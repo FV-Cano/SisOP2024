@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/big"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -165,9 +166,9 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 			url := fmt.Sprintf("http://%s:%d/io-stdin-read", globals.Configcpu.IP_kernel, globals.Configcpu.Port_kernel)
 
 			bodyStdin, err := json.Marshal(struct {
-				direccionesFisicas []globals.DireccionTamanio
-				interfaz           globals.InterfaceController
-				tamanio            int
+				DireccionesFisicas []globals.DireccionTamanio
+				Interfaz           globals.InterfaceController
+				Tamanio            int
 			}{direccionesFisicas, interfazEncontrada, dataSizeInt})
 			if err != nil {
 				log.Printf("Failed to encode adresses: %v", err)
@@ -210,8 +211,8 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 			url := fmt.Sprintf("http://%s:%d/io-stdout-write", globals.Configcpu.IP_kernel, globals.Configcpu.Port_kernel)
 
 			bodyStdout, err := json.Marshal(struct {
-				direccionesFisicas []globals.DireccionTamanio
-				interfaz           globals.InterfaceController
+				DireccionesFisicas []globals.DireccionTamanio
+				Interfaz           globals.InterfaceController
 			}{direccionesFisicas, interfazEncontrada})
 			if err != nil {
 				log.Printf("Failed to encode adresses: %v", err)
@@ -340,12 +341,14 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		// de memoria correspondiente a la Dirección Lógica que se encuentra
 		// en el Registro Dirección y lo almacena en el Registro Datos.
 
+		// valorReg2 = Direccion Logica -> Direccion Fisica
+		// valorReg1 registro donde tenemos que guardar el valor que esta en la D fisica
+
 	case "MOV_IN":
 
 		var tamanio int
 
 		valorReg2 := currentPCB.CPU_reg[instruccionDecodificada[2]]
-		
 		tipoActualReg2 := reflect.TypeOf(valorReg2).String()
 		
 		direc_log := Convertir[uint32](tipoActualReg2, valorReg2)
@@ -353,30 +356,35 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		fmt.Println("El valor de la direc logica es", int(direc_log))
 
 		// Obtenemos la direcion fisica del reg direccion
-		
 		direcsFisicas := mmu.ObtenerDireccionesFisicas(int(direc_log), tamanio, int(currentPCB.PID))
-		//Leemos el valor de la direccion fisica
-		datos := solicitudesmemoria.SolicitarLectura(direcsFisicas)
+
+		fmt.Println("Direcciones fisicas: ", direcsFisicas)
 		
+		//Obtenemos el valor guardado en las direcciones fisicas
+		datos := solicitudesmemoria.SolicitarLectura(direcsFisicas)
+		fmt.Println("Los datos MOSTRAMELLON son: ", datos)
 		
 		// Almacenamos lo leido en el registro destino
 		tipoReg1 := pcb.TipoReg(instruccionDecodificada[1])
 
-		var datosAAlmacenar interface{} // Declarar la variable con un tipo
-
-		fmt.Println("Los datos MOSTRAMELLON son: ", datos)
+		var datosAAlmacenar uint64
 		
 	
 		if tipoReg1 == "uint32" {
-			fmt.Println("QUE ONDA SOY UINT 32",tipoReg1)
-			
-			datosAAlmacenar = ConvertirUint32(datos) // Usar una función para la conversión
 
-		} else if tipoReg1 == "uint8" {
-			fmt.Println("ACA EL TIPO DEL REG1 ES: ", tipoReg1)
-			datosAAlmacenar = ConvertirUint8(datos) // Usar una función para la conversión
+			bigInt := big.NewInt(0).SetBytes(datos)
+    		datosAAlmacenar = bigInt.Uint64()
+
+			currentPCB.CPU_reg[instruccionDecodificada[1]] = uint32(datosAAlmacenar)
+
+			fmt.Println("LO GUARDE EN 32: ", currentPCB.CPU_reg[instruccionDecodificada[1]])
+		} else {
+			datosAAlmacenar = uint64(datos[0])
+
+			currentPCB.CPU_reg[instruccionDecodificada[1]] = uint8(datosAAlmacenar)
+
+			fmt.Println("LO GUARDE EN 8: ", currentPCB.CPU_reg[instruccionDecodificada[1]])
 		}
-		currentPCB.CPU_reg[instruccionDecodificada[1]] = datosAAlmacenar
 		
 		currentPCB.PC++
 		
@@ -386,30 +394,27 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		//posición de memoria apuntada por el registro DI.
 
 	case "COPY_STRING":
-		
 		tamanio := globals.PasarAInt(instruccionDecodificada[1])
 		//Buscar la direccion logica del registro SI
 		valorRegSI := currentPCB.CPU_reg["SI"]
 		tipoActualRegSI := reflect.TypeOf(valorRegSI).String()
-
 		direc_logicaSI := int(Convertir[uint32](tipoActualRegSI, valorRegSI))
 		
 		direcsFisicasSI := mmu.ObtenerDireccionesFisicas(direc_logicaSI, tamanio, int(currentPCB.PID))
 
-		//  Lee lo que hay en esa direccion fisica pero no todo, lees lo que te pasaron x param
+		// Lee lo que hay en esa direccion fisica pero no todo, lees lo que te pasaron x param
 		datos := solicitudesmemoria.SolicitarLectura(direcsFisicasSI)
 
 		// Busca la direccion logica del registro DI
 		valorRegDI := currentPCB.CPU_reg["DI"]
 		tipoActualRegDI := reflect.TypeOf(valorRegDI).String()
-
 		direc_logicaDI := int(Convertir[uint32](tipoActualRegDI, valorRegDI))
 		
 		// Obtiene la direccion Fisica asociada
 		direcsFisicasDI := mmu.ObtenerDireccionesFisicas(direc_logicaDI, tamanio, int(currentPCB.PID))
 		
 		// Carga en esa direccion fisica lo que leiste antes
-		solicitudesmemoria.SolicitarEscritura(direcsFisicasDI, datos, int(currentPCB.PID)) //([direccion fisica y tamanio], valorAEscribir, pid)
+		solicitudesmemoria.SolicitarEscritura(direcsFisicasDI, string(datos), int(currentPCB.PID)) //([direccion fisica y tamanio], valorAEscribir, pid)
 
 		currentPCB.PC++
 

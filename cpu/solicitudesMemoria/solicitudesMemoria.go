@@ -139,7 +139,6 @@ func SolicitarLectura(direccionesFisicas []globals.DireccionTamanio) []byte {
 		return []byte("error")
 	}
 
-	fmt.Println("Recibí respuesta de memoria: ", respuesta.Body)
 
 	if respuesta.StatusCode != http.StatusOK {
 		return []byte("Error al realizar la lectura")
@@ -149,6 +148,8 @@ func SolicitarLectura(direccionesFisicas []globals.DireccionTamanio) []byte {
 	if err != nil {
 		return []byte("error")
 	}
+	fmt.Println("Recibí respuesta de memoria: ", string(bodyBytes))
+
 	//contenidoLeido := string(bodyBytes)
 	//TODO nosotras no le pasamos el PID cuando lee, emtomses se lo pasamos para poder loguear?
 	//log.Printf("PID: %d - Acción: LEER - Dirección Física: %s - Valor: %s", pid, DireccionesFisicasAString(direccionesTamanios) ,contenidoLeido) 

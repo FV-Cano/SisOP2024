@@ -132,8 +132,8 @@ func ObtenerDireccionesFisicas(direccionLogica int, tamanio int, pid int) []glob
 		fmt.Println("ME METI X PRIM VEZ A LA TABLA, TAMANIO", tamanioTotal)
 		} else { 
 		if(tlb.BuscarEnTLB(pid, numeroPagina)){
-			frame = tlb.FrameEnTLB(pid, numeroPagina)
 			log.Printf("PID: %d - TLB HIT - Pagina: %d", pid, numeroPagina)
+			frame = tlb.FrameEnTLB(pid, numeroPagina)
 			} else { 
 				log.Printf("PID: %d - TLB MISS - Pagina: %d", pid, numeroPagina)
 				frame = Frame_rcv(&globals.CurrentJob, numeroPagina)
@@ -156,9 +156,9 @@ func ObtenerDireccionesFisicas(direccionLogica int, tamanio int, pid int) []glob
 		if i == cantidadPaginas-1 {
 			//Ultima pagina teniendo en cuenta el tamanio
 			numeroPagina++
-			if(tlb.BuscarEnTLB(pid, numeroPagina)){ 			 //TODO: Revisar si es correcto, VER SI ANTES HAY QUE HACER PAGINA++
-				frame = tlb.FrameEnTLB(pid, numeroPagina)
+			if(tlb.BuscarEnTLB(pid, numeroPagina)){ 
 				log.Printf("PID: %d - TLB HIT - Pagina: %d", pid, numeroPagina)
+				frame = tlb.FrameEnTLB(pid, numeroPagina)
 				fmt.Printf("BUSQUE EN TLB PARA EL PID %d LA PAG %d EL FRAME %d ", pid, numeroPagina, frame)
 
 			} else { 

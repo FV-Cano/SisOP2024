@@ -69,6 +69,8 @@ func RegisteredModuleRoutes() http.Handler {
 			"POST /iodata-stdin":		kernel_api.RecvData_stdin,
 			"POST /iodata-stdout":		kernel_api.RecvData_stdout,
 			"POST /io-return-pcb":		kernel_api.RecvPCB_IO,
+			"GET /resource-info":		resources.GETResourcesInstances,
+			"GET /resourceblocked":		resources.GETResourceBlockedJobs,
 		},
 	}
 	return moduleHandler

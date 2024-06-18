@@ -42,8 +42,8 @@ func InstruccionActual(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
 		return
 	}
-
-	log.Printf("La instruccion buscada fue: %s", BuscarInstruccionMap(PasarAInt(pc), PasarAInt(pid)))
+	
+	log.Printf("La instruccion buscada para el PID: %s fue: %s", pid, BuscarInstruccionMap(PasarAInt(pc), PasarAInt(pid)))
 
 	time.Sleep(time.Duration(globals.Configmemory.Delay_response))
 

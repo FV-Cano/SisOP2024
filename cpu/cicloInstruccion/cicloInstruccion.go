@@ -68,7 +68,7 @@ func Fetch(currentPCB *pcb.T_PCB) string {
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		log.Fatal("Error al hacer el request")
+		log.Fatal("Error al crear el request")
 	}
 	q := req.URL.Query()
 	q.Add("pid", strconv.Itoa(int(pid)))
@@ -270,13 +270,17 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 
 	case "WAIT":
 		currentPCB.RequestedResource = instruccionDecodificada[1]
+		fmt.Print("Requested Resource: ", currentPCB.RequestedResource + "\n") // *Lo hace bien 
 		currentPCB.EvictionReason = "WAIT"
-		//currentPCB.PC++
+		currentPCB.PC++
+		pcb.EvictionFlag = true
 
 	case "SIGNAL":
 		currentPCB.RequestedResource = instruccionDecodificada[1]
 		currentPCB.EvictionReason = "SIGNAL"
-		//currentPCB.PC++
+		currentPCB.PC++
+		pcb.EvictionFlag = true
+
 
 	case "MOV_OUT":
 		// MOV_OUT (Registro Dirección, Registro Origen): Mueve el contenido del Registro Origen al Registro Dirección (DL).

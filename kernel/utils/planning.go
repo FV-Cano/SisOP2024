@@ -227,6 +227,9 @@ func EvictionManagement() {
 		globals.JobExecBinary <- true
 
 	case "EXIT":
+		if resource.HasResources(globals.CurrentJob) {
+			globals.CurrentJob =  resource.ReleaseAllResources(globals.CurrentJob)
+		}
 		globals.ChangeState(&globals.CurrentJob, "TERMINATED")
 		globals.JobExecBinary <- true
 		<- globals.MultiprogrammingCounter
@@ -235,11 +238,21 @@ func EvictionManagement() {
 	case "WAIT":
 		if resource.Exists(globals.CurrentJob.RequestedResource) {
 			resource.RequestConsumption(globals.CurrentJob.RequestedResource)
+			globals.JobExecBinary <- true
+		} else {
+			fmt.Print("El recurso no existe\n")
+			globals.CurrentJob.EvictionReason = "EXIT"
+			EvictionManagement()
 		}
 
 	case "SIGNAL":
 		if resource.Exists(globals.CurrentJob.RequestedResource) {
 			resource.ReleaseConsumption(globals.CurrentJob.RequestedResource)
+			globals.JobExecBinary <- true
+		} else {
+			fmt.Print("El recurso no existe\n")
+			globals.CurrentJob.EvictionReason = "EXIT"
+			EvictionManagement()
 		}
 		
 	case "OUT_OF_MEMORY":

@@ -151,17 +151,13 @@ func RealizarResize(tamanio int, pid int) string {
 }
 
 func ModificarTamanioProceso(tamanioProcesoActual int, tamanioProcesoNuevo int, pid int) string {
-
-	//tamanioMemEnPaginas := globals.Configmemory.Memory_size / globals.Configmemory.Page_size
 	var diferenciaEnPaginas = tamanioProcesoNuevo - tamanioProcesoActual
 
-	if (tamanioProcesoActual < tamanioProcesoNuevo) { //ampliar proceso
+	if (tamanioProcesoActual < tamanioProcesoNuevo) { // ampliar proceso
 		log.Printf("PID: %d - Tamanio Actual: %d - Tamanio a Ampliar: %d", pid, tamanioProcesoActual, tamanioProcesoNuevo) // verificar si en el último parámetro va diferenciaEnPaginas
-		fmt.Println("MOSTRAMELON EN PAGINAS EL TAMANIO")
 		return AmpliarProceso(diferenciaEnPaginas, pid)
 	} else if (tamanioProcesoActual > tamanioProcesoNuevo) { // reducir proceso
 		log.Printf("PID: %d - Tamanio Actual: %d - Tamanio a Reducir: %d", pid, tamanioProcesoActual, tamanioProcesoNuevo) // verificar si en el último parámetro va diferenciaEnPaginas
-		fmt.Println("MOSTRAMELON EN PAGINAS EL TAMANIO")
 		return ReducirProceso(diferenciaEnPaginas, pid)
 	}
 	return "OK"
@@ -189,13 +185,15 @@ func AmpliarProceso(diferenciaEnPaginas int, pid int) string {
 }
 
 func ReducirProceso(diferenciaEnPaginas int, pid int) string {
-	for diferenciaEnPaginas > 0 {
+	diferenciaPositiva := diferenciaEnPaginas * -1
+	
+	for diferenciaPositiva > 0 {
 		//obtener el marco que le corresponde a la página
-		marco := BuscarMarco(pid, diferenciaEnPaginas)
+		marco := BuscarMarco(pid, diferenciaPositiva)
 		//marcar marco como desocupado
-		globals.Tablas_de_paginas[pid] = globals.Tablas_de_paginas[pid][:len(globals.Tablas_de_paginas[pid])-diferenciaEnPaginas]
+		globals.Tablas_de_paginas[pid] = globals.Tablas_de_paginas[pid][:len(globals.Tablas_de_paginas[pid])-1]
 		Clear(marco)
-		diferenciaEnPaginas--
+		diferenciaPositiva--
 	}
 	return "OK"
 }
@@ -204,9 +202,9 @@ func ReducirProceso(diferenciaEnPaginas int, pid int) string {
 // ACCESO A TABLA DE PAGINAS: PETICION DESDE CPU (GET)
 // Busca el marco que pertenece al proceso y a la página que envía CPU, dentro del diccionario
 func BuscarMarco(pid int, pagina int) int {
-	fmt.Println("Estoy buscandolon")
+	fmt.Println("Buscando marco...")
 	resultado := globals.Tablas_de_paginas[pid][pagina]
-	fmt.Println("El resultado es: ", resultado)
+	fmt.Println("N° del marco encontrado: ", resultado)
 	return int(resultado)
 }
 

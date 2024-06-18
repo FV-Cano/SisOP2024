@@ -138,7 +138,7 @@ func RealizarResize(tamanio int, pid int) string {
 	// agregar a la tabla de páginas del proceso la cantidad de páginas que se le asignaron
 	log.Printf("Tabla de paginas ANTES DE REDIM del PID %d: %v", pid, globals.Tablas_de_paginas[pid])
 
-	globals.Tablas_de_paginas[int(pid)] = make(globals.TablaPaginas, cantPaginas)
+	// ! globals.Tablas_de_paginas[int(pid)] = make(globals.TablaPaginas, cantPaginas)
 	/*
 	   make(globals.TablaPaginas, cantPaginas) crea una nueva tabla de páginas con una cantidad específica de páginas (cantPaginas).
 	   Cada página en la tabla es un Frame.
@@ -153,19 +153,18 @@ func RealizarResize(tamanio int, pid int) string {
 func ModificarTamanioProceso(tamanioProcesoActual int, tamanioProcesoNuevo int, pid int) string {
 
 	//tamanioMemEnPaginas := globals.Configmemory.Memory_size / globals.Configmemory.Page_size
+	var diferenciaEnPaginas = tamanioProcesoNuevo - tamanioProcesoActual
 
-	if (tamanioProcesoActual <= tamanioProcesoNuevo) { //ampliar proceso
-		var diferenciaEnPaginas = tamanioProcesoNuevo - tamanioProcesoActual
+	if (tamanioProcesoActual < tamanioProcesoNuevo) { //ampliar proceso
 		log.Printf("PID: %d - Tamanio Actual: %d - Tamanio a Ampliar: %d", pid, tamanioProcesoActual, tamanioProcesoNuevo) // verificar si en el último parámetro va diferenciaEnPaginas
 		fmt.Println("MOSTRAMELON EN PAGINAS EL TAMANIO")
 		return AmpliarProceso(diferenciaEnPaginas, pid)
-	} else { // reducir proceso
-		var diferenciaEnPaginas = tamanioProcesoActual - tamanioProcesoNuevo
+	} else if (tamanioProcesoActual > tamanioProcesoNuevo) { // reducir proceso
 		log.Printf("PID: %d - Tamanio Actual: %d - Tamanio a Reducir: %d", pid, tamanioProcesoActual, tamanioProcesoNuevo) // verificar si en el último parámetro va diferenciaEnPaginas
 		fmt.Println("MOSTRAMELON EN PAGINAS EL TAMANIO")
 		return ReducirProceso(diferenciaEnPaginas, pid)
-		
 	}
+	return "OK"
 }
 
 func AmpliarProceso(diferenciaEnPaginas int, pid int) string {
@@ -174,7 +173,7 @@ func AmpliarProceso(diferenciaEnPaginas int, pid int) string {
 		for i := 0; i < globals.Frames; i++ { //out of memory si no hay marcos disponibles
 			if IsNotSet(i) {
 				//setear el valor del marco en la tabla de páginas del proceso
-				globals.Tablas_de_paginas[pid][pagina] = globals.Frame(i)
+				globals.Tablas_de_paginas[pid] = append(globals.Tablas_de_paginas[pid], globals.Frame(i))
 				//marcar marco como ocupado
 				Set(i)
 				marcoDisponible = true
@@ -187,7 +186,6 @@ func AmpliarProceso(diferenciaEnPaginas int, pid int) string {
 		}
 	}
 	return "OK"
-
 }
 
 func ReducirProceso(diferenciaEnPaginas int, pid int) string {
@@ -195,10 +193,9 @@ func ReducirProceso(diferenciaEnPaginas int, pid int) string {
 		//obtener el marco que le corresponde a la página
 		marco := BuscarMarco(pid, diferenciaEnPaginas)
 		//marcar marco como desocupado
-		globals.Tablas_de_paginas[pid] = append(globals.Tablas_de_paginas[pid][:diferenciaEnPaginas], globals.Tablas_de_paginas[pid][diferenciaEnPaginas+1:]...)
+		globals.Tablas_de_paginas[pid] = globals.Tablas_de_paginas[pid][:len(globals.Tablas_de_paginas[pid])-diferenciaEnPaginas]
 		Clear(marco)
 		diferenciaEnPaginas--
-		
 	}
 	return "OK"
 }

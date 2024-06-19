@@ -7,6 +7,6 @@
     "planning_algorithm": "FIFO", 
     "quantum": 2000,
     "resources": ["RA", "RB", "RC"],
-    "resource_instances": [1,2,1],
+    "resource_instances": [2,5,1],
     "multiprogramming": 10
 }

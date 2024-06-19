@@ -1,7 +1,9 @@
 package resource
 
 import (
+	"encoding/json"
 	"log"
+	"net/http"
 
 	kernel_api "github.com/sisoputnfrba/tp-golang/kernel/API"
 	"github.com/sisoputnfrba/tp-golang/kernel/globals"
@@ -29,11 +31,8 @@ func InitResourceMap() {
  * @param pcb: proceso a encolar
 */
 func QueueProcess(resource string, pcb pcb.T_PCB) {
-	globals.MapMutex.Lock()
-	defer globals.MapMutex.Unlock()
-
 	globals.ResourceMap[resource] = append(globals.ResourceMap[resource], pcb)
-	globals.Blocked = append(globals.Blocked, pcb)
+	slice.Push(&globals.Blocked, pcb)
 }
 
 /**
@@ -43,9 +42,6 @@ func QueueProcess(resource string, pcb pcb.T_PCB) {
  * @return pcb: proceso desencolado
 */
 func DequeueProcess(resource string) pcb.T_PCB {
-	globals.MapMutex.Lock()
-	defer globals.MapMutex.Unlock()
-
 	pcb := globals.ResourceMap[resource][0]
 	globals.ResourceMap[resource] = globals.ResourceMap[resource][1:]
 
@@ -61,19 +57,21 @@ func DequeueProcess(resource string) pcb.T_PCB {
 func RequestConsumption(resource string) {
 	globals.MapMutex.Lock()
 	defer globals.MapMutex.Unlock()
-
 	if IsAvailable(resource) {
+		globals.ChangeState(&globals.CurrentJob, "READY")
 		globals.Resource_instances[resource]--
 		globals.CurrentJob.Resources[resource]++
 		log.Print("Se consumio una instancia del recurso: ", resource, "\n")
 		globals.CurrentJob.RequestedResource = ""
 		slice.Push(&globals.STS, globals.CurrentJob)
+		globals.STSCounter <- 1
 	} else {
+		log.Print("No hay instancias del recurso solicitado\n")
 		// * No debería ocurrir un problema de sincronización con esto pero por las dudas dejo el comentario
 		globals.ChangeState(&globals.CurrentJob, "BLOCKED")
 		globals.CurrentJob.PC--	// Se decrementa el PC para que no avance en la próxima ejecución
-		QueueProcess(resource, globals.CurrentJob)
 		log.Print("Entra el proceso PID: ", globals.CurrentJob.PID, " a la cola de bloqueo del recurso ", resource,  "\n")
+		QueueProcess(resource, globals.CurrentJob)
 	}
 }
 
@@ -91,10 +89,12 @@ func ReleaseConsumption(resource string) {
 		return
 	}
 
+	globals.CurrentJob.Resources[resource]--
 	globals.Resource_instances[resource]++
 	log.Print("Se libero una instancia del recurso: ", resource, "\n")
-	slice.Push(&globals.STS, globals.CurrentJob)
+	slice.InsertAtIndex(&globals.STS, 0, globals.CurrentJob)
 	ReleaseJobIfBlocked(resource)
+	globals.STSCounter <- 1
 }
 
 /**
@@ -118,9 +118,6 @@ func Exists(resource string) bool {
  * @return bool: true si hay instancias disponibles, false en caso contrario
 */
 func IsAvailable(resource string) bool {
-	globals.MapMutex.Lock()
-	defer globals.MapMutex.Unlock()
-
 	return globals.Resource_instances[resource] > 0
 }
 
@@ -130,13 +127,55 @@ func IsAvailable(resource string) bool {
  * @param resource: recurso del que se quiere liberar un proceso
 */
 func ReleaseJobIfBlocked(resource string) {
-	globals.MapMutex.Lock()
-	defer globals.MapMutex.Unlock()
-
 	if len(globals.ResourceMap[resource]) > 0 {
 		pcb := DequeueProcess(resource)
 		globals.ChangeState(&pcb, "READY")
 		globals.STS = append(globals.STS, pcb)
 		log.Print("Se desbloqueo el proceso PID: ", pcb.PID, " del recurso ", resource, "\n")
+		globals.STSCounter <- 1
 	}
+}
+
+/**
+ * Libera todos los recursos de un proceso
+
+ * @param pcb: proceso al que se le quieren liberar los recursos
+ * @return pcb: proceso con los recursos liberados
+*/
+func ReleaseAllResources(pcb pcb.T_PCB) pcb.T_PCB {
+	for resource, instances := range globals.CurrentJob.Resources {
+		for i := 0; i < instances; i++ {
+			ReleaseConsumption(resource)
+		}
+	}
+	
+	return pcb
+}
+
+/**
+ * Consulta si un proceso tiene recursos
+
+ * @param pcb: proceso a consultar
+ * @return bool: true si tiene recursos, false en caso contrario
+*/
+func HasResources(pcb pcb.T_PCB) bool {
+	for _, instances := range pcb.Resources {
+		if instances > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+
+// --------------------- API ------------------------
+
+func GETResourcesInstances(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(globals.Resource_instances)
+}
+
+func GETResourceBlockedJobs(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(globals.ResourceMap)
 }

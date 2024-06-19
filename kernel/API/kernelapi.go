@@ -369,8 +369,6 @@ func GetPIDFromString(pidString string) (uint32, error) {
 func RemoveFromBlocked(pid uint32) {
 	for i, pcb := range globals.Blocked {
 		if pcb.PID == pid {
-			globals.MapMutex.Lock()
-			defer globals.MapMutex.Unlock()
 			slice.RemoveAtIndex(&globals.Blocked, i)
 		}
 	}

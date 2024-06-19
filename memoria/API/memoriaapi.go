@@ -103,7 +103,7 @@ func CargarInstrucciones(w http.ResponseWriter, r *http.Request) {
 	}
 	
 	globals.Tablas_de_paginas[int(pid)] = globals.TablaPaginas{}
-	log.Printf("PID: %d - Tamaño: %d", pid, len(globals.Tablas_de_paginas[int(pid)]))
+	log.Printf("PID: %d - Tamaño de tabla: %d", pid, len(globals.Tablas_de_paginas[int(pid)]))
 	respuesta, err := json.Marshal((BuscarInstruccionMap(int(pc), int(pid))))
 	if err != nil {
 		http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)

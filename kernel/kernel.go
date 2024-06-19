@@ -33,10 +33,10 @@ func main() {
 	globals.STSCounter = make (chan int, globals.Configkernel.Multiprogramming)	// Inicializamos el contador de STS
 	resources.InitResourceMap()
 
-	globals.ControlMutex.Lock()
+	// ! globals.ControlMutex.Lock()
 	globals.EmptiedListMutex.Lock() // Bloqueamos la lista de jobs vacía
-	globals.PlanBinary <- false
-
+	globals.LTSPlanBinary <- false
+	globals.STSPlanBinary <- false
 
 	// Iniciar servidor
 	go server.ServerStart(globals.Configkernel.Port, kernelRoutes)
@@ -54,21 +54,22 @@ func UNUSED(x ...interface{}){}
 func RegisteredModuleRoutes() http.Handler {
 	moduleHandler := &server.ModuleHandler{
 		RouteHandlers: map[string]http.HandlerFunc{
+			// Procesos
+			"GET /process": 			kernel_api.ProcessList,
 			"PUT /process": 			kernel_api.ProcessInit,
+			"GET /process/{pid}":		kernel_api.ProcessState,
 			"DELETE /process/{pid}": 	kernel_api.ProcessDelete,
-			"GET /process/{pid}": 		kernel_api.ProcessState,
+			// Planificación
 			"PUT /plani": 				kernel_api.PlanificationStart,
 			"DELETE /plani": 			kernel_api.PlanificationStop,
-			"GET /process": 			kernel_api.ProcessList,
+			// I/O
 			"POST /io-handshake": 		kernel_api.GetIOInterface,
 			"POST /io-interface": 		kernel_api.ExisteInterfaz,
-			// "POST /tiempo-bloq":		kernel_api.Resp_TiempoEspera,	 Deprecated
-			// "POST /io-stdin-read":		kernel_api.IOStdinRead,		 Deprecated
-			// "POST /io-stdout-write":	kernel_api.IOStdoutWrite,		 Deprecated
 			"POST /iodata-gensleep":	kernel_api.RecvData_gensleep,
 			"POST /iodata-stdin":		kernel_api.RecvData_stdin,
 			"POST /iodata-stdout":		kernel_api.RecvData_stdout,
 			"POST /io-return-pcb":		kernel_api.RecvPCB_IO,
+			// Recursos
 			"GET /resource-info":		resources.GETResourcesInstances,
 			"GET /resourceblocked":		resources.GETResourceBlockedJobs,
 		},

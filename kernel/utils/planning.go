@@ -17,67 +17,63 @@ import (
 
 func LTS_Plan() {
 	for {
+		globals.LTSPlanBinary <- true
+		fmt.Println("Comienza el LTS")
 		// Si la lista de jobs está vacía, esperar a que tenga al menos uno
-		fmt.Println("La lista es: ", globals.LTS)
-		fmt.Println("La lista tiene longitud: ", len(globals.LTS))
-
 		if len(globals.LTS) == 0 {
 			globals.EmptiedListMutex.Lock()
 			//continue
 		}
+		fmt.Println("La lista es: ", globals.LTS)
+		fmt.Println("La lista tiene longitud: ", len(globals.LTS))
 		auxJob := slice.Shift(&globals.LTS)
 		//globals.MultiprogrammingCounter <- int(auxJob.PID)
 		globals.MultiprogrammingCounter <- int(auxJob.PID) // !?
 		globals.ChangeState(&auxJob, "READY")
 		slice.Push(&globals.STS, auxJob)
 		globals.STSCounter <- int(auxJob.PID)
-		//globals.ControlMutex.Unlock()
 
 		// Los procesos en READY, EXEC y BLOCKED afectan al grado de multiprogramación
 		// ! Lo cambiamos de linea porque tecnicamente debería ser después de ser agregado a la cola de listos
 		// ? No debería ser antes? Cosa que verifique si puede agregar un proceso a la cola, o si se lo impide el grado multiprogramación?
+		<- globals.LTSPlanBinary
 	}
 }
 
 func STS_Plan() {
 	switch globals.Configkernel.Planning_algorithm {
 	case "FIFO":
-		
 		log.Println("FIFO algorithm")
 		for {
-			//if len(globals.STS) == 0 {
-				//globals.ControlMutex.Lock()
-				//continue
-			//}
-
-			globals.PlanBinary <- true
+			globals.STSPlanBinary <- true
 			<- globals.STSCounter
 			//log.Println("FIFO Planificandoooo")
 			FIFO_Plan()
 			<- globals.JobExecBinary
-			<- globals.PlanBinary
+			<- globals.STSPlanBinary
 		}
 		
 	case "RR":
 		log.Println("ROUND ROBIN algorithm")
 		quantum := uint32(globals.Configkernel.Quantum * int(time.Millisecond))
 		for {
-			globals.PlanBinary <- true
+			globals.STSPlanBinary <- true
 			<- globals.STSCounter
 			//log.Println("RR Planificandoooo")
 			RR_Plan(quantum)
 			<- globals.JobExecBinary
-			<- globals.PlanBinary
+			<- globals.STSPlanBinary
 		}
 		
 	case "VRR":
 		log.Println("VIRTUAL ROUND ROBIN algorithm")
 		for {
-			globals.PlanBinary <- true
+			globals.STSPlanBinary <- true
 			<- globals.STSCounter
+			//log.Println("VRR Planificandoooo")
 			VRR_Plan()
 			<- globals.JobExecBinary
-			<- globals.PlanBinary
+			<- globals.STSPlanBinary
 		}
 
 	default:
@@ -126,9 +122,6 @@ func RR_Plan(quantum uint32) {
 
 	// 4. Esperar a que el proceso termine o sea desalojado por el timer
 	<- globals.PcbReceived
-
-	// fmt.Println("REGISTROS: ", globals.CurrentJob.CPU_reg)
-	// fmt.Println("EVICTION REASON: ", globals.CurrentJob.EvictionReason)
 
 	// 5. Manejo de desalojo
 	EvictionManagement()
@@ -182,10 +175,7 @@ func quantumInterrupt(pcb pcb.T_PCB) {
 
 /**
   - EvictionManagement
-
-  - [ ] Implementar caso de desalojo por bloqueo
-  - [x] Implementar caso de desalojo por timeout
-  - [x] Implementar caso de desalojo por finalización
+  - Maneja los desalojos de los procesos
 *
 */
 func EvictionManagement() {

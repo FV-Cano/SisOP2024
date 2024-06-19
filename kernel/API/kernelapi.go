@@ -15,10 +15,8 @@ import (
 )
 
 /* Glossary:
-
 - BRQ: Body Request
 - BRS: Body Response
-
 */
 
 type ProcessStart_BRQ struct {
@@ -37,9 +35,7 @@ type GetInstructions_BRQ struct {
 
 /**
  * ProcessInit: Inicia un proceso en base a un archivo dentro del FS de Linux.
-	[x] Creación de PCB
-	[x] Asignación de PID incrementando en 1 por cada proceso creado
-	[x] Estado de proceso: NEW
+ 	[ ] Testeada
 */
 func ProcessInit(w http.ResponseWriter, r *http.Request) {
 	var request ProcessStart_BRQ
@@ -78,15 +74,6 @@ func ProcessInit(w http.ResponseWriter, r *http.Request) {
 		RequestedResource: "",
 	}
 
-	// Si la lista está vacía, la desbloqueo
-	if len(globals.LTS) == 0 {
-		globals.EmptiedListMutex.Unlock()
-	}
-
-	globals.LTSMutex.Lock()
-	slice.Push(&globals.LTS, *newPcb)
-	defer globals.LTSMutex.Unlock()
-
 	var respBody ProcessStart_BRS = ProcessStart_BRS{PID: newPcb.PID}
 	response, err := json.Marshal(respBody)
 	if err != nil {
@@ -118,6 +105,15 @@ func ProcessInit(w http.ResponseWriter, r *http.Request) {
 		log.Fatal("Error en CargarInstrucciones (memoria)", err)
 	}
 
+	// Si la lista está vacía, la desbloqueo
+	if len(globals.LTS) == 0 {
+		globals.EmptiedListMutex.Unlock()
+	}
+
+	globals.LTSMutex.Lock()
+	slice.Push(&globals.LTS, *newPcb)
+	defer globals.LTSMutex.Unlock()
+
 	log.Printf("Se crea el proceso %d en %s\n", newPcb.PID, newPcb.State)
 
 	w.WriteHeader(http.StatusOK)
@@ -137,6 +133,8 @@ func generatePID() uint32 {
 	[ ] Liberación de recursos
 	[ ] Liberación de archivos
 	[ ] Liberación de memoria 
+
+	[ ] Testeada
 */
 func ProcessDelete(w http.ResponseWriter, r *http.Request) {
 	pidString := r.PathValue("pid")
@@ -159,27 +157,27 @@ type ProcessStatus_BRS struct {
 
 /**
  * ProcessState: Devuelve el estado de un proceso en base a un PID
-	[ ] Devuelve el estado del proceso
-
-	Por el momento devuelve un dato hardcodeado
+	[ ] Testeada
 */
 func ProcessState(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("HOLAAA ESTOY EN PROCESS STATE")
 	pidString := r.PathValue("pid")
 	pid, err := GetPIDFromString(pidString)
 	if err != nil {
+		fmt.Println("Error al convertir PID a string: ", pidString, err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	process, _ := SearchByID(pid, globals.LTS)
-	if process == nil {
-		process, _ = SearchByID(pid, globals.STS)
-	} 
-	
+	fmt.Println("Vamos a buscar el proceso con PID: ", pid)
+
+	process, _ := SearchByID(pid, getProcessList())
 	if process == nil {
 		http.Error(w, "Process not found", http.StatusNotFound)
 		return
 	}
+
+	fmt.Println("Encontré esto: ", process)
 
 	result := ProcessStatus_BRS{State: process.State}
 
@@ -198,7 +196,8 @@ func ProcessState(w http.ResponseWriter, r *http.Request) {
 */
 func PlanificationStart(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	<- globals.PlanBinary
+	<- globals.LTSPlanBinary
+	<- globals.STSPlanBinary
 }
 
 /**
@@ -208,7 +207,8 @@ func PlanificationStart(w http.ResponseWriter, r *http.Request) {
 */
 func PlanificationStop(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	globals.PlanBinary <- false
+	globals.LTSPlanBinary <- false
+	globals.STSPlanBinary <- false
 }
 
 type ProcessList_BRS struct {
@@ -244,10 +244,14 @@ func ProcessList(w http.ResponseWriter, r *http.Request) {
  * @return []pcb.T_PCB: Lista de procesos
 */
 func getProcessList() []pcb.T_PCB {
-	allProcesses := append(globals.LTS, globals.STS...)
-	allProcesses = append(allProcesses, globals.Blocked...)
+	var allProcesses []pcb.T_PCB
+	allProcesses = append(allProcesses, globals.LTS...)
+	allProcesses = append(allProcesses, globals.STS...)
 	allProcesses = append(allProcesses, globals.STS_Priority...)
-	allProcesses = append(allProcesses, globals.CurrentJob)
+	allProcesses = append(allProcesses, globals.Blocked...)
+	if globals.CurrentJob.PID != 0 {
+		allProcesses = append(allProcesses, globals.CurrentJob)
+	}
 	return allProcesses
 }
 

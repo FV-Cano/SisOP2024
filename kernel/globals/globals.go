@@ -27,13 +27,14 @@ var (
 		PidMutex 				sync.Mutex
 		ProcessesMutex 			sync.Mutex
 		STSMutex 				sync.Mutex //!chequear
-		ControlMutex 			sync.Mutex
+		//ControlMutex 			sync.Mutex		// Creería que no es necesario
 		LTSMutex 				sync.Mutex
 		MapMutex 				sync.Mutex
 		EmptiedListMutex		sync.Mutex
 		EnganiaPichangaMutex	sync.Mutex
 	// * Binarios
-		PlanBinary  			= make (chan bool, 1)
+		LTSPlanBinary  			= make (chan bool, 1)
+		STSPlanBinary  			= make (chan bool, 1)
 		JobExecBinary			= make (chan bool, 1)
 		PcbReceived				= make (chan bool, 1)
 		AvailablePcb			= make (chan bool, 1)

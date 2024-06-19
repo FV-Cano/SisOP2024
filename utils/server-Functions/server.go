@@ -67,6 +67,7 @@ func ServerStart(port int, moduleRoutes ...http.Handler) {
 	mux.HandleFunc("/paquetes", RecibirPaquetes)
 	mux.HandleFunc("/mensaje", RecibirMensaje)
 	mux.HandleFunc("GET /helloworld", HelloWorld)
+	//mux.HandleFunc("GET /process/{pid}", kernel_api.ProcessState)
 
 	for _, route := range moduleRoutes {
 		mux.Handle("/", route)

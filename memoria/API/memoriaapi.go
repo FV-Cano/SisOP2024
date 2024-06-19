@@ -328,10 +328,9 @@ func EscribirEnMemoria(direccionesTamanios []globals.DireccionTamanio, valor_a_e
 	bytesValor := []byte(valor_a_escribir)
 	fmt.Println("VALOR EN BYTES: ", bytesValor)
 	
-	cantEscrita := 0
-	
 	for _, dt := range direccionesTamanios {
-		for cantEscrita < tamanioLimite {
+		cantEscrita := 0
+		for cantEscrita < dt.Tamanio {
 			valorAEscribir := takeAndRemove(dt.Tamanio, &bytesValor)
 			fmt.Println("VALOR TRUNCADO: ", valorAEscribir)
 			
@@ -342,17 +341,6 @@ func EscribirEnMemoria(direccionesTamanios []globals.DireccionTamanio, valor_a_e
 			log.Printf("PID: %d - Accion: ESCRIBIR - Direccion fisica: %d - Tamaño %d", pid, dt.DireccionFisica, dt.Tamanio)
 		}
 	}
-
-
-	/* for _, dt := range direccionesTamanios {
-		bytesValor := []byte(valor_a_escribir)
-		fmt.Println("VALOR EN BYTES: ", bytesValor)
-		valorAEscribir := takeAndRemove(dt.Tamanio, &bytesValor)
-		fmt.Println("VALOR TRUNCADO: ", valorAEscribir)
-		copy(globals.User_Memory[dt.DireccionFisica:], valorAEscribir)
-		log.Printf("PID: %d - Accion: ESCRIBIR - Direccion fisica: %d - Tamaño %d", pid, dt.DireccionFisica, dt.Tamanio)
-	} */
-
 	return "OK"
 }
 	

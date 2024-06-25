@@ -137,7 +137,7 @@ func ObtenerDireccionesFisicas(direccionLogica int, tamanio int, pid int) []glob
 			frame = tlb.FrameEnTLB(pid, numeroPagina)
 		} else { 
 			log.Printf("PID: %d - TLB MISS - Pagina: %d", pid, numeroPagina)
-			frame = Frame_rcv(&globals.CurrentJob, numeroPagina)
+			frame = Frame_rcv(globals.CurrentJob, numeroPagina)
 			tlb.ActualizarTLB(pid, numeroPagina, frame)
 			}		
 			tamanioTotal = frame * tamPagina + desplazamiento + tamanio
@@ -164,7 +164,7 @@ func ObtenerDireccionesFisicas(direccionLogica int, tamanio int, pid int) []glob
 
 			} else { 
 				log.Printf("PID: %d - TLB MISS - Pagina: %d", pid, numeroPagina)
-				frame = Frame_rcv(&globals.CurrentJob, numeroPagina)
+				frame = Frame_rcv(globals.CurrentJob, numeroPagina)
 				tlb.ActualizarTLB(pid, numeroPagina, frame)
 				fmt.Printf("Busco FRAME MEMORIA para el PID %d Y EL FRAME ES %d ",pid,frame)
 			}
@@ -178,7 +178,7 @@ func ObtenerDireccionesFisicas(direccionLogica int, tamanio int, pid int) []glob
 
 			} else { 
 				log.Printf("PID: %d - TLB MISS - Pagina: %d", pid, numeroPagina)
-				frame = Frame_rcv(&globals.CurrentJob, numeroPagina)
+				frame = Frame_rcv(globals.CurrentJob, numeroPagina)
 				fmt.Printf("Busco FRAME MEMORIA para el PID %d Y EL FRAME ES %d ",pid,frame)
 				tlb.ActualizarTLB(pid, numeroPagina, frame)
 				}		

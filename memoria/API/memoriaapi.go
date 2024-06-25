@@ -240,32 +240,59 @@ func FinalizarProceso(w http.ResponseWriter, r *http.Request) {
 // ACCESO A ESPACIO DE USUARIO: Esta petición puede venir tanto de la CPU como de un Módulo de Interfaz de I/O
 type BodyRequestLeer struct {
 	DireccionesTamanios []globals.DireccionTamanio `json:"direcciones_tamanios"`
+	Pid				 	int 					   `json:"pid"`
+}
+//type BodyRequestLeer []globals.DireccionTamanio
+type BodyADevolver struct {
+	Contenido [][]byte `json:"contenido"`
 }
 // le va a llegar la lista de struct de direccionfisica y tamanio
 // por cada struct va a leer la memoria en el tamaño que le pide y devolver el contenido
 func LeerMemoria(w http.ResponseWriter, r *http.Request) {
-	var request []globals.DireccionTamanio
+	var request BodyRequestLeer
+	//var bodyADevolver BodyADevolver
+	//var request []globals.DireccionTamanio
+	log.Println("Llego una peticion de lectura")
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
+		log.Println("Error al decodificar el body")
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	log.Println("llego aca", request)
 
 	fmt.Println("Me mandaron a leer :)")
 
-	contenidoLeido := LeerDeMemoria(request)
-	fmt.Println("CONTENIDO LEIDO: ", contenidoLeido)
+	//bodyADevolver = LeerDeMemoria(bodyRequestLeer.DireccionesTamanios, bodyRequestLeer.Pid)
+	//fmt.Println("CONTENIDO LEIDO: ", bodyADevolver)
 
 	/* respuesta, err := json.Marshal(contenidoLeido)
 	if err != nil {
 		http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
 		return
 	} */
+	log.Println("LLEGUE aca")
 
+	var respBody BodyADevolver = BodyADevolver{
+		Contenido: LeerDeMemoria(request.DireccionesTamanios, request.Pid).Contenido,
+	}
+
+	respuesta, err := json.Marshal(respBody)
+	if err != nil {
+		http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
+		return
+	}
+/*
+	respuesta, err := json.Marshal(bodyADevolver)
+    if err != nil {
+        http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
+        return
+    }*/
+	log.Println("LLEGUE ACAAAA")
 	time.Sleep(time.Duration(globals.Configmemory.Delay_response) * time.Millisecond) //nos dan los milisegundos o lo dejamos así?
 
 	w.WriteHeader(http.StatusOK)
-	w.Write(contenidoLeido)
+	w.Write(respuesta)
 }
 
 // le va a llegar la lista de struct de direccionfisica y tamanio (O LE LLEGA DE A UNA? ES DECIR DE A UNA PETICION)
@@ -280,20 +307,25 @@ func LeerMemoria(w http.ResponseWriter, r *http.Request) {
 	}
 	return string(contenido)
 } */
-func LeerDeMemoria(direccionesTamanios []globals.DireccionTamanio) []byte {
-	/*Ante un pedido de lectura, devolver el valor que se encuentra a partir de la dirección física pedida.*/
-	var contenido []byte
-	for _, dt := range direccionesTamanios {
-		contenido = append(contenido, globals.User_Memory[dt.DireccionFisica:dt.DireccionFisica+dt.Tamanio]...)
-	}
-	return contenido
+func LeerDeMemoria(direccionesTamanios []globals.DireccionTamanio, pid int) BodyADevolver {
+    var bodyADevolver BodyADevolver
+
+    for _, dt := range direccionesTamanios {
+        // Leer el bloque de memoria una vez por cada DireccionTamanio
+        bloque := globals.User_Memory[dt.DireccionFisica : dt.DireccionFisica+dt.Tamanio]
+		log.Printf("PID: %d - Accion: LEER - Direccion fisica: %d - Tamaño %d", pid, dt.DireccionFisica, dt.Tamanio)
+		//log.Printf("Accion: LEER - Direccion fisica: %d - Tamaño %d", dt.DireccionFisica, dt.Tamanio)
+
+        //  agregamos el bloque leído
+        bodyADevolver.Contenido = append(bodyADevolver.Contenido, bloque)
+    }
+    return bodyADevolver
 }
 
 type BodyRequestEscribir struct {
-	DireccionesTamanios []globals.DireccionTamanio
-	Valor_a_escribir    string       
-	TamanioLimite       int
-	Pid                 int      
+	DireccionesTamanios []globals.DireccionTamanio  `json:"direcciones_tamanios"`
+	Valor_a_escribir    string 					    `json:"valor_a_escribir"`
+	Pid                 int 						`json:"pid"`
 }
 
 func EscribirMemoria(w http.ResponseWriter, r *http.Request) {
@@ -303,8 +335,9 @@ func EscribirMemoria(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	fmt.Println("RIQUEST",request)
 
-	escribioEnMemoria := EscribirEnMemoria(request.DireccionesTamanios, request.Valor_a_escribir, request.Pid, request.TamanioLimite)
+	escribioEnMemoria := EscribirEnMemoria(request.DireccionesTamanios, request.Valor_a_escribir, request.Pid)
 
 	respuesta, err := json.Marshal(escribioEnMemoria)
 	if err != nil {
@@ -321,7 +354,7 @@ func EscribirMemoria(w http.ResponseWriter, r *http.Request) {
 }
 
 // por cada struct va a ESCRIBIR la memoria en el tamaño que le pide
-func EscribirEnMemoria(direccionesTamanios []globals.DireccionTamanio, valor_a_escribir string, pid int, tamanioLimite int) string { //TODO: tenemos que validar que al proceso le corresponda escribir ahí o ya la validación la hizo cpu al traducir la dirección?
+func EscribirEnMemoria(direccionesTamanios []globals.DireccionTamanio, valor_a_escribir string, pid int) string { //TODO: tenemos que validar que al proceso le corresponda escribir ahí o ya la validación la hizo cpu al traducir la dirección?
 	/*Ante un pedido de escritura, escribir lo indicado a partir de la dirección física pedida.
 	En caso satisfactorio se responderá un mensaje de ‘OK’.*/
 	

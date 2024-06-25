@@ -27,15 +27,17 @@ func LTS_Plan() {
 		fmt.Println("La lista es: ", globals.LTS)
 		fmt.Println("La lista tiene longitud: ", len(globals.LTS))
 		auxJob := slice.Shift(&globals.LTS)
-		//globals.MultiprogrammingCounter <- int(auxJob.PID)
-		globals.MultiprogrammingCounter <- int(auxJob.PID) // !?
-		globals.ChangeState(&auxJob, "READY")
-		slice.Push(&globals.STS, auxJob)
-		globals.STSCounter <- int(auxJob.PID)
-
-		// Los procesos en READY, EXEC y BLOCKED afectan al grado de multiprogramación
-		// ! Lo cambiamos de linea porque tecnicamente debería ser después de ser agregado a la cola de listos
-		// ? No debería ser antes? Cosa que verifique si puede agregar un proceso a la cola, o si se lo impide el grado multiprogramación?
+		if auxJob.PID != 0 {
+			//globals.MultiprogrammingCounter <- int(auxJob.PID)
+			globals.MultiprogrammingCounter <- int(auxJob.PID) // !?
+			globals.ChangeState(&auxJob, "READY")
+			slice.Push(&globals.STS, auxJob)
+			globals.STSCounter <- int(auxJob.PID)
+	
+			// Los procesos en READY, EXEC y BLOCKED afectan al grado de multiprogramación
+			// ! Lo cambiamos de linea porque tecnicamente debería ser después de ser agregado a la cola de listos
+			// ? No debería ser antes? Cosa que verifique si puede agregar un proceso a la cola, o si se lo impide el grado multiprogramación?
+		}
 		<- globals.LTSPlanBinary
 	}
 }

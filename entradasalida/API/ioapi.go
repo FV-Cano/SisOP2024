@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"os"
@@ -105,7 +104,7 @@ func IOWork() {
 		for {
 			interfaceToWork = <- globals.Stdin_QueueChannel
 
-			IO_STDIN_READ(interfaceToWork.Pcb, interfaceToWork.DireccionesFisicas, interfaceToWork.Tamanio)
+			IO_STDIN_READ(interfaceToWork.Pcb, interfaceToWork.DireccionesFisicas)
 			log.Println("Fin de bloqueo")
 			returnPCB(interfaceToWork.Pcb)
 		}
@@ -136,8 +135,10 @@ func IO_GEN_SLEEP(sleepTime int, pcb pcb.T_PCB) {
 	time.Sleep(time.Duration(sleepTimeTotal) * time.Second)
 }
 
-func IO_STDIN_READ(pcb pcb.T_PCB, direccionesFisicas []globals.DireccionTamanio, tamanio int) {
+func IO_STDIN_READ(pcb pcb.T_PCB, direccionesFisicas []globals.DireccionTamanio) {
 	// Lee datos de la entrada
+	fmt.Println("TE LO MUESTRO", direccionesFisicas)
+
 	fmt.Print("Ingrese datos: ")
 	reader := bufio.NewReader(os.Stdin)
 	data, _ := reader.ReadString('\n')
@@ -146,11 +147,10 @@ func IO_STDIN_READ(pcb pcb.T_PCB, direccionesFisicas []globals.DireccionTamanio,
 	url := fmt.Sprintf("http://%s:%d/write", globals.ConfigIO.Ip_memory, globals.ConfigIO.Port_memory)
 
 	bodyWrite, err := json.Marshal(struct {
-		DireccionesTamanios 			[]globals.DireccionTamanio
-		Valor_a_escribir 				string
-		TamanioLimite 					int
-		Pid 							int
-	} {direccionesFisicas, data, tamanio, int(pcb.PID)})
+		DireccionesTamanios []globals.DireccionTamanio  `json:"direcciones_tamanios"`
+		Valor_a_escribir    string 					    `json:"valor_a_escribir"`
+		Pid                 int 						`json:"pid"`
+	} {direccionesFisicas, data, int(pcb.PID)})
 	if err != nil {
 		log.Printf("Failed to encode data: %v", err)
 	}
@@ -165,13 +165,32 @@ func IO_STDIN_READ(pcb pcb.T_PCB, direccionesFisicas []globals.DireccionTamanio,
 	}
 }
 
+
+type BodyRequestLeer struct {
+	DireccionesTamanios []globals.DireccionTamanio `json:"direcciones_tamanios"`
+	Pid				 	int 					   `json:"pid"`
+}
+type BodyADevolver struct {
+	Contenido [][]byte `json:"contenido"`
+}
 func IO_STDOUT_WRITE(pcb pcb.T_PCB, direccionesFisicas []globals.DireccionTamanio) {
 	url := fmt.Sprintf("http://%s:%d/read", globals.ConfigIO.Ip_memory, globals.ConfigIO.Port_memory)
 
-	bodyRead, err := json.Marshal(direccionesFisicas)
+	bodyRead, err := json.Marshal(BodyRequestLeer{
+		DireccionesTamanios: direccionesFisicas,
+		Pid:                 int(pcb.PID),
+	})
+	if err != nil {
+		return 
+	}
+/*
+	bodyRead, err := json.Marshal(struct {
+		DireccionesTamanios 			[]globals.DireccionTamanio `json:"direcciones_tamanios"`
+		Pid 							int  					   `json:"pid"`		
+	} {direccionesFisicas, int(pcb.PID)})
 	if err != nil {
 		log.Printf("Failed to encode data: %v", err)
-	}
+	}*/
 
 	datosLeidos, err := http.Post(url, "application/json", bytes.NewBuffer(bodyRead))
 	if err != nil {
@@ -182,14 +201,28 @@ func IO_STDOUT_WRITE(pcb pcb.T_PCB, direccionesFisicas []globals.DireccionTamani
 		log.Printf("Unexpected response status: %s", datosLeidos.Status)
 	}
 
+
+	var response BodyADevolver
+
+	err = json.NewDecoder(datosLeidos.Body).Decode(&response) 
+	if err != nil {
+		return
+	}
+	fmt.Println("DIRECCCIONES FISICAS: ", direccionesFisicas)
+
+	var bytesConcatenados []byte
+    for _, sliceBytes := range response.Contenido {
+        bytesConcatenados = append(bytesConcatenados, sliceBytes...)
+    }
+
 	// Lee los datos de la respuesta
-	response, err := io.ReadAll(datosLeidos.Body)
+	/* response, err := io.ReadAll(datosLeidos.Body)
 	if err != nil {
 		log.Printf("Failed to read response body: %v", err)
-	}
+	} */
 
 	// Convierto los datos a string
-	responseString := string(response)
+	responseString := string(bytesConcatenados)
 
 	// Consumo una unidad de trabajo
 	time.Sleep(time.Duration(globals.ConfigIO.Unit_work_time) * time.Millisecond)

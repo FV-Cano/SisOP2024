@@ -26,16 +26,6 @@ import (
  * @return instruccionDecodificada: Instrucción separada
 **/
 
-type BodyRequestLeer struct {
-	DireccionesTamanios []globals.DireccionTamanio `json:"direcciones_tamanios"`
-}
-
-type BodyRequestEscribir struct {
-	DireccionesTamanios []globals.DireccionTamanio `json:"direcciones_tamanios"`
-	Valor_a_escribir    string                     `json:"valor_a_escribir"`
-	Pid                 int                        `json:"pid"`
-}
-
 func Delimitador(instActual string) []string {
 	delimitador := " "
 	i := 0
@@ -353,7 +343,7 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		fmt.Println("Direcciones fisicas: ", direcsFisicas)
 		
 		//Obtenemos el valor guardado en las direcciones fisicas
-		datos := solicitudesmemoria.SolicitarLectura(direcsFisicas)
+		datos := solicitudesmemoria.SolicitarLectura(direcsFisicas, int(currentPCB.PID))
 		fmt.Println("Los datos MOSTRAMELLON son: ", datos)
 		
 		// Almacenamos lo leido en el registro destino
@@ -395,7 +385,7 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		direcsFisicasSI := mmu.ObtenerDireccionesFisicas(direc_logicaSI, tamanio, int(currentPCB.PID))
 
 		// Lee lo que hay en esa direccion fisica pero no todo, lees lo que te pasaron x param
-		datos := solicitudesmemoria.SolicitarLectura(direcsFisicasSI)
+		datos := solicitudesmemoria.SolicitarLectura(direcsFisicasSI, int(currentPCB.PID))
 
 		// Busca la direccion logica del registro DI
 		valorRegDI := currentPCB.CPU_reg["DI"]

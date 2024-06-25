@@ -25,10 +25,10 @@ func PCB_recv(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	globals.CurrentJob = received_pcb
+	globals.CurrentJob = &received_pcb
 
 	for !pcb.EvictionFlag {
-		cicloInstruccion.DecodeAndExecute(&globals.CurrentJob)
+		cicloInstruccion.DecodeAndExecute(globals.CurrentJob)
 
 		fmt.Println("Los registros de la cpu son", globals.CurrentJob.CPU_reg)
 	}

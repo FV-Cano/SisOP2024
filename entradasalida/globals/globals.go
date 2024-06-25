@@ -31,7 +31,6 @@ type StdinRead struct {
 	Pcb 					pcb.T_PCB
 	Inter 					device.T_IOInterface
 	DireccionesFisicas 		[]DireccionTamanio
-	Tamanio 				int
 }
 
 type StdoutWrite struct {

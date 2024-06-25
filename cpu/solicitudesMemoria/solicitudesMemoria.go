@@ -101,9 +101,9 @@ func SolicitarEscritura(direccionesTamanios []globals.DireccionTamanio, valorAEs
 	}
 }
 //Hacemos esta funcion para que quede prolijo loguearla en el log xd
-func DireccionesFisicasAString(direccionesFisicas []globals.DireccionTamanio) string {
+func DireccionesFisicasAString(direccionesTamanios []globals.DireccionTamanio) string {
 	var direccionesString string
-	for i, direc := range direccionesFisicas {
+	for i, direc := range direccionesTamanios {
 		direccionesString += fmt.Sprintf("Dirección física número %d: %d - Tamaño: %d\n", i, direc.DireccionFisica, direc.Tamanio)
 	}
 	return direccionesString
@@ -111,27 +111,36 @@ func DireccionesFisicasAString(direccionesFisicas []globals.DireccionTamanio) st
 
 type BodyRequestLeer struct {
 	DireccionesTamanios []globals.DireccionTamanio `json:"direcciones_tamanios"`
+	Pid                 int                        `json:"pid"`
 }
 
+type BodyADevolver struct {
+	Contenido [][]byte `json:"contenido"`
+}
 // LE SOLICITO A MEMORIA LEER Y DEVOLVER LO QUE ESTÉ EN LA DIREC FISICA INDICADA
-func SolicitarLectura(direccionesFisicas []globals.DireccionTamanio) []byte {
+func SolicitarLectura(direccionesFisicas []globals.DireccionTamanio, pid int) []byte {
+	var bodyResponseLeer BodyADevolver
 
-	/* jsonDirecYTamanio, err := json.Marshal(BodyRequestLeer{
+	jsonDirecYTamanio, err := json.Marshal(BodyRequestLeer{
 		DireccionesTamanios: direccionesFisicas,
-	}) */
-	jsonDirecYTamanio, err := json.Marshal(direccionesFisicas)
+		Pid:                 pid,
+	})
 	if err != nil {
 		return []byte("error")
 	}
+	/*jsonDirecYTamanio, err := json.Marshal(direccionesFisicas)
+	if err != nil {
+		return []byte("error")
+	}*/
 
 	cliente := &http.Client{}
 	url := fmt.Sprintf("http://%s:%d/read", globals.Configcpu.IP_memory, globals.Configcpu.Port_memory)
-	leerMemoria, err := http.NewRequest("GET", url, bytes.NewBuffer(jsonDirecYTamanio))
+	leerMemoria, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonDirecYTamanio))
 	if err != nil {
 		return []byte("error")
 	}
 
-	fmt.Println("Solicito lectura de memoria")
+	fmt.Println("Solicito lectura de memoria", jsonDirecYTamanio)
 
 	leerMemoria.Header.Set("Content-Type", "application/json")
 	respuesta, err := cliente.Do(leerMemoria)
@@ -144,15 +153,29 @@ func SolicitarLectura(direccionesFisicas []globals.DireccionTamanio) []byte {
 		return []byte("Error al realizar la lectura")
 	}
 
-	bodyBytes, err := io.ReadAll(respuesta.Body)
+	fmt.Println("A VER QUE ONDA")
+
+	/*bodyBytes, err := io.ReadAll(respuesta.Body)
 	if err != nil {
 		return []byte("error")
+	}*/
+	//fmt.Println("Recibí respuesta de memoria: ", string(bodyBytes))
+	
+	err = json.NewDecoder(respuesta.Body).Decode(&bodyResponseLeer) 
+	if err != nil {
+		return []byte("error al deserializar la respuesta")
 	}
-	fmt.Println("Recibí respuesta de memoria: ", string(bodyBytes))
+	fmt.Println("DIRECCCIONES FISICAS: ", direccionesFisicas)
 
-	//contenidoLeido := string(bodyBytes)
-	//TODO nosotras no le pasamos el PID cuando lee, emtomses se lo pasamos para poder loguear?
-	//log.Printf("PID: %d - Acción: LEER - Dirección Física: %s - Valor: %s", pid, DireccionesFisicasAString(direccionesTamanios) ,contenidoLeido) 
+	for i, df := range direccionesFisicas {
+		contenido := bodyResponseLeer.Contenido[i]
+		fmt.Println("Contenido: ", contenido)
+		log.Printf("PID: %d - Acción: LEER - Dirección Física: %d - Valor: %b", pid, df.DireccionFisica, contenido) 
+	}
 
-	return bodyBytes
+	var bytesConcatenados []byte
+    for _, sliceBytes := range bodyResponseLeer.Contenido {
+        bytesConcatenados = append(bytesConcatenados, sliceBytes...)
+    }
+	return bytesConcatenados
 }

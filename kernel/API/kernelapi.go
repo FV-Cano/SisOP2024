@@ -451,7 +451,6 @@ type StdinRead struct {
 	Pcb 				pcb.T_PCB
 	Inter 				device.T_IOInterface
 	DireccionesFisicas 	[]globals.DireccionTamanio
-	Tamanio 			int
 }
 
 type StdoutWrite struct {
@@ -514,7 +513,6 @@ func SolicitarStdinRead(pcb pcb.T_PCB) {
 		Pcb: 					pcb,
 		Inter:	 				newInter,
 		DireccionesFisicas:		stdinDataDecoded.DireccionesFisicas,
-		Tamanio: 				stdinDataDecoded.Tamanio,
 	}
 
 	fmt.Println("LE QUIERE MANDAR A IO: ", stdinRead)

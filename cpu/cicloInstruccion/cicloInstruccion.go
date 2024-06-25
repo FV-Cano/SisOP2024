@@ -312,6 +312,9 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		} else {
 			valor2EnString = string(Convertir[uint8](tipoActualReg2, valorReg2))
 		}
+
+		fmt.Println("EL STRING ES", valor2EnString)
+
 		solicitudesmemoria.SolicitarEscritura(direcsFisicas, valor2EnString, int(currentPCB.PID)) //([direccion fisica y tamanio], valorAEscribir, pid
 
 	

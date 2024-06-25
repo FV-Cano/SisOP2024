@@ -93,20 +93,19 @@ func SolicitarEscritura(direccionesTamanios []globals.DireccionTamanio, valorAEs
 	respuestaSinComillas := strings.Trim(respuestaEnString, `"`)
 
 	fmt.Println("Respuesta de memoria: ", respuestaSinComillas)
+	fmt.Println("Valor a escribir: ", valorAEscribir)
+	valorAEscribirEnBytes := []byte(valorAEscribir)
+	fmt.Println("Valor a escribir en bytes: ", valorAEscribirEnBytes)
 	
 	if respuestaSinComillas != "OK" {
 		fmt.Println("Se produjo un error al escribir", respuestaSinComillas)
 	} else {
-		log.Printf("PID: %d - Acción: ESCRIBIR - %s - Valor: %s", pid, DireccionesFisicasAString(direccionesTamanios) ,valorAEscribir)
+		for _, df := range direccionesTamanios {
+			cantEscrita := 0
+			log.Printf("PID: %d - Acción: ESCRIBIR - Dirección Física: %d - Valor: %b", pid, df.DireccionFisica, valorAEscribirEnBytes[cantEscrita: df.Tamanio]) 
+			cantEscrita += df.Tamanio
+		}
 	}
-}
-//Hacemos esta funcion para que quede prolijo loguearla en el log xd
-func DireccionesFisicasAString(direccionesTamanios []globals.DireccionTamanio) string {
-	var direccionesString string
-	for i, direc := range direccionesTamanios {
-		direccionesString += fmt.Sprintf("Dirección física número %d: %d - Tamaño: %d\n", i, direc.DireccionFisica, direc.Tamanio)
-	}
-	return direccionesString
 }
 
 type BodyRequestLeer struct {

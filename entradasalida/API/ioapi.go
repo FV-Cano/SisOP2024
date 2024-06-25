@@ -137,8 +137,6 @@ func IO_GEN_SLEEP(sleepTime int, pcb pcb.T_PCB) {
 
 func IO_STDIN_READ(pcb pcb.T_PCB, direccionesFisicas []globals.DireccionTamanio) {
 	// Lee datos de la entrada
-	fmt.Println("TE LO MUESTRO", direccionesFisicas)
-
 	fmt.Print("Ingrese datos: ")
 	reader := bufio.NewReader(os.Stdin)
 	data, _ := reader.ReadString('\n')
@@ -208,7 +206,6 @@ func IO_STDOUT_WRITE(pcb pcb.T_PCB, direccionesFisicas []globals.DireccionTamani
 	if err != nil {
 		return
 	}
-	fmt.Println("DIRECCCIONES FISICAS: ", direccionesFisicas)
 
 	var bytesConcatenados []byte
     for _, sliceBytes := range response.Contenido {

@@ -314,7 +314,6 @@ func LeerDeMemoria(direccionesTamanios []globals.DireccionTamanio, pid int) Body
         // Leer el bloque de memoria una vez por cada DireccionTamanio
         bloque := globals.User_Memory[dt.DireccionFisica : dt.DireccionFisica+dt.Tamanio]
 		log.Printf("PID: %d - Accion: LEER - Direccion fisica: %d - Tamaño %d", pid, dt.DireccionFisica, dt.Tamanio)
-		//log.Printf("Accion: LEER - Direccion fisica: %d - Tamaño %d", dt.DireccionFisica, dt.Tamanio)
 
         //  agregamos el bloque leído
         bodyADevolver.Contenido = append(bodyADevolver.Contenido, bloque)
@@ -352,6 +351,7 @@ func EscribirMemoria(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write(respuesta)
 }
+
 
 // por cada struct va a ESCRIBIR la memoria en el tamaño que le pide
 func EscribirEnMemoria(direccionesTamanios []globals.DireccionTamanio, valor_a_escribir string, pid int) string { //TODO: tenemos que validar que al proceso le corresponda escribir ahí o ya la validación la hizo cpu al traducir la dirección?

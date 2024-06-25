@@ -149,43 +149,49 @@ func ObtenerDireccionesFisicas(direccionLogica int, tamanio int, pid int) []glob
 	}
 	
 	//Primer pagina teniendo en cuenta el desplazamiento
-	slice.Push(&direccion_y_tamanio, globals.DireccionTamanio{DireccionFisica: frame*tamPagina + desplazamiento, Tamanio: tamPagina - desplazamiento})
-	tamanioRestante := tamanio - (tamPagina - desplazamiento)
-	fmt.Println("AGREGUE DIREC FISICA A LA LISTA")
-
-	for i := 1; i < cantidadPaginas; i++ {
-		if i == cantidadPaginas-1 {
-			//Ultima pagina teniendo en cuenta el tamanio
-			numeroPagina++
-			if(tlb.BuscarEnTLB(pid, numeroPagina)){ 
-				log.Printf("PID: %d - TLB HIT - Pagina: %d", pid, numeroPagina)
-				frame = tlb.FrameEnTLB(pid, numeroPagina)
-				fmt.Printf("BUSQUE EN TLB PARA EL PID %d LA PAG %d EL FRAME %d ", pid, numeroPagina, frame)
-
-			} else { 
-				log.Printf("PID: %d - TLB MISS - Pagina: %d", pid, numeroPagina)
-				frame = Frame_rcv(globals.CurrentJob, numeroPagina)
-				tlb.ActualizarTLB(pid, numeroPagina, frame)
-				fmt.Printf("Busco FRAME MEMORIA para el PID %d Y EL FRAME ES %d ",pid,frame)
+	if(tamanio < tamPagina - desplazamiento){
+		slice.Push(&direccion_y_tamanio, globals.DireccionTamanio{DireccionFisica: frame*tamPagina + desplazamiento, Tamanio: tamanio})
+	} else {
+		slice.Push(&direccion_y_tamanio, globals.DireccionTamanio{DireccionFisica: frame*tamPagina + desplazamiento, Tamanio: tamPagina - desplazamiento})
+		tamanioRestante := tamanio - (tamPagina - desplazamiento)
+		
+		fmt.Println("AGREGUE DIREC FISICA A LA LISTA")
+	
+		for i := 1; i < cantidadPaginas; i++ {
+			if i == cantidadPaginas-1 {
+				//Ultima pagina teniendo en cuenta el tamanio
+				numeroPagina++
+				if(tlb.BuscarEnTLB(pid, numeroPagina)){ 
+					log.Printf("PID: %d - TLB HIT - Pagina: %d", pid, numeroPagina)
+					frame = tlb.FrameEnTLB(pid, numeroPagina)
+					fmt.Printf("BUSQUE EN TLB PARA EL PID %d LA PAG %d EL FRAME %d ", pid, numeroPagina, frame)
+	
+				} else { 
+					log.Printf("PID: %d - TLB MISS - Pagina: %d", pid, numeroPagina)
+					frame = Frame_rcv(globals.CurrentJob, numeroPagina)
+					tlb.ActualizarTLB(pid, numeroPagina, frame)
+					fmt.Printf("Busco FRAME MEMORIA para el PID %d Y EL FRAME ES %d ",pid,frame)
+				}
+				slice.Push(&direccion_y_tamanio, globals.DireccionTamanio{DireccionFisica: frame * tamPagina, Tamanio: tamanioRestante})
+			} else { //Paginas del medio sin tener en cuenta el desplazamiento
+				numeroPagina++
+				if(tlb.BuscarEnTLB(pid, numeroPagina)){
+					log.Printf("PID: %d - TLB HIT - Pagina: %d", pid, numeroPagina)
+					frame = tlb.FrameEnTLB(pid, numeroPagina)
+					fmt.Printf("BUSQUE EN TLB PARA EL PID %d LA PAG %d EL FRAME %d ", pid, numeroPagina, frame)
+	
+				} else { 
+					log.Printf("PID: %d - TLB MISS - Pagina: %d", pid, numeroPagina)
+					frame = Frame_rcv(globals.CurrentJob, numeroPagina)
+					fmt.Printf("Busco FRAME MEMORIA para el PID %d Y EL FRAME ES %d ",pid,frame)
+					tlb.ActualizarTLB(pid, numeroPagina, frame)
+					}		
+				slice.Push(&direccion_y_tamanio, globals.DireccionTamanio{DireccionFisica: frame * tamPagina, Tamanio: tamPagina})
+				tamanioRestante -= tamPagina
 			}
-			slice.Push(&direccion_y_tamanio, globals.DireccionTamanio{DireccionFisica: frame * tamPagina, Tamanio: tamanioRestante})
-		} else { //Paginas del medio sin tener en cuenta el desplazamiento
-			numeroPagina++
-			if(tlb.BuscarEnTLB(pid, numeroPagina)){
-				log.Printf("PID: %d - TLB HIT - Pagina: %d", pid, numeroPagina)
-				frame = tlb.FrameEnTLB(pid, numeroPagina)
-				fmt.Printf("BUSQUE EN TLB PARA EL PID %d LA PAG %d EL FRAME %d ", pid, numeroPagina, frame)
-
-			} else { 
-				log.Printf("PID: %d - TLB MISS - Pagina: %d", pid, numeroPagina)
-				frame = Frame_rcv(globals.CurrentJob, numeroPagina)
-				fmt.Printf("Busco FRAME MEMORIA para el PID %d Y EL FRAME ES %d ",pid,frame)
-				tlb.ActualizarTLB(pid, numeroPagina, frame)
-				}		
-			slice.Push(&direccion_y_tamanio, globals.DireccionTamanio{DireccionFisica: frame * tamPagina, Tamanio: tamPagina})
-			tamanioRestante -= tamPagina
 		}
 	}
+	
 	return direccion_y_tamanio
 }
 

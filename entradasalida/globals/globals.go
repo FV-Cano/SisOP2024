@@ -39,13 +39,28 @@ type StdoutWrite struct {
 	DireccionesFisicas 		[]DireccionTamanio
 }
 
+type DialFSRequest struct {
+	Pcb 					pcb.T_PCB
+	Inter 					device.T_IOInterface
+	Operacion 				string
+	NombreArchivo 			string
+	Direccion 				int
+	Tamanio 				int
+	Puntero 				int
+}
 
 var ConfigIO 				T_ConfigIO
 var Generic_QueueChannel 	chan GenSleep
 var Stdin_QueueChannel 		chan StdinRead
 var Stdout_QueueChannel 	chan StdoutWrite
+var DialFS_QueueChannel 	chan DialFSRequest
 
 type DireccionTamanio struct {
 	DireccionFisica 		int
 	Tamanio         		int
+}
+
+type FileMetadata struct {
+	Initial_block 			int 	`json:"initial_block"`
+	Size 					int 	`json:"size"`
 }

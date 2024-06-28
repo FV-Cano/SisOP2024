@@ -10,6 +10,7 @@ import (
 	"os"
 	"time"
 
+	FS_api "github.com/sisoputnfrba/tp-golang/entradasalida/FS"
 	"github.com/sisoputnfrba/tp-golang/entradasalida/globals"
 	"github.com/sisoputnfrba/tp-golang/utils/device"
 	"github.com/sisoputnfrba/tp-golang/utils/generics"
@@ -85,6 +86,18 @@ func InterfaceQueuePCB(w http.ResponseWriter, r *http.Request) {
 
 		log.Print("Nueva PCB ID: ", decodedStruct.Pcb.PID, " para usar Interfaz")
 		globals.Stdout_QueueChannel <- decodedStruct
+	
+	case "DialFS":
+		var decodedStruct globals.DialFSRequest
+
+		err := json.NewDecoder(r.Body).Decode(&decodedStruct)
+		if err != nil {
+			http.Error(w, "Bad request", http.StatusBadRequest)
+			return
+		}
+
+		log.Print("Nueva PCB ID: ", decodedStruct.Pcb.PID, " para usar Interfaz")
+		globals.DialFS_QueueChannel <- decodedStruct
 	}
 }
 
@@ -114,6 +127,16 @@ func IOWork() {
 			interfaceToWork = <- globals.Stdout_QueueChannel
 
 			IO_STDOUT_WRITE(interfaceToWork.Pcb, interfaceToWork.DireccionesFisicas)
+			log.Println("Fin de bloqueo")
+			returnPCB(interfaceToWork.Pcb)
+		}
+
+	case "DialFS":
+		var interfaceToWork globals.DialFSRequest
+		for {
+			interfaceToWork = <- globals.DialFS_QueueChannel
+			
+			IO_DIALFS(interfaceToWork)
 			log.Println("Fin de bloqueo")
 			returnPCB(interfaceToWork.Pcb)
 		}
@@ -234,4 +257,21 @@ func IO_STDOUT_WRITE(pcb pcb.T_PCB, direccionesFisicas []globals.DireccionTamani
 
 // ------------------------- DIALFS -------------------------
 
-// Compatacion
+func IO_DIALFS(interfaceToWork globals.DialFSRequest) {
+	switch interfaceToWork.Operacion {
+	case "CREATE":
+		FS_api.CreateFile(interfaceToWork.NombreArchivo)
+		
+	case "DELETE":
+		FS_api.DeleteFile(interfaceToWork.NombreArchivo)
+		
+	case "READ":
+		FS_api.ReadFile(interfaceToWork.NombreArchivo, interfaceToWork.Direccion, interfaceToWork.Tamanio, interfaceToWork.Puntero)
+
+	case "WRITE":
+		FS_api.WriteFile(interfaceToWork.NombreArchivo, interfaceToWork.Direccion, interfaceToWork.Tamanio, interfaceToWork.Puntero)
+	
+	case "TRUNCATE":	
+		FS_api.TruncateFile(interfaceToWork.NombreArchivo, interfaceToWork.Tamanio)	
+	}
+}

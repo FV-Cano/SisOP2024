@@ -231,3 +231,7 @@ func IO_STDOUT_WRITE(pcb pcb.T_PCB, direccionesFisicas []globals.DireccionTamani
 	writer.Flush()
 	fmt.Print("*\n")
 }
+
+// ------------------------- DIALFS -------------------------
+
+// Compatacion

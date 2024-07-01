@@ -101,6 +101,188 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 	}
 
 	switch instruccionDecodificada[0] {
+	case "IO_FS_CREATE":
+		cond, err := HallarInterfaz(instruccionDecodificada[1], "DialFS")
+		if err != nil {
+			log.Print("La interfaz no existe o no acepta operaciones de IO Genéricas")
+			currentPCB.EvictionReason = "EXIT"
+		} else {
+			nombre_archivo := instruccionDecodificada[2]
+			if cond {
+				
+				var fsCreateBody = struct {
+					InterfaceName string
+					FileName      string
+					Operation     string
+					}{
+						InterfaceName: instruccionDecodificada[1],
+						FileName:      nombre_archivo,
+						Operation:     "CREATE",
+					}
+					
+					SendIOData(fsCreateBody, "iodata-dialfs")
+					currentPCB.EvictionReason = "BLOCKED_IO_DIALFS"
+			} else {
+				currentPCB.EvictionReason = "EXIT"
+			}
+		}
+		pcb.EvictionFlag = true
+		currentPCB.PC++
+
+	case "IO_FS_DELETE":
+		cond, err := HallarInterfaz(instruccionDecodificada[1], "DialFS")
+		if err != nil {
+			log.Print("La interfaz no existe o no acepta operaciones de IO Genéricas")
+			currentPCB.EvictionReason = "EXIT"
+		} else {
+			nombre_archivo := instruccionDecodificada[2]
+			if cond {
+				
+				var fsCreateBody = struct {
+					InterfaceName string
+					FileName      string
+					Operation     string
+					}{
+						InterfaceName: instruccionDecodificada[1],
+						FileName:      nombre_archivo,
+						Operation:     "DELETE",
+					}
+					
+					SendIOData(fsCreateBody, "iodata-dialfs")
+					currentPCB.EvictionReason = "BLOCKED_IO_DIALFS"
+			} else {
+				currentPCB.EvictionReason = "EXIT"
+			}
+		}
+		pcb.EvictionFlag = true
+		currentPCB.PC++
+
+	case "IO_FS_TRUNCATE":
+		cond, err := HallarInterfaz(instruccionDecodificada[1], "DialFS")
+		if err != nil {
+			log.Print("La interfaz no existe o no acepta operaciones de IO Genéricas")
+			currentPCB.EvictionReason = "EXIT"
+		} else {
+			nombre_archivo := instruccionDecodificada[2]
+			tamanio_archivo, err := strconv.Atoi(instruccionDecodificada[3])
+			if err != nil {
+				log.Fatal("Error al convertir el tamaño del archivo a entero")
+			}
+			if cond {
+				
+				var fsCreateBody = struct {
+					InterfaceName string
+					FileName      string
+					Size		  int
+					Operation     string
+					}{
+						InterfaceName:	instruccionDecodificada[1],
+						FileName:		nombre_archivo,
+						Size:			tamanio_archivo,
+						Operation:		"TRUNCATE",
+					}
+					
+					SendIOData(fsCreateBody, "iodata-dialfs")
+					currentPCB.EvictionReason = "BLOCKED_IO_DIALFS"
+			} else {
+				currentPCB.EvictionReason = "EXIT"
+			}
+		}
+		pcb.EvictionFlag = true
+		currentPCB.PC++
+
+	case "IO_FS_WRITE":
+		cond, err := HallarInterfaz(instruccionDecodificada[1], "DialFS")
+		if err != nil {
+			log.Print("La interfaz no existe o no acepta operaciones de IO Genéricas")
+			currentPCB.EvictionReason = "EXIT"
+		} else {
+			nombre_archivo := instruccionDecodificada[2]
+			direccion, err := strconv.Atoi(instruccionDecodificada[3])
+			if err != nil {
+				log.Fatal("Error al convertir la dirección a entero")
+			}
+			tamanio_archivo, err := strconv.Atoi(instruccionDecodificada[4])
+			if err != nil {
+				log.Fatal("Error al convertir el tamaño del archivo a entero")
+			}
+			puntero, err := strconv.Atoi(instruccionDecodificada[5])
+			if err != nil {
+				log.Fatal("Error al convertir el puntero a entero")
+			}
+			if cond {
+				
+				var fsCreateBody = struct {
+					InterfaceName		string
+					FileName			string
+					Address				int
+					Size				int
+					Pointer				int
+					Operation			string
+					}{
+						InterfaceName:	instruccionDecodificada[1],
+						FileName:		nombre_archivo,
+						Address:		direccion,
+						Size:			tamanio_archivo,
+						Pointer:		puntero,
+						Operation:		"WRITE",
+					}
+					
+					SendIOData(fsCreateBody, "iodata-dialfs")
+					currentPCB.EvictionReason = "BLOCKED_IO_DIALFS"
+			} else {
+				currentPCB.EvictionReason = "EXIT"
+			}
+		}
+		pcb.EvictionFlag = true
+		currentPCB.PC++
+
+	case "IO_FS_READ":
+		cond, err := HallarInterfaz(instruccionDecodificada[1], "DialFS")
+		if err != nil {
+			log.Print("La interfaz no existe o no acepta operaciones de IO Genéricas")
+			currentPCB.EvictionReason = "EXIT"
+		} else {
+			nombre_archivo := instruccionDecodificada[2]
+			direccion, err := strconv.Atoi(instruccionDecodificada[3])
+			if err != nil {
+				log.Fatal("Error al convertir la dirección a entero")
+			}
+			tamanio_archivo, err := strconv.Atoi(instruccionDecodificada[4])
+			if err != nil {
+				log.Fatal("Error al convertir el tamaño del archivo a entero")
+			}
+			puntero, err := strconv.Atoi(instruccionDecodificada[5])
+			if err != nil {
+				log.Fatal("Error al convertir el puntero a entero")
+			}
+			if cond {
+				
+				var fsCreateBody = struct {
+					InterfaceName		string
+					FileName			string
+					Address				int
+					Size				int
+					Pointer				int
+					Operation			string
+					}{
+						InterfaceName:	instruccionDecodificada[1],
+						FileName:		nombre_archivo,
+						Address:		direccion,
+						Size:			tamanio_archivo,
+						Pointer:		puntero,
+						Operation:		"READ",
+					}
+					
+					SendIOData(fsCreateBody, "iodata-dialfs")
+					currentPCB.EvictionReason = "BLOCKED_IO_DIALFS"
+			} else {
+				currentPCB.EvictionReason = "EXIT"
+			}
+		}
+		pcb.EvictionFlag = true
+		currentPCB.PC++
+		
 	case "IO_GEN_SLEEP":
 		cond, err := HallarInterfaz(instruccionDecodificada[1], "GENERICA")
 		if err != nil {

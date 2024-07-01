@@ -55,23 +55,24 @@ func RegisteredModuleRoutes() http.Handler {
 	moduleHandler := &server.ModuleHandler{
 		RouteHandlers: map[string]http.HandlerFunc{
 			// Procesos
-			"GET /process": 			kernel_api.ProcessList,
-			"PUT /process": 			kernel_api.ProcessInit,
-			"GET /process/{pid}":		kernel_api.ProcessState,
-			"DELETE /process/{pid}": 	kernel_api.ProcessDelete,
+			"GET /process": 					kernel_api.ProcessList,
+			"PUT /process": 					kernel_api.ProcessInit,
+			"GET /process/{pid}":				kernel_api.ProcessState,
+			"DELETE /process/{pid}": 			kernel_api.ProcessDelete,
 			// Planificación
-			"PUT /plani": 				kernel_api.PlanificationStart,
-			"DELETE /plani": 			kernel_api.PlanificationStop,
+			"PUT /plani": 							kernel_api.PlanificationStart,
+			"DELETE /plani": 					kernel_api.PlanificationStop,
 			// I/O
-			"POST /io-handshake": 		kernel_api.GetIOInterface,
-			"POST /io-interface": 		kernel_api.ExisteInterfaz,
-			"POST /iodata-gensleep":	kernel_api.RecvData_gensleep,
-			"POST /iodata-stdin":		kernel_api.RecvData_stdin,
-			"POST /iodata-stdout":		kernel_api.RecvData_stdout,
-			"POST /io-return-pcb":		kernel_api.RecvPCB_IO,
+			"POST /io-handshake": 				kernel_api.GetIOInterface,
+			"POST /io-interface": 				kernel_api.ExisteInterfaz,
+			"POST /iodata-gensleep":			kernel_api.RecvData_gensleep,
+			"POST /iodata-stdin":				kernel_api.RecvData_stdin,
+			"POST /iodata-stdout":				kernel_api.RecvData_stdout,
+			"POST /iodata-dialfs":				kernel_api.RecvData_dialfs,
+			"POST /io-return-pcb":				kernel_api.RecvPCB_IO,
 			// Recursos
-			"GET /resource-info":		resources.GETResourcesInstances,
-			"GET /resourceblocked":		resources.GETResourceBlockedJobs,
+			"GET /resource-info":				resources.GETResourcesInstances,
+			"GET /resourceblocked":				resources.GETResourceBlockedJobs,
 		},
 	}
 	return moduleHandler

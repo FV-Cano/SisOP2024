@@ -42,11 +42,11 @@ type StdoutWrite struct {
 type DialFSRequest struct {
 	Pcb 					pcb.T_PCB
 	Inter 					device.T_IOInterface
-	Operacion 				string
 	NombreArchivo 			string
-	Direccion 				int
 	Tamanio 				int
-	Puntero 				int
+	Puntero					int
+	Direccion				int
+	Operacion				string
 }
 
 var ConfigIO 				T_ConfigIO

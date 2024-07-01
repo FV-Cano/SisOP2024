@@ -10,7 +10,7 @@ import (
 	"os"
 	"time"
 
-	FS_api "github.com/sisoputnfrba/tp-golang/entradasalida/FS"
+	FS_api "github.com/sisoputnfrba/tp-golang/entradasalida/dialfs"
 	"github.com/sisoputnfrba/tp-golang/entradasalida/globals"
 	"github.com/sisoputnfrba/tp-golang/utils/device"
 	"github.com/sisoputnfrba/tp-golang/utils/generics"

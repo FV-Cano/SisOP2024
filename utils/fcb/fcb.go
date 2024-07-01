@@ -7,5 +7,3 @@ type T_FCB struct {
 	Nombre 				string 			`json:"name"`
 	Bloque_inicial 		int				`json:"initial_block"`
 }
-
-var EvictionFlag bool = false

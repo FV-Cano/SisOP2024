@@ -213,6 +213,15 @@ func EvictionManagement() {
 		}()
 		globals.JobExecBinary <- true
 
+	case "BLOCKED_IO_DIALFS":
+		globals.EnganiaPichangaMutex.Lock()
+		globals.ChangeState(&globals.CurrentJob, "BLOCKED")
+		slice.Push(&globals.Blocked, globals.CurrentJob)
+		go func(){
+			kernel_api.SolicitarDialFS(globals.CurrentJob)
+		}()
+		globals.JobExecBinary <- true
+
 	case "TIMEOUT":
 		globals.ChangeState(&globals.CurrentJob, "READY")
 		globals.STS = append(globals.STS, globals.CurrentJob)

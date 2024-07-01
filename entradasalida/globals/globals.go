@@ -5,6 +5,13 @@ import (
 	"github.com/sisoputnfrba/tp-golang/utils/pcb"
 )
 
+var (
+	CurrentBitMap []int
+	Blocks []byte
+	// TODO: Borrar estructura FCB de utils
+	Fcbs map[string]Metadata
+)
+
 type T_ConfigIO struct {
 	Ip                 		string `json:"ip"`
 	Port               		int    `json:"port"`
@@ -60,7 +67,8 @@ type DireccionTamanio struct {
 	Tamanio         		int
 }
 
-type FileMetadata struct {
-	Initial_block 			int 	`json:"initial_block"`
+type Metadata struct {
+	InitialBlock 			int 	`json:"initial_block"`
 	Size 					int 	`json:"size"`
 }
+

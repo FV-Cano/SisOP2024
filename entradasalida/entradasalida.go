@@ -13,8 +13,6 @@ import (
 	cfg "github.com/sisoputnfrba/tp-golang/utils/config"
 )
 
-// una funcion que codifique las unidades de trabajo en un json
-
 func main() {
 	// Iniciar loggers
 	logger.ConfigurarLogger("io.log")
@@ -37,6 +35,12 @@ func main() {
 	globals.Generic_QueueChannel = make(chan globals.GenSleep, 1)
 	globals.Stdin_QueueChannel = make(chan globals.StdinRead, 1)
 	globals.Stdout_QueueChannel = make(chan globals.StdoutWrite, 1)
+	globals.DialFS_QueueChannel = make(chan globals.DialFSRequest, 1)
+
+	// Si la interfaz es de tipo DialFS se debe inicializar el sistema de archivos
+	if globals.ConfigIO.Type == "DialFS" {
+		IO_api.InicializarFS()
+	}
 
 	go IO_api.IOWork()
 
@@ -47,9 +51,6 @@ func RegisteredModuleRoutes() http.Handler {
 	moduleHandler := &server.ModuleHandler{
 		RouteHandlers: map[string]http.HandlerFunc{
 			"POST /io-operate":	IO_api.InterfaceQueuePCB,
-			// "POST /io-gen-sleep": 	IO_api.IOGenSleep, 	Deprecated
-			// "POST /io-stdin-read": 	IO_api.IOStdinRead,
-			// "POST /io-stdin-write": IO_api.IOStdoutWrite,
 		},
 	}
 	return moduleHandler

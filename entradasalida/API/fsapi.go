@@ -1,8 +1,11 @@
-package FS_api
+package IO_api
 
 import (
 	"encoding/json"
+	"errors"
+	"io"
 	"log"
+	"math"
 	"os"
 
 	"github.com/sisoputnfrba/tp-golang/entradasalida/globals"
@@ -55,7 +58,7 @@ func InicializarFS() {
 			log.Fatalf("Failed reading file: %s", err)
 		}
 
-		// Convierte el contenido a JSON
+		// Convierte el contenido a JSON y lo carga en globals
 		err = json.Unmarshal(contenidoBitmap, &globals.CurrentBitMap)
 		if err != nil {
 			log.Fatalf("Failed to unmarshal contenido: %s", err)
@@ -96,7 +99,7 @@ func InicializarFS() {
 			log.Fatalf("Failed reading file: %s", err)
 		}
 
-		// Convierte el contenido a JSON
+		// Convierte el contenido a JSON y lo carga en globals
 		err = json.Unmarshal(contenidoBloques, &globals.Blocks)
 		if err != nil {
 			log.Fatalf("Failed to unmarshal contenido: %s", err)
@@ -110,7 +113,10 @@ func InicializarFS() {
 }
 
 /**
- * CargarArchivo: carga un archivo en el sistema de archivos
+ * CrearModificarArchivo: carga un archivo en el sistema de archivos
+
+ * @param nombreArchivo: nombre del archivo a cargar
+ * @param contenido: contenido del archivo a cargar (en bytes)
 */
 func CrearModificarArchivo(nombreArchivo string, contenido []byte) {
 	var file *os.File
@@ -145,7 +151,7 @@ func CrearModificarArchivo(nombreArchivo string, contenido []byte) {
 }
 
 
-// Funciones para ciclo de instrucción
+// * Funciones para ciclo de instrucción
 
 /**
  * CreateFile: se define un nuevo archivo y se lo posiciona en el sistema de archivos (se crea el FCB y se lo agrega al directorio)
@@ -153,15 +159,6 @@ func CrearModificarArchivo(nombreArchivo string, contenido []byte) {
 func CreateFile(nombreArchivo string) {
 	//Se crea el archivo metadata, con el size en 0 y 1 bloque asignado
 	//Archivos de metadata en el módulo FS cargados en alguna estructura para que les sea fácil acceder
-	
-	// Crea un nuevo archivo
-    file, err := os.Create(nombreArchivo)
-    if err != nil {
-        log.Fatalf("Failed creating file: %s", err)
-    }
-
-    // Cierra el archivo al final de la función
-    defer file.Close()
 
 	bloqueInicial := CalcularBloqueLibre()
 
@@ -177,24 +174,17 @@ func CreateFile(nombreArchivo string) {
         log.Fatalf("Failed to marshal metadata: %s", err)
     }
 
-    // Escribe la metadata en el archivo
-    _, err = file.Write(metadataJson)
-    if err != nil {
-        log.Fatalf("Failed writing to file: %s", err)
-    }
-
-    // Guarda los cambios en el archivo
-    err = file.Sync()
-    if err != nil {
-        log.Fatalf("Failed syncing file: %s", err)
-    }
+	// Crea el archivo
+	CrearModificarArchivo(nombreArchivo, metadataJson)
+	
+	// Agrego el FCB al directorio
+	globals.Fcbs[nombreArchivo] = metadata
 }
-
 
 func CalcularBloqueLibre() int {
 	var i = 0
 	for  i < globals.ConfigIO.Dialfs_block_count { 
-		if IsNotSet(i) { //todo: acá revisar si falta algo, en memoria tenemos la tabla de páginas pero no se si es necesario tener alguna estructura m
+		if IsNotSet(i) {
 			Set(i)
 			break
 		}
@@ -202,11 +192,60 @@ func CalcularBloqueLibre() int {
 	}
 	return i
 }
+
 /**
  * DeleteFile: elimina un archivo del sistema de archivos y su FCB asociado (incluye liberar los bloques de datos)
 */
-func DeleteFile(nombreArchivo string) {
+func DeleteFile(nombreArchivo string) error {
+	// Paso 1: Verificar si el archivo existe
+	if _, err := os.Stat(nombreArchivo); os.IsNotExist(err) {
+		// El archivo no existe
+		return errors.New("el archivo no existe")
+	}
 
+	// Paso 2: Eliminar el archivo del sistema de archivos
+	err := os.Remove(nombreArchivo)
+	if err != nil {
+		// Error al intentar eliminar el archivo
+		return err
+	}
+
+	// Paso 3: Eliminar el FCB asociado y liberar los bloques de datos
+	delete(globals.Fcbs, nombreArchivo)
+	archivo := LeerArchivoEnStruct(nombreArchivo)
+	sizeArchivo := archivo.Size 
+	sizeArchivoEnBloques := int(math.Ceil(float64(sizeArchivo) / float64(globals.ConfigIO.Dialfs_block_size)))
+	bloqueInicial := archivo.InitialBlock
+	
+	for i := 0; i < sizeArchivoEnBloques; i++ {
+		Clear(bloqueInicial + i)
+	}
+
+	return nil
+}
+
+func LeerArchivoEnStruct(nombreArchivo string) *globals.Metadata {
+    // Paso 2: Abrir el archivo
+    archivo, err := os.Open(nombreArchivo)
+    if err != nil {
+        return nil
+    }
+    defer archivo.Close()
+
+    // Paso 3 y 4: Leer y deserializar el contenido del archivo en el struct
+    bytes, err := io.ReadAll(archivo)
+    if err != nil {
+        return nil
+    }
+
+    var metadata globals.Metadata
+    err = json.Unmarshal(bytes, &metadata)
+    if err != nil {
+        return nil
+    }
+
+    // El archivo se cierra automáticamente gracias a defer
+    return &metadata
 }
 
 /**
@@ -227,6 +266,8 @@ func WriteFile(nombreArchivo string, direccion int, tamanio int, puntero int) {
  * TruncateFile: Trunca un archivo del sistema de archivos (puede incluir compactar el archivo)
 */
 func TruncateFile(nombreArchivo string, tamanio int) {
+//	
+
 
 }
 

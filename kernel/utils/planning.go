@@ -22,13 +22,13 @@ func LTS_Plan() {
 		// Si la lista de jobs está vacía, esperar a que tenga al menos uno
 		if len(globals.LTS) == 0 {
 			globals.EmptiedListMutex.Lock()
-			//continue
+			<- globals.LTSPlanBinary
+			continue	// * Es necesario
 		}
 		fmt.Println("La lista es: ", globals.LTS)
 		fmt.Println("La lista tiene longitud: ", len(globals.LTS))
 		auxJob := slice.Shift(&globals.LTS)
 		if auxJob.PID != 0 {
-			//globals.MultiprogrammingCounter <- int(auxJob.PID)
 			globals.MultiprogrammingCounter <- int(auxJob.PID) // !?
 			globals.ChangeState(&auxJob, "READY")
 			slice.Push(&globals.STS, auxJob)
@@ -40,6 +40,12 @@ func LTS_Plan() {
 		}
 		<- globals.LTSPlanBinary
 	}
+}
+
+func enganiaPichangaValorDeCanal(channel chan bool) {
+	value := <- channel
+	fmt.Println("El valor del canal es: ", value)
+	channel <- value
 }
 
 func STS_Plan() {
@@ -143,10 +149,9 @@ func VRR_Plan() {
 	timeBefore := time.Now()
 	go startTimer(globals.CurrentJob.Quantum)
 	kernel_api.PCB_Send()
-	//timeAfter := time.Now()
 
 	<- globals.PcbReceived
-	timeAfter := time.Now() // ! Se cambió de lugar para que se tome el tiempo después de recibir el PCB
+	timeAfter := time.Now()
 
 	diffTime := uint32(timeAfter.Sub(timeBefore))
 	if diffTime < globals.CurrentJob.Quantum {
@@ -217,6 +222,7 @@ func EvictionManagement() {
 		globals.ChangeState(&globals.CurrentJob, "READY")
 		globals.STS = append(globals.STS, globals.CurrentJob)
 		globals.JobExecBinary <- true
+		globals.STSCounter <- int(globals.CurrentJob.PID)
 
 	case "EXIT":
 		if resource.HasResources(globals.CurrentJob) {

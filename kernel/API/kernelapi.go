@@ -296,6 +296,7 @@ func PCB_Send() error {
 	return nil
 }
 
+// * Esto no es código deprecado?
 func PCB_recv(w http.ResponseWriter, r *http.Request) {
 	var received_pcb pcb.T_PCB
 

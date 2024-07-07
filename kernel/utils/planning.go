@@ -42,12 +42,6 @@ func LTS_Plan() {
 	}
 }
 
-func enganiaPichangaValorDeCanal(channel chan bool) {
-	value := <- channel
-	fmt.Println("El valor del canal es: ", value)
-	channel <- value
-}
-
 func STS_Plan() {
 	switch globals.Configkernel.Planning_algorithm {
 	case "FIFO":
@@ -155,9 +149,9 @@ func VRR_Plan() {
 
 	diffTime := uint32(timeAfter.Sub(timeBefore))
 	if diffTime < globals.CurrentJob.Quantum {
-		globals.CurrentJob.Quantum -= diffTime
+		globals.CurrentJob.Quantum -= diffTime * uint32(time.Millisecond)
 	} else {
-		globals.CurrentJob.Quantum = uint32(globals.Configkernel.Quantum)
+		globals.CurrentJob.Quantum = uint32(globals.Configkernel.Quantum * int(time.Millisecond))
 	}
 
 	EvictionManagement()

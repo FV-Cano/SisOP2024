@@ -60,7 +60,7 @@ func RegisteredModuleRoutes() http.Handler {
 			"GET /process/{pid}":				kernel_api.ProcessState,
 			"DELETE /process/{pid}": 			kernel_api.ProcessDelete,
 			// Planificación
-			"PUT /plani": 							kernel_api.PlanificationStart,
+			"PUT /plani": 						kernel_api.PlanificationStart,
 			"DELETE /plani": 					kernel_api.PlanificationStop,
 			// I/O
 			"POST /io-handshake": 				kernel_api.GetIOInterface,

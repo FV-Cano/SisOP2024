@@ -181,6 +181,7 @@ func CreateFile(nombreArchivo string) {
 	globals.Fcbs[nombreArchivo] = metadata
 }
 
+// TODO: Tirar excepción si no hay bloques libres
 func CalcularBloqueLibre() int {
 	var i = 0
 	for  i < globals.ConfigIO.Dialfs_block_count { 
@@ -212,6 +213,7 @@ func DeleteFile(nombreArchivo string) error {
 
 	// Paso 3: Eliminar el FCB asociado y liberar los bloques de datos
 	delete(globals.Fcbs, nombreArchivo)
+
 	archivo := LeerArchivoEnStruct(nombreArchivo)
 	sizeArchivo := archivo.Size 
 	sizeArchivoEnBloques := int(math.Ceil(float64(sizeArchivo) / float64(globals.ConfigIO.Dialfs_block_size)))
@@ -266,9 +268,7 @@ func WriteFile(nombreArchivo string, direccion int, tamanio int, puntero int) {
  * TruncateFile: Trunca un archivo del sistema de archivos (puede incluir compactar el archivo)
 */
 func TruncateFile(nombreArchivo string, tamanio int) {
-//	
-
-
+	//
 }
 
 func NewBitMap(size int) BitMap {

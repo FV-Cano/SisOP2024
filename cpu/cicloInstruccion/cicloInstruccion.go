@@ -672,6 +672,7 @@ func HallarInterfaz(nombre string, tipo string) (bool, error) {
 	- "iodata-gensleep"
 	- "iodata-stdin"
 	- "iodata-stdout"
+	- "iodata-dialfs"
  @return error: Error en caso de que la comunicación falle
 **/
 func SendIOData(datum interface{}, endpoint string) error {

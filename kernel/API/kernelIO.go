@@ -345,12 +345,12 @@ func RecvData_stdout(w http.ResponseWriter, r *http.Request) {
 func RecvData_dialfs(w http.ResponseWriter, r *http.Request) {
 	var received_data struct {
 	//	Pcb 					pcb.T_PCB
-		Inter 					device.T_IOInterface
-		NombreArchivo 			string
-		Tamanio 				int
-		Puntero					int
-		Direccion				int
-		Operacion				string
+		InterfaceName 			string
+		FileName 				string
+		Size 					int
+		Pointer					int
+		Address					int
+		Operation				string
 	}
 
 	err := json.NewDecoder(r.Body).Decode(&received_data)

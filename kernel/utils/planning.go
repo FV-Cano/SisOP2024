@@ -174,10 +174,6 @@ func startTimer(quantum uint32) {
 func quantumInterrupt(pcb pcb.T_PCB) {
 	// Interrumpir proceso actual, response = OK message
 	SendInterrupt("QUANTUM", pcb.PID)
-	
-	if globals.CurrentJob.EvictionReason == "TIMEOUT" {
-		log.Printf("PID: %d - Desalojado por fin de quantum\n", globals.CurrentJob.PID)
-	}
 }
 
 /**
@@ -221,6 +217,7 @@ func EvictionManagement() {
 	case "TIMEOUT":
 		globals.ChangeState(&globals.CurrentJob, "READY")
 		globals.STS = append(globals.STS, globals.CurrentJob)
+		log.Printf("PID: %d - Desalojado por fin de quantum\n", globals.CurrentJob.PID)
 		globals.JobExecBinary <- true
 		globals.STSCounter <- int(globals.CurrentJob.PID)
 

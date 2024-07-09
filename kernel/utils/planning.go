@@ -22,13 +22,13 @@ func LTS_Plan() {
 		// Si la lista de jobs está vacía, esperar a que tenga al menos uno
 		if len(globals.LTS) == 0 {
 			globals.EmptiedListMutex.Lock()
-			//continue
+			<- globals.LTSPlanBinary
+			continue	// * Es necesario
 		}
 		fmt.Println("La lista es: ", globals.LTS)
 		fmt.Println("La lista tiene longitud: ", len(globals.LTS))
 		auxJob := slice.Shift(&globals.LTS)
 		if auxJob.PID != 0 {
-			//globals.MultiprogrammingCounter <- int(auxJob.PID)
 			globals.MultiprogrammingCounter <- int(auxJob.PID) // !?
 			globals.ChangeState(&auxJob, "READY")
 			slice.Push(&globals.STS, auxJob)
@@ -143,16 +143,15 @@ func VRR_Plan() {
 	timeBefore := time.Now()
 	go startTimer(globals.CurrentJob.Quantum)
 	kernel_api.PCB_Send()
-	//timeAfter := time.Now()
 
 	<- globals.PcbReceived
-	timeAfter := time.Now() // ! Se cambió de lugar para que se tome el tiempo después de recibir el PCB
+	timeAfter := time.Now()
 
 	diffTime := uint32(timeAfter.Sub(timeBefore))
 	if diffTime < globals.CurrentJob.Quantum {
-		globals.CurrentJob.Quantum -= diffTime
+		globals.CurrentJob.Quantum -= diffTime * uint32(time.Millisecond)
 	} else {
-		globals.CurrentJob.Quantum = uint32(globals.Configkernel.Quantum)
+		globals.CurrentJob.Quantum = uint32(globals.Configkernel.Quantum * int(time.Millisecond))
 	}
 
 	EvictionManagement()
@@ -169,10 +168,6 @@ func startTimer(quantum uint32) {
 func quantumInterrupt(pcb pcb.T_PCB) {
 	// Interrumpir proceso actual, response = OK message
 	SendInterrupt("QUANTUM", pcb.PID)
-	
-	if globals.CurrentJob.EvictionReason == "TIMEOUT" {
-		log.Printf("PID: %d - Desalojado por fin de quantum\n", globals.CurrentJob.PID)
-	}
 }
 
 /**
@@ -225,7 +220,9 @@ func EvictionManagement() {
 	case "TIMEOUT":
 		globals.ChangeState(&globals.CurrentJob, "READY")
 		globals.STS = append(globals.STS, globals.CurrentJob)
+		log.Printf("PID: %d - Desalojado por fin de quantum\n", globals.CurrentJob.PID)
 		globals.JobExecBinary <- true
+		globals.STSCounter <- int(globals.CurrentJob.PID)
 
 	case "EXIT":
 		if resource.HasResources(globals.CurrentJob) {

@@ -5,6 +5,12 @@ import (
 	"github.com/sisoputnfrba/tp-golang/utils/pcb"
 )
 
+var (
+	CurrentBitMap []int
+	Blocks []byte
+	Fcbs map[string]Metadata
+)
+
 type T_ConfigIO struct {
 	Ip                 		string `json:"ip"`
 	Port               		int    `json:"port"`
@@ -39,13 +45,28 @@ type StdoutWrite struct {
 	DireccionesFisicas 		[]DireccionTamanio
 }
 
+type DialFSRequest struct {
+	Pcb 					pcb.T_PCB
+	Inter 					device.T_IOInterface
+	NombreArchivo 			string
+	Tamanio 				int
+	Puntero					int
+	Direccion				[]DireccionTamanio
+	Operacion				string
+}
 
 var ConfigIO 				T_ConfigIO
 var Generic_QueueChannel 	chan GenSleep
 var Stdin_QueueChannel 		chan StdinRead
 var Stdout_QueueChannel 	chan StdoutWrite
+var DialFS_QueueChannel 	chan DialFSRequest
 
 type DireccionTamanio struct {
 	DireccionFisica 		int
 	Tamanio         		int
+}
+
+type Metadata struct {
+	InitialBlock 			int 	`json:"initial_block"`
+	Size 					int 	`json:"size"`
 }

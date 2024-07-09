@@ -232,7 +232,7 @@ func FinalizarProceso(w http.ResponseWriter, r *http.Request) {
 	queryParams := r.URL.Query()
 	pid := queryParams.Get("pid")
 	ReducirProceso(len(globals.Tablas_de_paginas[PasarAInt(pid)]), PasarAInt(pid))
-	log.Printf("PID: %d - Tamaño reducido: %d", PasarAInt(pid), len(globals.Tablas_de_paginas[PasarAInt(pid)]))
+	//log.Printf("PID: %d - Tamaño reducido: %d", PasarAInt(pid), len(globals.Tablas_de_paginas[PasarAInt(pid)]))
 	w.WriteHeader(http.StatusOK)
 	log.Printf("PID: %d - Tamaño: %d", PasarAInt(pid), len(globals.Tablas_de_paginas[PasarAInt(pid)]))
 	

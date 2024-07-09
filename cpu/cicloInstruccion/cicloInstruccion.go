@@ -210,19 +210,22 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 			if err != nil {
 				log.Fatal("Error al convertir el puntero a entero")
 			}
+
+			direccionesFisicas := mmu.ObtenerDireccionesFisicas(direccion, tamanio_archivo, int(currentPCB.PID))
+
 			if cond {
 				
 				var fsCreateBody = struct {
 					InterfaceName		string
 					FileName			string
-					Address				int
+					Address				[]globals.DireccionTamanio
 					Size				int
 					Pointer				int
 					Operation			string
 					}{
 						InterfaceName:	instruccionDecodificada[1],
 						FileName:		nombre_archivo,
-						Address:		direccion,
+						Address:		direccionesFisicas,
 						Size:			tamanio_archivo,
 						Pointer:		puntero,
 						Operation:		"WRITE",

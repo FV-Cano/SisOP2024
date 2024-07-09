@@ -257,24 +257,24 @@ func IO_STDOUT_WRITE(pcb pcb.T_PCB, direccionesFisicas []globals.DireccionTamani
 // ------------------------- DIALFS -------------------------
 
 func IO_DIALFS(interfaceToWork globals.DialFSRequest) {
-	pid := interfaceToWork.Pcb.PID
+	pid := int(interfaceToWork.Pcb.PID)
 	nombreArchivo := interfaceToWork.NombreArchivo
 
 	switch interfaceToWork.Operacion {
 	case "CREATE":
-		FS_api.CreateFile(pid, nombreArchivo)
+		CreateFile(pid, nombreArchivo)
 		
 	case "DELETE":
-		FS_api.DeleteFile(pid, nombreArchivo)
+		DeleteFile(pid, nombreArchivo)
 		
 	case "READ":
-		FS_api.ReadFile(pid, nombreArchivo, interfaceToWork.Direccion, interfaceToWork.Tamanio, interfaceToWork.Puntero)
+		ReadFile(pid, nombreArchivo, interfaceToWork.Direccion, interfaceToWork.Tamanio, interfaceToWork.Puntero)
 
 	case "WRITE":
-		FS_api.WriteFile(pid, nombreArchivo, interfaceToWork.Direccion, interfaceToWork.Tamanio, interfaceToWork.Puntero)
+		WriteFile(pid, nombreArchivo, interfaceToWork.Direccion, interfaceToWork.Tamanio, interfaceToWork.Puntero)
 	
 	case "TRUNCATE":	
-		FS_api.TruncateFile(pid, nombreArchivo, interfaceToWork.Tamanio)	
+		TruncateFile(pid, nombreArchivo, interfaceToWork.Tamanio)	
 	}
 }
 

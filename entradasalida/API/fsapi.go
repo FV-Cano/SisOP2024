@@ -1,13 +1,16 @@
 package IO_api
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"io"
+	"fmt"
 	"log"
 	"math"
 	"os"
 	"strings"
+	"net/http"
 
 	"github.com/sisoputnfrba/tp-golang/entradasalida/globals"
 )
@@ -290,14 +293,13 @@ func LeerArchivoEnStruct(nombreArchivo string) *globals.Metadata {
 
 /**
  * ReadFile: Lee un archivo del sistema de archivos
+ // Leer un bloque de fs implica escribirlo en memoria
+	(Interfaz, Nombre Archivo, Registro Dirección, Registro Tamaño, Registro Puntero Archivo): 
+	Esta instrucción solicita al Kernel que mediante la interfaz seleccionada, se lea desde el
+	archivo a partir del valor del Registro Puntero Archivo la cantidad de bytes indicada por Registro
+	Tamaño y se escriban en la Memoria a partir de la dirección lógica indicada en el Registro Dirección.
 */
 func ReadFile(pid int, nombreArchivo string, direccion []globals.DireccionTamanio, tamanio int, puntero int) {
-	// Leer un bloque de fs implica escribirlo en memoria
-	//(Interfaz, Nombre Archivo, Registro Dirección, Registro Tamaño, Registro Puntero Archivo): 
-	//Esta instrucción solicita al Kernel que mediante la interfaz seleccionada, se lea desde el
-	//archivo a partir del valor del Registro Puntero Archivo la cantidad de bytes indicada por Registro
-	//Tamaño y se escriban en la Memoria a partir de la dirección lógica indicada en el Registro Dirección.
-	
 	var contenidoALeer []byte
 
 	primerBloqueArchivo := globals.Fcbs[nombreArchivo].InitialBlock * globals.ConfigIO.Dialfs_block_size
@@ -307,10 +309,11 @@ func ReadFile(pid int, nombreArchivo string, direccion []globals.DireccionTamani
 
 	// verificar tamaño del archivo a leer valido
 	if(limite > tamanioTotalArchivo){
-		Sprintf("El tamaño a leer es superior a el correspondiente del archivo")
+		log.Println("El tamaño a leer es superior a el correspondiente del archivo")
 	} else {
 		contenidoALeer = ReadFs(nombreArchivo, posicionPuntero, limite)
-		IO_DIALFS_READ(pid,direccionesFisicas,string(contenidoALeer))	
+		IO_DIALFS_READ(pid,direccion,string(contenidoALeer))
+		
 	}
 
 	log.Printf("PID: %d - Leer Archivo: %s - Tamaño a Leer: %d - Puntero Archivo: %d", pid, nombreArchivo, tamanio, puntero)
@@ -319,9 +322,15 @@ func ReadFile(pid int, nombreArchivo string, direccion []globals.DireccionTamani
 
 /**
  * WriteFile: Escribe un archivo del sistema de archivos
+ IO_FS_WRITE (Interfaz, Nombre Archivo, Registro Dirección, Registro Tamaño, Registro Puntero Archivo): 
+ Esta instrucción solicita al Kernel que mediante la interfaz seleccionada, se lea desde Memoria
+ la cantidad de bytes indicadas por el Registro Tamaño a partir de la dirección lógica que se encuentra
+ en el Registro Dirección y se escriban en el archivo a partir del valor del Registro Puntero Archivo.
  */
 func WriteFile(pid int, nombreArchivo string, direccion int, tamanio int, puntero int) {
 	// Escritura de un bloque de fs implica leerlo de memoria para luego escribirlo en fs
+
+	
 	log.Printf("PID: %d - Escribir Archivo: %s - Tamaño a Escribir: %d - Puntero Archivo: %d", pid, nombreArchivo, tamanio, puntero)
 }
 
@@ -431,7 +440,12 @@ func TruncateFile(pid int, nombreArchivo string, tamanio int) { //revisar si tie
  */
 func ReadFs(nombreArchivo string, desplazamiento int, tamanio int) []byte {
 	archivo := globals.Fcbs[nombreArchivo]
-	tamanioALeer := tamanio == -1 ? archivo.Size : tamanio
+	var tamanioALeer int
+	if tamanio == -1 {
+		tamanioALeer = archivo.Size
+	} else {
+		tamanioALeer = tamanio
+	}
 
 	contenido := make([]byte, tamanioALeer)
 	byteInicial := (archivo.InitialBlock * globals.ConfigIO.Dialfs_block_size) + desplazamiento
@@ -554,8 +568,7 @@ func Compactar() {
 	ActualizarBitmap()
 }
 
-
-func IO_DIALFS_READ(int pid, direccionesFisicas []globals.DireccionTamanio, string contenido) {
+func IO_DIALFS_READ(pid int ,direccionesFisicas []globals.DireccionTamanio, contenido string) {
 
 	// Le pido a memoria que me guarde los datos
 	url := fmt.Sprintf("http://%s:%d/write", globals.ConfigIO.Ip_memory, globals.ConfigIO.Port_memory)

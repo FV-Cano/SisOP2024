@@ -154,10 +154,10 @@ func ModificarTamanioProceso(tamanioProcesoActual int, tamanioProcesoNuevo int, 
 	var diferenciaEnPaginas = tamanioProcesoNuevo - tamanioProcesoActual
 
 	if (tamanioProcesoActual < tamanioProcesoNuevo) { // ampliar proceso
-		log.Printf("PID: %d - Tamanio Actual: %d - Tamanio a Ampliar: %d", pid, tamanioProcesoActual, tamanioProcesoNuevo) // verificar si en el último parámetro va diferenciaEnPaginas
+		log.Printf("PID: %d - Tamaño Actual: %d - Tamaño a Ampliar: %d", pid, tamanioProcesoActual, tamanioProcesoNuevo) // verificar si en el último parámetro va diferenciaEnPaginas
 		return AmpliarProceso(diferenciaEnPaginas, pid)
 	} else if (tamanioProcesoActual > tamanioProcesoNuevo) { // reducir proceso
-		log.Printf("PID: %d - Tamanio Actual: %d - Tamanio a Reducir: %d", pid, tamanioProcesoActual, tamanioProcesoNuevo) // verificar si en el último parámetro va diferenciaEnPaginas
+		log.Printf("PID: %d - Tamaño Actual: %d - Tamaño a Reducir: %d", pid, tamanioProcesoActual, tamanioProcesoNuevo) // verificar si en el último parámetro va diferenciaEnPaginas
 		return ReducirProceso(diferenciaEnPaginas, pid)
 	}
 	return "OK"
@@ -234,6 +234,8 @@ func FinalizarProceso(w http.ResponseWriter, r *http.Request) {
 	ReducirProceso(len(globals.Tablas_de_paginas[PasarAInt(pid)]), PasarAInt(pid))
 	log.Printf("PID: %d - Tamaño reducido: %d", PasarAInt(pid), len(globals.Tablas_de_paginas[PasarAInt(pid)]))
 	w.WriteHeader(http.StatusOK)
+	log.Printf("PID: %d - Tamaño: %d", PasarAInt(pid), len(globals.Tablas_de_paginas[PasarAInt(pid)]))
+	
 }
 
 // --------------------------------------------------------------------------------------//

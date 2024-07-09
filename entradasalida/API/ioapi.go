@@ -151,7 +151,7 @@ func returnPCB(pcb pcb.T_PCB) {
 
 func IO_GEN_SLEEP(sleepTime int, pcb pcb.T_PCB) {
 	sleepTimeTotal := sleepTime * globals.ConfigIO.Unit_work_time
-	log.Printf("PID: %d - Operacion: <IO_GEN_SLEEP>", pcb.PID)
+	log.Printf("PID: %d - Operacion: IO_GEN_SLEEP", pcb.PID)
 	log.Printf("Bloqueado por %d segundos\n", sleepTimeTotal)
 
 	time.Sleep(time.Duration(sleepTimeTotal) * time.Second)
@@ -159,6 +159,7 @@ func IO_GEN_SLEEP(sleepTime int, pcb pcb.T_PCB) {
 
 func IO_STDIN_READ(pcb pcb.T_PCB, direccionesFisicas []globals.DireccionTamanio) {
 	// Lee datos de la entrada
+	log.Printf("PID: %d - Operacion: IO_STDIN_READ", pcb.PID)
 	fmt.Print("Ingrese datos: ")
 	reader := bufio.NewReader(os.Stdin)
 	data, _ := reader.ReadString('\n')
@@ -194,6 +195,7 @@ type BodyADevolver struct {
 	Contenido [][]byte `json:"contenido"`
 }
 func IO_STDOUT_WRITE(pcb pcb.T_PCB, direccionesFisicas []globals.DireccionTamanio) {
+	log.Printf("PID: %d - Operacion: IO_STDOUT_WRITE", pcb.PID)
 	url := fmt.Sprintf("http://%s:%d/read", globals.ConfigIO.Ip_memory, globals.ConfigIO.Port_memory)
 
 	bodyRead, err := json.Marshal(BodyRequestLeer{

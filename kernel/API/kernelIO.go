@@ -349,7 +349,7 @@ func RecvData_dialfs(w http.ResponseWriter, r *http.Request) {
 		FileName 				string
 		Size 					int
 		Pointer					int
-		Address					int
+		Address					[]globals.DireccionTamanio
 		Operation				string
 	}
 

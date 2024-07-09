@@ -8,7 +8,6 @@ import (
 var (
 	CurrentBitMap []int
 	Blocks []byte
-	// TODO: Borrar estructura FCB de utils
 	Fcbs map[string]Metadata
 )
 
@@ -52,7 +51,7 @@ type DialFSRequest struct {
 	NombreArchivo 			string
 	Tamanio 				int
 	Puntero					int
-	Direccion				int
+	Direccion				[]DireccionTamanio
 	Operacion				string
 }
 

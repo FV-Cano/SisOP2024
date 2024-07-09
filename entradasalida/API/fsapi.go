@@ -35,15 +35,7 @@ func InicializarFS() {
 	if _, err := os.Stat(bitmapFile); os.IsNotExist(err) {
 		// Carga el bitmap en globals
 		globals.CurrentBitMap = NewBitMap(globals.ConfigIO.Dialfs_block_count)
-
-		// Convierte el contenido a JSON
-		contenidoBitmap, err := json.Marshal(globals.CurrentBitMap)
-		if err != nil {
-			log.Fatalf("Failed to marshal contenido: %s", err)
-		}
-
-		// Carga el contenido en el archivo
-		CrearModificarArchivo(bitmapFile, contenidoBitmap)
+		ActualizarBitmap()
 
 	} else {
 		// Carga el contenido del archivo
@@ -76,15 +68,7 @@ func InicializarFS() {
 	if _, err := os.Stat(blocksFile); os.IsNotExist(err) {
 		// Carga los bloques en globals
 		globals.Blocks = make([]byte, globals.ConfigIO.Dialfs_block_count*globals.ConfigIO.Dialfs_block_size)
-
-		// Convierte el contenido a JSON
-		contenidoBloques, err := json.Marshal(globals.Blocks)
-		if err != nil {
-			log.Fatalf("Failed to marshal contenido: %s", err)
-		}
-
-		// Carga el contenido en el archivo
-		CrearModificarArchivo(blocksFile, contenidoBloques)
+		ActualizarBloques()
 
 	} else {
 		// Carga el contenido del archivo
@@ -113,7 +97,7 @@ func InicializarFS() {
 		}
 	}
 
-	// * Carga los archivos del directorio si existen
+	// * Carga los archivos metadata del directorio si existen
 	globals.Fcbs = make(map[string]globals.Metadata)
 	files, err := os.ReadDir(dirName)
 	if err != nil {
@@ -128,13 +112,10 @@ func InicializarFS() {
 	}
 }
 
-/*
-*
-
-  - CrearModificarArchivo: carga un archivo en el sistema de archivos
+/**
+  * CrearModificarArchivo: carga un archivo en el sistema de archivos
 
   - @param nombreArchivo: nombre del archivo a cargar
-
   - @param contenido: contenido del archivo a cargar (en bytes)
 */
 func CrearModificarArchivo(nombreArchivo string, contenido []byte) {
@@ -174,7 +155,7 @@ func CrearModificarArchivo(nombreArchivo string, contenido []byte) {
 /**
  * CreateFile: se define un nuevo archivo y se lo posiciona en el sistema de archivos (se crea el FCB y se lo agrega al directorio)
  */
-func CreateFile(nombreArchivo string) {
+func CreateFile(pid int, nombreArchivo string) {
 	//Se crea el archivo metadata, con el size en 0 y 1 bloque asignado
 	//Archivos de metadata en el módulo FS cargados en alguna estructura para que les sea fácil acceder
 
@@ -198,8 +179,7 @@ func CreateFile(nombreArchivo string) {
 
 	// Agrego el FCB al directorio
 	globals.Fcbs[nombreArchivo] = metadata
-	log.Printf("“PID: %d - Crear Archivo: %s”", pid, nombreArchivo) //TODO: Reemplazar <PID> por el PID correspondiente
-
+	log.Printf("PID: %d - Crear Archivo: %s", pid, nombreArchivo)
 }
 
 // TODO: Tirar excepción si no hay bloques libres
@@ -225,12 +205,14 @@ func LiberarBloquesDesde(numBloque int, tamanioABorrar int) {
 		}
 		i++
 	}
+	ActualizarBitmap()
 }
 
 func LiberarBloque(bloque int, tamanioABorrar int) {
     for i := 0; i < tamanioABorrar; i++ {
         Clear(bloque - i)
     }
+	ActualizarBitmap()
 }
 
 func OcuparBloquesDesde(numBloque int, tamanioASetear int) {
@@ -245,12 +227,13 @@ func OcuparBloquesDesde(numBloque int, tamanioASetear int) {
 		}
 		i++ // Incrementa el índice para revisar el siguiente bloque
 	}
+	ActualizarBitmap()
 }
 
 /**
  * DeleteFile: elimina un archivo del sistema de archivos y su FCB asociado (incluye liberar los bloques de datos)
  */
-func DeleteFile(nombreArchivo string) error {
+func DeleteFile(pid int, nombreArchivo string) error {
 	// Paso 1: Verificar si el archivo existe
 	if _, err := os.Stat(nombreArchivo); os.IsNotExist(err) {
 		// El archivo no existe
@@ -275,7 +258,7 @@ func DeleteFile(nombreArchivo string) error {
 	for i := 0; i < sizeArchivoEnBloques; i++ {
 		Clear(bloqueInicial + i)
 	}
-
+	log.Printf("PID: %d - Eliminar Archivo: %s", pid, nombreArchivo)
 	return nil
 }
 
@@ -308,35 +291,44 @@ func LeerArchivoEnStruct(nombreArchivo string) *globals.Metadata {
 /**
  * ReadFile: Lee un archivo del sistema de archivos
 */
-func ReadFile(nombreArchivo string, direccion int, tamanio int, puntero int) {
+func ReadFile(pid int, nombreArchivo string, direccion []globals.DireccionTamanio, tamanio int, puntero int) {
 	// Leer un bloque de fs implica escribirlo en memoria
 	//(Interfaz, Nombre Archivo, Registro Dirección, Registro Tamaño, Registro Puntero Archivo): 
 	//Esta instrucción solicita al Kernel que mediante la interfaz seleccionada, se lea desde el
 	//archivo a partir del valor del Registro Puntero Archivo la cantidad de bytes indicada por Registro
 	//Tamaño y se escriban en la Memoria a partir de la dirección lógica indicada en el Registro Dirección.
+	
 	var contenidoALeer []byte
 
-	// verificar tamaño del archivo a leer valido
 	primerBloqueArchivo := globals.Fcbs[nombreArchivo].InitialBlock * globals.ConfigIO.Dialfs_block_size
 	posicionPuntero := primerBloqueArchivo + puntero 
 	limite := tamanio + posicionPuntero
-	
-	contenidoALeer = ReadFs(nombreArchivo, posicionPuntero, limite)
-	
+	tamanioTotalArchivo := primerBloqueArchivo + globals.Fcbs[nombreArchivo].Size
+
+	// verificar tamaño del archivo a leer valido
+	if(limite > tamanioTotalArchivo){
+		Sprintf("El tamaño a leer es superior a el correspondiente del archivo")
+	} else {
+		contenidoALeer = ReadFs(nombreArchivo, posicionPuntero, limite)
+		IO_DIALFS_READ(pid,direccionesFisicas,string(contenidoALeer))	
+	}
+
+	log.Printf("PID: %d - Leer Archivo: %s - Tamaño a Leer: %d - Puntero Archivo: %d", pid, nombreArchivo, tamanio, puntero)
 
 }
 
 /**
  * WriteFile: Escribe un archivo del sistema de archivos
  */
-func WriteFile(nombreArchivo string, direccion int, tamanio int, puntero int) {
+func WriteFile(pid int, nombreArchivo string, direccion int, tamanio int, puntero int) {
 	// Escritura de un bloque de fs implica leerlo de memoria para luego escribirlo en fs
+	log.Printf("PID: %d - Escribir Archivo: %s - Tamaño a Escribir: %d - Puntero Archivo: %d", pid, nombreArchivo, tamanio, puntero)
 }
 
 /**
  * TruncateFile: Trunca un archivo del sistema de archivos (puede incluir compactar el archivo)
  */
-func TruncateFile(nombreArchivo string, tamanio int) { //revisar si tiene que devolver un msje
+func TruncateFile(pid int, nombreArchivo string, tamanio int) { //revisar si tiene que devolver un msje
 	archivo := globals.Fcbs[nombreArchivo]
 
 	tamanioFinalEnBloques := int(math.Ceil(float64(tamanio) / float64(globals.ConfigIO.Dialfs_block_size)))
@@ -413,13 +405,20 @@ func TruncateFile(nombreArchivo string, tamanio int) { //revisar si tiene que de
 
 	// Si el archivo se achica
 	} else if tamanio < archivo.Size {
-		tamanioATruncarEnBytes := archivo.Size - tamanio 
+		tamanioATruncarEnBytes := archivo.Size - tamanio
 		tamanioATruncarEnBloques := int(math.Ceil(float64(tamanioATruncarEnBytes) / float64(globals.ConfigIO.Dialfs_block_size)))
-		ultimoBloque := bloqueInicial + tamArchivoOriginalEnBloques - 1 //es decir el final del archivo actual
 		// Liberar los bloques que ya no se usan
-		LiberarBloque(ultimoBloque, tamanioATruncarEnBloques)
+		LiberarBloque(bloqueFinalInicial, tamanioATruncarEnBloques)
 		archivo.Size = tamanio
+
+		archivoMarshallado, err := json.Marshal(archivo)
+		if err != nil {
+			log.Fatalf("Failed to marshal metadata: %s", err)
+		}
+		CrearModificarArchivo(nombreArchivo, archivoMarshallado)
 	}
+
+	log.Printf("PID: %d - Truncar Archivo: %s - Tamaño: %d" , pid, nombreArchivo, tamanio)
 }
 
 /**
@@ -453,12 +452,7 @@ func WriteFs(contenido []byte, bloqueInicial int) {
 
 	tamanioFinalEnBloques := int(math.Ceil(float64(len(contenido)) / float64(globals.ConfigIO.Dialfs_block_size)))
 	OcuparBloquesDesde(bloqueInicial, tamanioFinalEnBloques)
-
-	bloquesMarshallados, err := json.Marshal(globals.Blocks)
-	if err != nil {
-		log.Fatalf("Failed to marshal bloques: %s", err)
-	}
-	CrearModificarArchivo("bloques.dat", bloquesMarshallados)
+	ActualizarBloques()
 }
 
 
@@ -502,6 +496,18 @@ func ContadorDeEspaciosLibres() int {
     return maxEspacioLibre
 }*/
 
+func ActualizarBitmap() {
+	archivoMarshallado, err := json.Marshal(globals.CurrentBitMap)
+	if err != nil {
+		log.Fatalf("Failed to marshal metadata: %s", err)
+	}
+	CrearModificarArchivo("dialfs/bitmap.dat", archivoMarshallado)
+}
+
+func ActualizarBloques(){
+	CrearModificarArchivo("dialfs/bloques.dat", globals.Blocks)
+}
+
 func CalcularBloquesLibreAPartirDe(bloqueInicial int) int { //esta funcion va a calcular los bloques libres al final del archivo hasta que encuentre uno seteado y ahí debería cortar
 	var i = bloqueInicial
 	var contadorLibres = 0 // Inicializamos el contador de bloques libres
@@ -543,6 +549,33 @@ func Compactar() {
 
 	for i := range bloquesDeArchivos {
 		Set(i)
+	}
+	ActualizarBloques()
+	ActualizarBitmap()
+}
+
+
+func IO_DIALFS_READ(int pid, direccionesFisicas []globals.DireccionTamanio, string contenido) {
+
+	// Le pido a memoria que me guarde los datos
+	url := fmt.Sprintf("http://%s:%d/write", globals.ConfigIO.Ip_memory, globals.ConfigIO.Port_memory)
+
+	bodyWrite, err := json.Marshal(struct {
+		DireccionesTamanios []globals.DireccionTamanio  `json:"direcciones_tamanios"`
+		Valor_a_escribir    string 					    `json:"valor_a_escribir"`
+		Pid                 int 						`json:"pid"`
+	} {direccionesFisicas,contenido,pid})
+	if err != nil {
+		log.Printf("Failed to encode data: %v", err)
+	}
+
+	response, err := http.Post(url, "application/json", bytes.NewBuffer(bodyWrite))
+	if err != nil {
+		log.Printf("Failed to send data: %v", err)
+	}
+
+	if response.StatusCode != http.StatusOK {
+		log.Printf("Unexpected response status: %s", response.Status)
 	}
 }
 

@@ -264,7 +264,7 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 				var fsCreateBody = struct {
 					InterfaceName		string
 					FileName			string
-					Address				int
+					Address				[]globals.DireccionTamanio
 					Size				int
 					Pointer				int
 					Operation			string

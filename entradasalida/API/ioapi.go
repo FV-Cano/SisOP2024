@@ -10,7 +10,6 @@ import (
 	"os"
 	"time"
 
-	FS_api "github.com/sisoputnfrba/tp-golang/entradasalida/dialfs"
 	"github.com/sisoputnfrba/tp-golang/entradasalida/globals"
 	"github.com/sisoputnfrba/tp-golang/utils/device"
 	"github.com/sisoputnfrba/tp-golang/utils/generics"
@@ -258,20 +257,25 @@ func IO_STDOUT_WRITE(pcb pcb.T_PCB, direccionesFisicas []globals.DireccionTamani
 // ------------------------- DIALFS -------------------------
 
 func IO_DIALFS(interfaceToWork globals.DialFSRequest) {
+	pid := interfaceToWork.Pcb.PID
+	nombreArchivo := interfaceToWork.NombreArchivo
+
 	switch interfaceToWork.Operacion {
 	case "CREATE":
-		FS_api.CreateFile(interfaceToWork.NombreArchivo)
+		FS_api.CreateFile(pid, nombreArchivo)
 		
 	case "DELETE":
-		FS_api.DeleteFile(interfaceToWork.NombreArchivo)
+		FS_api.DeleteFile(pid, nombreArchivo)
 		
 	case "READ":
-		FS_api.ReadFile(interfaceToWork.NombreArchivo, interfaceToWork.Direccion, interfaceToWork.Tamanio, interfaceToWork.Puntero)
+		FS_api.ReadFile(pid, nombreArchivo, interfaceToWork.Direccion, interfaceToWork.Tamanio, interfaceToWork.Puntero)
 
 	case "WRITE":
-		FS_api.WriteFile(interfaceToWork.NombreArchivo, interfaceToWork.Direccion, interfaceToWork.Tamanio, interfaceToWork.Puntero)
+		FS_api.WriteFile(pid, nombreArchivo, interfaceToWork.Direccion, interfaceToWork.Tamanio, interfaceToWork.Puntero)
 	
 	case "TRUNCATE":	
-		FS_api.TruncateFile(interfaceToWork.NombreArchivo, interfaceToWork.Tamanio)	
+		FS_api.TruncateFile(pid, nombreArchivo, interfaceToWork.Tamanio)	
 	}
 }
+
+	

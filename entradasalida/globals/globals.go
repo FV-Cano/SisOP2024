@@ -71,4 +71,3 @@ type Metadata struct {
 	InitialBlock 			int 	`json:"initial_block"`
 	Size 					int 	`json:"size"`
 }
-

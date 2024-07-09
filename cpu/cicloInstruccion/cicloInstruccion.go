@@ -248,10 +248,13 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 			if err != nil {
 				log.Fatal("Error al convertir la dirección a entero")
 			}
+	
 			tamanio_archivo, err := strconv.Atoi(instruccionDecodificada[4])
 			if err != nil {
 				log.Fatal("Error al convertir el tamaño del archivo a entero")
 			}
+			direccionesFisicas := mmu.ObtenerDireccionesFisicas(direccion, tamanio_archivo, int(currentPCB.PID))
+
 			puntero, err := strconv.Atoi(instruccionDecodificada[5])
 			if err != nil {
 				log.Fatal("Error al convertir el puntero a entero")
@@ -268,7 +271,7 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 					}{
 						InterfaceName:	instruccionDecodificada[1],
 						FileName:		nombre_archivo,
-						Address:		direccion,
+						Address:		direccionesFisicas,
 						Size:			tamanio_archivo,
 						Pointer:		puntero,
 						Operation:		"READ",

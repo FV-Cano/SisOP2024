@@ -10,9 +10,12 @@ import (
 	"time"
 
 	"github.com/sisoputnfrba/tp-golang/kernel/globals"
+	resource "github.com/sisoputnfrba/tp-golang/kernel/resources"
 	"github.com/sisoputnfrba/tp-golang/utils/pcb"
 	"github.com/sisoputnfrba/tp-golang/utils/slice"
 )
+
+// ! Verificar que no se genere ningún problema de dependencias con resources
 
 /* Glossary:
 - BRQ: Body Request
@@ -347,16 +350,22 @@ func RemoveByID(pid uint32) error {
 	_, ltsIndex := SearchByID(pid, globals.LTS)
 	_, stsIndex := SearchByID(pid, globals.STS)
 	
+	var removedPCB pcb.T_PCB
+
 	if ltsIndex != -1 {
 		globals.LTSMutex.Lock()
 		defer globals.LTSMutex.Unlock()
-		slice.RemoveAtIndex(&globals.LTS, ltsIndex)	
+		removedPCB = slice.RemoveAtIndex(&globals.LTS, ltsIndex)	
 	} else if stsIndex != -1 {
 		globals.STSMutex.Lock()
 		defer globals.STSMutex.Unlock()
-		slice.RemoveAtIndex(&globals.STS, stsIndex)
+		removedPCB = slice.RemoveAtIndex(&globals.STS, stsIndex)
 	}
-	
+
+	resource.HasResources(removedPCB)
+	resource.ReleaseAllResources(removedPCB)
+	RequestMemoryRelease(removedPCB.PID)
+
 	return nil
 }
 
@@ -377,4 +386,29 @@ func RemoveFromBlocked(pid uint32) {
 			slice.RemoveAtIndex(&globals.Blocked, i)
 		}
 	}
+}
+
+func RequestMemoryRelease(pid uint32) {
+	// Enviar mediante query params
+	url := fmt.Sprintf("http://%s:%d/finalizarProceso", globals.Configkernel.IP_memory, globals.Configkernel.Port_memory)
+	req, err := http.NewRequest("PATCH", url, nil)
+	if err != nil {
+		fmt.Printf("Error al crear el request: %v", err)
+	}
+
+	query := req.URL.Query()
+	query.Add("pid", strconv.Itoa(int(pid)))
+	req.URL.RawQuery = query.Encode()
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Printf("Error al enviar la solicitud: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		fmt.Printf("Error al enviar la solicitud: %v", err)
+	}
+
+	defer resp.Body.Close()
 }

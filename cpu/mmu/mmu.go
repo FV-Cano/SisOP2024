@@ -127,7 +127,9 @@ func ObtenerDireccionesFisicas(direccionLogica int, tamanio int, pid int) []glob
 	cantidadPaginas := int(math.Ceil(float64(tamanio) / float64(tamPagina)))
 	var frame int
 	var tamanioTotal int
-
+	if desplazamiento + tamanio > tamPagina {
+		cantidadPaginas++
+	}
 	if (PedirTamTablaPaginas(pid) == 0){
 		tamanioTotal = desplazamiento + tamanio
 		fmt.Println("ME METI X PRIM VEZ A LA TABLA, TAMANIO", tamanioTotal)

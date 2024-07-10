@@ -319,6 +319,7 @@ func LeerDeMemoria(direccionesTamanios []globals.DireccionTamanio, pid int) Body
 
         //  agregamos el bloque leído
         bodyADevolver.Contenido = append(bodyADevolver.Contenido, bloque)
+		fmt.Println("CONTENIDO LEIDO: ", bloque)
     }
     return bodyADevolver
 }

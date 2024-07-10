@@ -520,6 +520,14 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 	case "MOV_IN":
 
 		var tamanio int
+		//tamanio a leer es del tipo del registro de datos?
+		tipoReg1 := pcb.TipoReg(instruccionDecodificada[1])
+		if (tipoReg1 == "uint32") {
+			tamanio = 4
+		} else if (tipoReg1 == "uint8") {
+			tamanio = 1
+		}
+		//agregue lo de arriba
 
 		valorReg2 := currentPCB.CPU_reg[instruccionDecodificada[2]]
 		tipoActualReg2 := reflect.TypeOf(valorReg2).String()
@@ -538,8 +546,7 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		fmt.Println("Los datos MOSTRAMELLON son: ", datos)
 		
 		// Almacenamos lo leido en el registro destino
-		tipoReg1 := pcb.TipoReg(instruccionDecodificada[1])
-
+		fmt.Println("ACA ENTRO? EL TIPOREG1 ME LO DIO?: ", tipoReg1)
 		var datosAAlmacenar uint64
 		
 	
@@ -552,7 +559,10 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 
 			fmt.Println("LO GUARDE EN 32: ", currentPCB.CPU_reg[instruccionDecodificada[1]])
 		} else {
+			fmt.Println("ACA LLEGO A ENTRAR")
+
 			datosAAlmacenar = uint64(datos[0])
+			fmt.Println("ACA LLEGO A ENTRAR TAMBIEN Y LOS DATOS ALMACENADOS SON: ", datosAAlmacenar)
 
 			currentPCB.CPU_reg[instruccionDecodificada[1]] = uint8(datosAAlmacenar)
 

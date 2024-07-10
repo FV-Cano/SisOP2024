@@ -74,6 +74,7 @@ func InterfaceQueuePCB(w http.ResponseWriter, r *http.Request) {
 		
 		log.Print("Nueva PCB ID: ", decodedStruct.Pcb.PID, " para usar Interfaz")
 		globals.Stdin_QueueChannel <- decodedStruct
+		
 	case "STDOUT":
 		var decodedStruct globals.StdoutWrite
 
@@ -86,7 +87,7 @@ func InterfaceQueuePCB(w http.ResponseWriter, r *http.Request) {
 		log.Print("Nueva PCB ID: ", decodedStruct.Pcb.PID, " para usar Interfaz")
 		globals.Stdout_QueueChannel <- decodedStruct
 	
-	case "DialFS":
+	case "DIALFS":
 		var decodedStruct globals.DialFSRequest
 
 		err := json.NewDecoder(r.Body).Decode(&decodedStruct)
@@ -130,7 +131,7 @@ func IOWork() {
 			returnPCB(interfaceToWork.Pcb)
 		}
 
-	case "DialFS":
+	case "DIALFS":
 		var interfaceToWork globals.DialFSRequest
 		for {
 			interfaceToWork = <- globals.DialFS_QueueChannel

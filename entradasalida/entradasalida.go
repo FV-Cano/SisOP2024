@@ -49,7 +49,7 @@ func main() {
 	globals.DialFS_QueueChannel = make(chan globals.DialFSRequest, 1)
 
 	// Si la interfaz es de tipo DialFS se debe inicializar el sistema de archivos
-	if globals.ConfigIO.Type == "DialFS" {
+	if globals.ConfigIO.Type == "DIALFS" {
 		IO_api.InicializarFS()
 	}
 

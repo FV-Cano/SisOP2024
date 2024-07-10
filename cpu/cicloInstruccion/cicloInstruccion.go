@@ -105,7 +105,7 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 
 	switch instruccionDecodificada[0] {
 	case "IO_FS_CREATE":
-		cond, err := HallarInterfaz(instruccionDecodificada[1], "DialFS")
+		cond, err := HallarInterfaz(instruccionDecodificada[1], "DIALFS")
 		if err != nil {
 			log.Print("La interfaz no existe o no acepta operaciones de IO Genéricas")
 			currentPCB.EvictionReason = "EXIT"
@@ -132,7 +132,7 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		pcb.EvictionFlag = true
 
 	case "IO_FS_DELETE":
-		cond, err := HallarInterfaz(instruccionDecodificada[1], "DialFS")
+		cond, err := HallarInterfaz(instruccionDecodificada[1], "DIALFS")
 		if err != nil {
 			log.Print("La interfaz no existe o no acepta operaciones de IO Genéricas")
 			currentPCB.EvictionReason = "EXIT"
@@ -159,7 +159,7 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		pcb.EvictionFlag = true
 
 	case "IO_FS_TRUNCATE":
-		cond, err := HallarInterfaz(instruccionDecodificada[1], "DialFS")
+		cond, err := HallarInterfaz(instruccionDecodificada[1], "DIALFS")
 		if err != nil {
 			log.Print("La interfaz no existe o no acepta operaciones de IO Genéricas")
 			currentPCB.EvictionReason = "EXIT"
@@ -192,7 +192,7 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		pcb.EvictionFlag = true
 
 	case "IO_FS_WRITE":
-		cond, err := HallarInterfaz(instruccionDecodificada[1], "DialFS")
+		cond, err := HallarInterfaz(instruccionDecodificada[1], "DIALFS")
 		if err != nil {
 			log.Print("La interfaz no existe o no acepta operaciones de IO Genéricas")
 			currentPCB.EvictionReason = "EXIT"
@@ -240,7 +240,7 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		pcb.EvictionFlag = true
 
 	case "IO_FS_READ":
-		cond, err := HallarInterfaz(instruccionDecodificada[1], "DialFS")
+		cond, err := HallarInterfaz(instruccionDecodificada[1], "DIALFS")
 		if err != nil {
 			log.Print("La interfaz no existe o no acepta operaciones de IO Genéricas")
 			currentPCB.EvictionReason = "EXIT"
@@ -325,13 +325,19 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 			if cond {
 				// Obtener la dirección de memoria desde el registro
 				memoryAddress := currentPCB.CPU_reg[instruccionDecodificada[2]]
-				tipoActualReg2 := reflect.TypeOf(currentPCB.CPU_reg[instruccionDecodificada[3]]).String()
+				tipoActualReg2 := reflect.TypeOf(currentPCB.CPU_reg[instruccionDecodificada[2]]).String()
+
+				fmt.Println("A PUNTO DE CONVERTIR EL MEMORY ADDRESS")
 				memoryAddressInt := int(Convertir[uint32](tipoActualReg2, memoryAddress))
+				fmt.Println("TERMINO DE CONVERTIR")
 	
 				// Obtener la cantidad de datos a leer desde el registro
 				dataSize := currentPCB.CPU_reg[instruccionDecodificada[3]]
 				tipoActualReg3 := reflect.TypeOf(currentPCB.CPU_reg[instruccionDecodificada[3]]).String()
+				
+				fmt.Println("A PUNTO DE CONVERTIR EL DATA SIZE")
 				dataSizeInt := int(Convertir[uint32](tipoActualReg3, dataSize))
+				fmt.Println("ME VOY A TRADUCIR LAS DIRECSS")
 	
 				direccionesFisicas := mmu.ObtenerDireccionesFisicas(memoryAddressInt, dataSizeInt, int(currentPCB.PID))
 	
@@ -352,7 +358,8 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 				currentPCB.EvictionReason = "EXIT"
 			}
 		}
-
+		pcb.EvictionFlag = true
+		
 	case "IO_STDOUT_WRITE":
 		cond, err := HallarInterfaz(instruccionDecodificada[1], "STDOUT")
 		if err != nil {
@@ -362,7 +369,7 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 			if cond {
 				// Obtener la dirección de memoria desde el registro
 				memoryAddress := currentPCB.CPU_reg[instruccionDecodificada[2]]
-				tipoActualReg2 := reflect.TypeOf(currentPCB.CPU_reg[instruccionDecodificada[3]]).String()
+				tipoActualReg2 := reflect.TypeOf(currentPCB.CPU_reg[instruccionDecodificada[2]]).String()
 				memoryAddressInt := int(Convertir[uint32](tipoActualReg2, memoryAddress))
 	
 				// Obtener la cantidad de datos a leer desde el registro
@@ -370,7 +377,6 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 				tipoActualReg3 := reflect.TypeOf(currentPCB.CPU_reg[instruccionDecodificada[3]]).String()
 				dataSizeInt := int(Convertir[uint32](tipoActualReg3, dataSize))
 	
-				// ? Chequear como lo implementaron en mmu
 				direccionesFisicas := mmu.ObtenerDireccionesFisicas(memoryAddressInt, dataSizeInt, int(currentPCB.PID))
 
 				var stdoutBody = struct {
@@ -622,6 +628,8 @@ func Convertir[T Uint](tipo string, parametro interface{}) T {
 	if parametro == "" {
 		log.Fatal("La cadena de texto está vacía")
 	}
+
+	fmt.Print("El tipo a convertir es: ", tipo)
 
 	switch tipo {
 	case "uint8":

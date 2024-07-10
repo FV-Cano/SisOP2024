@@ -1,11 +1,8 @@
 package kernelutils
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"log"
-	"net/http"
 	"time"
 
 	kernel_api "github.com/sisoputnfrba/tp-golang/kernel/API"
@@ -167,7 +164,7 @@ func startTimer(quantum uint32) {
 
 func quantumInterrupt(pcb pcb.T_PCB) {
 	// Interrumpir proceso actual, response = OK message
-	SendInterrupt("QUANTUM", pcb.PID)
+	kernel_api.SendInterrupt("QUANTUM", pcb.PID)
 }
 
 /**
@@ -183,9 +180,11 @@ func EvictionManagement() {
 		globals.EnganiaPichangaMutex.Lock()
 		globals.ChangeState(&globals.CurrentJob, "BLOCKED")
 		slice.Push(&globals.Blocked, globals.CurrentJob)
+
+		pcbAux := globals.CurrentJob
 		log.Printf("PID: %d - Bloqueado por I/O genérico\n", globals.CurrentJob.PID)
 		go func(){
-			kernel_api.SolicitarGenSleep(globals.CurrentJob)
+			kernel_api.SolicitarGenSleep(pcbAux)
 		}()
 		globals.JobExecBinary <- true
 		
@@ -193,9 +192,11 @@ func EvictionManagement() {
 		globals.EnganiaPichangaMutex.Lock()
 		globals.ChangeState(&globals.CurrentJob, "BLOCKED")
 		slice.Push(&globals.Blocked, globals.CurrentJob)
+
+		pcbAux := globals.CurrentJob
 		log.Printf("PID: %d - Bloqueado por I/O de entrada\n", globals.CurrentJob.PID)
 		go func(){
-			kernel_api.SolicitarStdinRead(globals.CurrentJob)
+			kernel_api.SolicitarStdinRead(pcbAux)
 		}()
 		globals.JobExecBinary <- true
 
@@ -203,17 +204,21 @@ func EvictionManagement() {
 		globals.EnganiaPichangaMutex.Lock()
 		globals.ChangeState(&globals.CurrentJob, "BLOCKED")
 		slice.Push(&globals.Blocked, globals.CurrentJob)
+
+		pcbAux := globals.CurrentJob
 		go func(){
-			kernel_api.SolicitarStdoutWrite(globals.CurrentJob)
+			kernel_api.SolicitarStdoutWrite(pcbAux)
 		}()
 		globals.JobExecBinary <- true
 
 	case "BLOCKED_IO_DIALFS":
 		globals.EnganiaPichangaMutex.Lock()
 		globals.ChangeState(&globals.CurrentJob, "BLOCKED")
+
+		pcbAux := globals.CurrentJob
 		slice.Push(&globals.Blocked, globals.CurrentJob)
 		go func(){
-			kernel_api.SolicitarDialFS(globals.CurrentJob)
+			kernel_api.SolicitarDialFS(pcbAux)
 		}()
 		globals.JobExecBinary <- true
 
@@ -259,36 +264,16 @@ func EvictionManagement() {
 		<- globals.MultiprogrammingCounter
 		log.Printf("Finaliza el proceso %d - Motivo: %s\n", globals.CurrentJob.PID, evictionReason)
 
+	case "INTERRUPTED_BY_USER":
+		if resource.HasResources(globals.CurrentJob) {
+			globals.CurrentJob =  resource.ReleaseAllResources(globals.CurrentJob)
+		}
+		globals.ChangeState(&globals.CurrentJob, "TERMINATED")
+		globals.JobExecBinary <- true
+		<- globals.MultiprogrammingCounter
+		log.Printf("Finaliza el proceso %d - Motivo: %s\n", globals.CurrentJob.PID, evictionReason)
+	
 	default:
 		log.Fatalf("'%s' no es una razón de desalojo válida", evictionReason)
 	}	
-}
-
-type InterruptionRequest struct {
-	InterruptionReason string `json:"InterruptionReason"`
-	Pid uint32 `json:"pid"`
-}
-
-func SendInterrupt(reason string, pid uint32) {
-	url := fmt.Sprintf("http://%s:%d/interrupt", globals.Configkernel.IP_cpu, globals.Configkernel.Port_cpu)
-
-	bodyInt, err := json.Marshal(InterruptionRequest{
-		InterruptionReason: reason,
-		Pid: pid,
-	})
-	if err != nil {
-		return
-	}
-	
-	enviarInterrupcion, err := http.NewRequest("POST", url, bytes.NewBuffer(bodyInt))
-	if err != nil {
-		log.Fatalf("POST request failed (No se puede enviar interrupción): %v", err)
-	}
-	
-	cliente := &http.Client{}
-	enviarInterrupcion.Header.Set("Content-Type", "application/json")
-	recibirRta, err := cliente.Do(enviarInterrupcion)
-	if (err != nil || recibirRta.StatusCode != http.StatusOK) {
-		log.Fatal("Error al interrupir proceso", err)
-	}
 }

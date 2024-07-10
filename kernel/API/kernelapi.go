@@ -20,6 +20,7 @@ import (
 */
 
 type ProcessStart_BRQ struct {
+	PID uint32 `json:"pid"`
 	Path string `json:"path"`
 }
 
@@ -53,7 +54,7 @@ func ProcessInit(w http.ResponseWriter, r *http.Request) {
 	pathInstString := string(pathInst)
 	
 	newPcb := &pcb.T_PCB{
-		PID: 			generatePID(),
+		PID: 			request.PID, // ! ESTO NO ESTABA >:v
 		PC: 			0,
 		Quantum: 		uint32(globals.Configkernel.Quantum * int(time.Millisecond)),
 		CPU_reg: 		map[string]interface{}{
@@ -67,6 +68,7 @@ func ProcessInit(w http.ResponseWriter, r *http.Request) {
 							"EDX": uint32(0),
 							"SI": uint32(0),
 							"DI": uint32(0),
+							"PC": uint32(0),
 						},
 		State: 			"NEW",
 		EvictionReason: "",
@@ -120,18 +122,17 @@ func ProcessInit(w http.ResponseWriter, r *http.Request) {
 	w.Write(response)
 }
 
-func generatePID() uint32 {
+/* func generatePID() uint32 {
 	globals.PidMutex.Lock()
 	defer globals.PidMutex.Unlock()
 	globals.NextPID++
 	return globals.NextPID
-}
+} */
 
 /**
  * ProcessDelete: Elimina un proceso en base a un PID. Realiza las operaciones como si el proceso llegase a EXIT
 	[ ] Cambio de estado de proceso: EXIT
 	[ ] Liberación de recursos
-	[ ] Liberación de archivos
 	[ ] Liberación de memoria 
 
 	[ ] Testeada
@@ -147,8 +148,36 @@ func ProcessDelete(w http.ResponseWriter, r *http.Request) {
 	// Elimino el proceso de la lista de procesos
 	RemoveByID(pid)
 
+	// Le solicito a memoria que elimine el proceso
+	cliente := &http.Client{}
+	url := fmt.Sprintf("http://%s:%d/finalizarProceso", globals.Configkernel.IP_memory, globals.Configkernel.Port_memory)
+
+	req, err := http.NewRequest("PATCH", url, nil)
+	if err != nil {
+		return
+	}
+
+	q := req.URL.Query()
+	q.Add("pid", strconv.Itoa(int(pid)))
+	req.URL.RawQuery = q.Encode()
+
+	req.Header.Set("Content-Type", "application/json")
+	respuesta, err := cliente.Do(req)
+	if err != nil {
+		return
+	}
+
+	// Verificar el código de estado de la respuesta
+	if respuesta.StatusCode != http.StatusOK {
+		return
+	}
+
+	// TODO: Falta liberar recursos
+
+	SendInterrupt("DELETE", pid)
+
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Job deleted")) // ! No tiene que devolver nada
+	// w.Write([]byte("Job deleted")) // ! No tiene que devolver nada
 }
 
 type ProcessStatus_BRS struct {
@@ -339,6 +368,7 @@ func SearchByID(pid uint32, processList []pcb.T_PCB) (*pcb.T_PCB, int) {
 }
 
 /**
+ // TODO: Mover a utils/slice
  * RemoveByID: Remueve un proceso de la lista de procesos en base a su PID
 
  * @param pid: PID del proceso a remover
@@ -346,6 +376,7 @@ func SearchByID(pid uint32, processList []pcb.T_PCB) (*pcb.T_PCB, int) {
 func RemoveByID(pid uint32) error {
 	_, ltsIndex := SearchByID(pid, globals.LTS)
 	_, stsIndex := SearchByID(pid, globals.STS)
+	_, blockedIndex := SearchByID(pid, globals.Blocked)
 	
 	if ltsIndex != -1 {
 		globals.LTSMutex.Lock()
@@ -355,6 +386,10 @@ func RemoveByID(pid uint32) error {
 		globals.STSMutex.Lock()
 		defer globals.STSMutex.Unlock()
 		slice.RemoveAtIndex(&globals.STS, stsIndex)
+	} else if blockedIndex != -1 {
+		globals.BlockedMutex.Lock()
+		defer globals.BlockedMutex.Unlock()
+		slice.RemoveAtIndex(&globals.Blocked, blockedIndex)
 	}
 	
 	return nil
@@ -376,5 +411,35 @@ func RemoveFromBlocked(pid uint32) {
 		if pcb.PID == pid {
 			slice.RemoveAtIndex(&globals.Blocked, i)
 		}
+	}
+}
+
+
+type InterruptionRequest struct {
+	InterruptionReason string `json:"InterruptionReason"`
+	Pid uint32 `json:"pid"`
+}
+
+func SendInterrupt(reason string, pid uint32) {
+	url := fmt.Sprintf("http://%s:%d/interrupt", globals.Configkernel.IP_cpu, globals.Configkernel.Port_cpu)
+
+	bodyInt, err := json.Marshal(InterruptionRequest{
+		InterruptionReason: reason,
+		Pid: pid,
+	})
+	if err != nil {
+		return
+	}
+	
+	enviarInterrupcion, err := http.NewRequest("POST", url, bytes.NewBuffer(bodyInt))
+	if err != nil {
+		log.Fatalf("POST request failed (No se puede enviar interrupción): %v", err)
+	}
+	
+	cliente := &http.Client{}
+	enviarInterrupcion.Header.Set("Content-Type", "application/json")
+	recibirRta, err := cliente.Do(enviarInterrupcion)
+	if (err != nil || recibirRta.StatusCode != http.StatusOK) {
+		log.Fatal("Error al interrupir proceso", err)
 	}
 }

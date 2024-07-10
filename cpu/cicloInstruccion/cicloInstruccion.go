@@ -100,6 +100,9 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		log.Printf("PID: %d - Ejecutando: %s - %s", currentPCB.PID, instruccionDecodificada[0], instruccionDecodificada[1:])
 	}
 
+	currentPCB.PC++
+	currentPCB.CPU_reg["PC"] = uint32(currentPCB.PC)
+
 	switch instruccionDecodificada[0] {
 	case "IO_FS_CREATE":
 		cond, err := HallarInterfaz(instruccionDecodificada[1], "DialFS")
@@ -127,7 +130,6 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 			}
 		}
 		pcb.EvictionFlag = true
-		currentPCB.PC++
 
 	case "IO_FS_DELETE":
 		cond, err := HallarInterfaz(instruccionDecodificada[1], "DialFS")
@@ -155,7 +157,6 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 			}
 		}
 		pcb.EvictionFlag = true
-		currentPCB.PC++
 
 	case "IO_FS_TRUNCATE":
 		cond, err := HallarInterfaz(instruccionDecodificada[1], "DialFS")
@@ -189,7 +190,6 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 			}
 		}
 		pcb.EvictionFlag = true
-		currentPCB.PC++
 
 	case "IO_FS_WRITE":
 		cond, err := HallarInterfaz(instruccionDecodificada[1], "DialFS")
@@ -238,7 +238,6 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 			}
 		}
 		pcb.EvictionFlag = true
-		currentPCB.PC++
 
 	case "IO_FS_READ":
 		cond, err := HallarInterfaz(instruccionDecodificada[1], "DialFS")
@@ -287,7 +286,6 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 			}
 		}
 		pcb.EvictionFlag = true
-		currentPCB.PC++
 		
 	case "IO_GEN_SLEEP":
 		cond, err := HallarInterfaz(instruccionDecodificada[1], "GENERICA")
@@ -316,7 +314,6 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 			}
 		}
 		pcb.EvictionFlag = true
-		currentPCB.PC++
 
 	case "IO_STDIN_READ":
 		cond, err := HallarInterfaz(instruccionDecodificada[1], "STDIN")
@@ -355,8 +352,6 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 				currentPCB.EvictionReason = "EXIT"
 			}
 		}
-		pcb.EvictionFlag = true
-		currentPCB.PC++
 
 	case "IO_STDOUT_WRITE":
 		cond, err := HallarInterfaz(instruccionDecodificada[1], "STDOUT")
@@ -394,13 +389,11 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 			}
 		}
 		pcb.EvictionFlag = true
-		currentPCB.PC++
 
 	case "JNZ":
 		if currentPCB.CPU_reg[instruccionDecodificada[1]] != 0 {
 			currentPCB.PC = ConvertirUint32(instruccionDecodificada[2])
-		} else {
-			currentPCB.PC++
+			currentPCB.CPU_reg["PC"] = uint32(currentPCB.PC)
 		}
 
 	case "SET":
@@ -412,7 +405,10 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		} else {
 			currentPCB.CPU_reg[instruccionDecodificada[1]] = ConvertirUint8(valor)
 		}
-		currentPCB.PC++
+
+		if instruccionDecodificada[1] == "PC" {
+			currentPCB.PC = ConvertirUint32(valor)
+		}
 
 	case "SUM":
 		tipoReg1 := pcb.TipoReg(instruccionDecodificada[1])
@@ -427,7 +423,10 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		} else {
 			currentPCB.CPU_reg[instruccionDecodificada[1]] = Convertir[uint8](tipoActualReg1, currentPCB.CPU_reg[instruccionDecodificada[1]]) + Convertir[uint8](tipoActualReg2, valorReg2)
 		}
-		currentPCB.PC++
+
+		if instruccionDecodificada[1] == "PC" {
+			currentPCB.PC = currentPCB.CPU_reg["PC"].(uint32)
+		}
 
 	case "SUB":
 		//SUB (Registro Destino, Registro Origen): Resta al Registro Destino
@@ -444,19 +443,22 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		} else {
 			currentPCB.CPU_reg[instruccionDecodificada[1]] = Convertir[uint8](tipoActualReg1, currentPCB.CPU_reg[instruccionDecodificada[1]]) - Convertir[uint8](tipoActualReg2, valorReg2)
 		}
-		currentPCB.PC++
+		
+		if instruccionDecodificada[1] == "PC" {
+			currentPCB.PC = currentPCB.CPU_reg["PC"].(uint32)
+		}
 
 	case "WAIT":
 		currentPCB.RequestedResource = instruccionDecodificada[1]
 		fmt.Print("Requested Resource: ", currentPCB.RequestedResource + "\n") // *Lo hace bien 
 		currentPCB.EvictionReason = "WAIT"
-		currentPCB.PC++
+		//currentPCB.PC++
 		pcb.EvictionFlag = true
 
 	case "SIGNAL":
 		currentPCB.RequestedResource = instruccionDecodificada[1]
 		currentPCB.EvictionReason = "SIGNAL"
-		currentPCB.PC++
+		//currentPCB.PC++
 		pcb.EvictionFlag = true
 
 
@@ -506,8 +508,6 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		solicitudesmemoria.SolicitarEscritura(direcsFisicas, valor2EnString, int(currentPCB.PID)) //([direccion fisica y tamanio], valorAEscribir, pid
 
 	
-		currentPCB.PC++
-
 		//----------------------------------------------------------------------------
 
 		// MOV_IN (Registro Datos, Registro Dirección): Lee el valor
@@ -559,7 +559,6 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 			fmt.Println("LO GUARDE EN 8: ", currentPCB.CPU_reg[instruccionDecodificada[1]])
 		}
 		
-		currentPCB.PC++
 		
 		//-----------------------------------------------------------------------------
 		//COPY_STRING (Tamaño): Toma del string apuntado por el registro SI y
@@ -589,7 +588,6 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		// Carga en esa direccion fisica lo que leiste antes
 		solicitudesmemoria.SolicitarEscritura(direcsFisicasDI, string(datos), int(currentPCB.PID)) //([direccion fisica y tamanio], valorAEscribir, pid)
 
-		currentPCB.PC++
 
 	//RESIZE (Tamaño)
 	case "RESIZE":
@@ -604,7 +602,6 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 			pcb.EvictionFlag = true
 		}
 		fmt.Println("sigoo en cpu")
-		currentPCB.PC++
 	}
 }
 

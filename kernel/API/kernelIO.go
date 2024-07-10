@@ -377,6 +377,7 @@ func RecvPCB_IO(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	
+	RemoveByID(received_pcb.PID)
 	globals.ChangeState(&received_pcb, "READY")
 	slice.Push(&globals.STS, received_pcb)
 	globals.STSCounter <- int(received_pcb.PID)

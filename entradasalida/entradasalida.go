@@ -4,6 +4,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
+	"strings"
 
 	IO_api "github.com/sisoputnfrba/tp-golang/entradasalida/API"
 	"github.com/sisoputnfrba/tp-golang/entradasalida/globals"
@@ -19,19 +21,28 @@ func main() {
 	logger.LogfileCreate("io_debug.log")
 
 	// Inicializar config
-	err := cfg.ConfigInit(os.Args[2], &globals.ConfigIO)
+	err := cfg.ConfigInit(os.Args[1], &globals.ConfigIO)
 	if err != nil {
 		log.Fatalf("Error al cargar la configuracion %v", err)
 	}
-	log.Printf("Configuración IO cargada")
+	
+	cfg.VEnvKernel(&globals.ConfigIO.Ip_kernel, &globals.ConfigIO.Port_kernel)
+	cfg.VEnvMemoria(&globals.ConfigIO.Ip_memory, &globals.ConfigIO.Port_memory)
+	cfg.VEnvIO(&globals.ConfigIO.Ip, &globals.ConfigIO.Port)
 
+	log.Printf("Configuración IO cargada")
+	
 	IORoutes := RegisteredModuleRoutes()
 
 	go server.ServerStart(globals.ConfigIO.Port, IORoutes)
 
 	// Handshake con kernel
 	log.Println("Handshake con Kernel")
-	IO_api.HandshakeKernel(os.Args[1])
+
+    nombreInterfaz := filepath.Base(os.Args[1])
+    nombreInterfaz = strings.TrimSuffix(nombreInterfaz, filepath.Ext(nombreInterfaz))
+	IO_api.HandshakeKernel(nombreInterfaz)
+	
 	globals.Generic_QueueChannel = make(chan globals.GenSleep, 1)
 	globals.Stdin_QueueChannel = make(chan globals.StdinRead, 1)
 	globals.Stdout_QueueChannel = make(chan globals.StdoutWrite, 1)

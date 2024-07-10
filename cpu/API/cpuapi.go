@@ -71,10 +71,14 @@ func HandleInterruption(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if _, ok := evictionReasons[globals.CurrentJob.EvictionReason]; !ok && request.Pid == globals.CurrentJob.PID {
+		pcb.EvictionFlag = true
+
 		switch request.InterruptionReason {
 		case "QUANTUM":
-			pcb.EvictionFlag = true
 			globals.CurrentJob.EvictionReason = "TIMEOUT"
+
+		case "DELETE":
+			globals.CurrentJob.EvictionReason = "INTERRUPTED_BY_USER"
 		}
 	}
 

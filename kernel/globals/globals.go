@@ -29,6 +29,7 @@ var (
 		STSMutex 				sync.Mutex //!chequear
 		//ControlMutex 			sync.Mutex		// Creería que no es necesario
 		LTSMutex 				sync.Mutex
+		BlockedMutex			sync.Mutex
 		MapMutex 				sync.Mutex
 		EmptiedListMutex		sync.Mutex
 		EnganiaPichangaMutex	sync.Mutex

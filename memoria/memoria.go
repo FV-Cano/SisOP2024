@@ -21,6 +21,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error al cargar la configuracion %v", err)
 	}
+
+	cfg.VEnvMemoria(nil, &globals.Configmemory.Port)
+
 	log.Println("Configuracion MEMORIA cargada")
 
 	globals.User_Memory = make([]byte, globals.Configmemory.Memory_size)

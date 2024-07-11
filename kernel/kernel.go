@@ -114,5 +114,3 @@ func ServerStart(port int) {
 		panic(err)
 	}
 }
-
-// TODO: Probar finalizar proceso y estado proceso

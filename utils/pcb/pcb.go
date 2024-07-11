@@ -1,6 +1,6 @@
 package pcb
 
-// Estructura PCB que comparten tanto el kernel como el CPU
+// * Estructura PCB que comparten tanto el kernel como el CPU
 type T_PCB struct {
 	PID 				uint32 						`json:"pid"`
 	PC 					uint32 						`json:"pc"`

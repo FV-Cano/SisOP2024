@@ -35,8 +35,7 @@ type GetInstructions_BRQ struct {
 }
 
 /**
- * ProcessInit: Inicia un proceso en base a un archivo dentro del FS de Linux.
- 	[ ] Testeada
+ * ProcessInit: Inicia un proceso en base a un archivo dentro del FS.
 */
 func ProcessInit(w http.ResponseWriter, r *http.Request) {
 	var request ProcessStart_BRQ
@@ -134,11 +133,6 @@ func ProcessInit(w http.ResponseWriter, r *http.Request) {
 
 /**
  * ProcessDelete: Elimina un proceso en base a un PID. Realiza las operaciones como si el proceso llegase a EXIT
-	[ ] Cambio de estado de proceso: EXIT
-	[ ] Liberación de recursos
-	[ ] Liberación de memoria 
-
-	[ ] Testeada
 */
 func ProcessDelete(w http.ResponseWriter, r *http.Request) {
 	pidString := r.PathValue("pid")
@@ -189,7 +183,6 @@ type ProcessStatus_BRS struct {
 
 /**
  * ProcessState: Devuelve el estado de un proceso en base a un PID
-	[ ] Testeada
 */
 func ProcessState(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("HOLAAA ESTOY EN PROCESS STATE")
@@ -345,7 +338,6 @@ func SearchByID(pid uint32, processList []pcb.T_PCB) (*pcb.T_PCB, int) {
 }
 
 /**
- // TODO: Mover a utils/slice
  * RemoveByID: Remueve un proceso de la lista de procesos en base a su PID
 
  * @param pid: PID del proceso a remover

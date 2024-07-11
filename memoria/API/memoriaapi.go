@@ -226,8 +226,7 @@ func EnviarMarco(w http.ResponseWriter, r *http.Request) {
 }
 
 //--------------------------------------------------------------------------------------//
-//FINALIZACION DE PROCESO: PETICION DESDE KERNEL (PATCH) 
-//TODO: falta implementar desde el kernel?
+//FINALIZACION DE PROCESO: PETICION DESDE KERNEL (PATCH)
 func FinalizarProceso(w http.ResponseWriter, r *http.Request) {
 	queryParams := r.URL.Query()
 	pid := queryParams.Get("pid")
@@ -357,7 +356,7 @@ func EscribirMemoria(w http.ResponseWriter, r *http.Request) {
 
 
 // por cada struct va a ESCRIBIR la memoria en el tamaño que le pide
-func EscribirEnMemoria(direccionesTamanios []globals.DireccionTamanio, valor_a_escribir string, pid int) string { //TODO: tenemos que validar que al proceso le corresponda escribir ahí o ya la validación la hizo cpu al traducir la dirección?
+func EscribirEnMemoria(direccionesTamanios []globals.DireccionTamanio, valor_a_escribir string, pid int) string {
 	/*Ante un pedido de escritura, escribir lo indicado a partir de la dirección física pedida.
 	En caso satisfactorio se responderá un mensaje de ‘OK’.*/
 	

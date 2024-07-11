@@ -120,7 +120,7 @@ func SolicitarGenSleep(pcb pcb.T_PCB) {
 		TimeToSleep: 	genSleepDataDecoded.SleepTime,
 	}
 
-	globals.EnganiaPichangaMutex.Unlock()
+	//globals.EnganiaPichangaMutex.Unlock()
 	
 	jsonData, err := json.Marshal(genSleep)
 	if err != nil {
@@ -160,7 +160,12 @@ func SolicitarStdinRead(pcb pcb.T_PCB) {
 
 	fmt.Println("LE QUIERE MANDAR A IO: ", stdinRead)
 
-	globals.EnganiaPichangaMutex.Unlock()
+	log.Println("STS ANTES DE MANDAR A IO: ", globals.STS)
+	RemoveByID(pcb.PID)
+	globals.ChangeState(&pcb, "BLOCKED")
+	slice.Push(&globals.Blocked, pcb)
+	
+	//globals.EnganiaPichangaMutex.Unlock()
 
 	jsonData, err := json.Marshal(stdinRead)
 	if err != nil {
@@ -174,6 +179,7 @@ func SolicitarStdinRead(pcb pcb.T_PCB) {
 		log.Printf("Failed to send PCB: %v", err)
 	}
 
+	log.Println("STS DESPUES DE MANDAR A IO: ", globals.STS)
 	log.Println("IO STDIN FUE AVISADO POR KERNEL")
 
 	if resp.StatusCode != http.StatusOK {
@@ -198,7 +204,7 @@ func SolicitarStdoutWrite(pcb pcb.T_PCB) {
 		DireccionesFisicas: 	stdoutDataDecoded.DireccionesFisicas,
 	}
 
-	globals.EnganiaPichangaMutex.Unlock()
+	//globals.EnganiaPichangaMutex.Unlock()
 
 	jsonData, err := json.Marshal(stdoutWrite)
 	if err != nil {
@@ -242,7 +248,7 @@ func SolicitarDialFS(pcb pcb.T_PCB) {
 		Operacion: 				dialFsDataDecoded.Operation,				
 	}
 
-	globals.EnganiaPichangaMutex.Unlock()
+	//globals.EnganiaPichangaMutex.Unlock()
 
 	jsonData, err := json.Marshal(dialFS)
 	if err != nil {

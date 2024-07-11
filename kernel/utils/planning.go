@@ -131,7 +131,7 @@ func RR_Plan(quantum uint32) {
 }
 
 func VRR_Plan() {
-	globals.EnganiaPichangaMutex.Lock()
+	//globals.EnganiaPichangaMutex.Lock()
 	if len(globals.STS_Priority) == 0 {
 		globals.CurrentJob = slice.Shift(&globals.STS)
 	} else {
@@ -139,7 +139,7 @@ func VRR_Plan() {
 	}
 	
 	globals.ChangeState(&globals.CurrentJob, "EXEC")
-	globals.EnganiaPichangaMutex.Unlock()
+	//globals.EnganiaPichangaMutex.Unlock()
 
 	timeBefore := time.Now()
 	go startTimer(globals.CurrentJob.Quantum)
@@ -181,7 +181,7 @@ func EvictionManagement() {
 
 	switch evictionReason {
 	case "BLOCKED_IO_GEN":
-		globals.EnganiaPichangaMutex.Lock()
+		//globals.EnganiaPichangaMutex.Lock()
 		globals.ChangeState(&globals.CurrentJob, "BLOCKED")
 		slice.Push(&globals.Blocked, globals.CurrentJob)
 
@@ -193,7 +193,7 @@ func EvictionManagement() {
 		//globals.JobExecBinary <- true
 		
 	case "BLOCKED_IO_STDIN":
-		globals.EnganiaPichangaMutex.Lock()
+		//globals.EnganiaPichangaMutex.Lock()
 		globals.ChangeState(&globals.CurrentJob, "BLOCKED")
 		slice.Push(&globals.Blocked, globals.CurrentJob)
 
@@ -205,7 +205,7 @@ func EvictionManagement() {
 		//globals.JobExecBinary <- true
 
 	case "BLOCKED_IO_STDOUT":
-		globals.EnganiaPichangaMutex.Lock()
+		//globals.EnganiaPichangaMutex.Lock()
 		globals.ChangeState(&globals.CurrentJob, "BLOCKED")
 		slice.Push(&globals.Blocked, globals.CurrentJob)
 
@@ -216,7 +216,7 @@ func EvictionManagement() {
 		//globals.JobExecBinary <- true
 
 	case "BLOCKED_IO_DIALFS":
-		globals.EnganiaPichangaMutex.Lock()
+		//globals.EnganiaPichangaMutex.Lock()
 		globals.ChangeState(&globals.CurrentJob, "BLOCKED")
 
 		pcbAux := globals.CurrentJob

@@ -223,6 +223,7 @@ func WriteFile(pid int, nombreArchivo string, direccion []globals.DireccionTaman
 	punteroEnArchivo := primerByteArchivo + puntero
 	ultimoByteArchivo := globals.Fcbs[nombreArchivo].Size + primerByteArchivo
 	leerDeMemoria := IO_DIALFS_WRITE(pid, direccion)
+	fmt.Println("YA LEI PARA ESCRIBIR EL FS")
 	cantidadBytesLeidos := len(leerDeMemoria)
 	cantidadBytesAEscribir := punteroEnArchivo + cantidadBytesLeidos
 	cantidadBytesDisponibles := ultimoByteArchivo - punteroEnArchivo
@@ -232,6 +233,7 @@ func WriteFile(pid int, nombreArchivo string, direccion []globals.DireccionTaman
 	}
 
 	ioutils.WriteFs(leerDeMemoria, punteroEnArchivo)
+	fmt.Print("YA ESCRIBI EL FS PIBE")
 
 	log.Printf("PID: %d - Escribir Archivo: %s - Tamaño a Escribir: %d - Puntero Archivo: %d", pid, nombreArchivo, tamanio, puntero)
 }
@@ -246,13 +248,16 @@ func TruncateFile(pid int, nombreArchivo string, tamanio int) { //revisar si tie
 
 	bloqueInicial := archivo.InitialBlock
 	tamArchivoOriginalEnBloques := int(math.Ceil(float64(archivo.Size) / float64(globals.ConfigIO.Dialfs_block_size)))
+	fmt.Println("El tamaño original del archivo en bloques es ", tamArchivoOriginalEnBloques)
 	bloqueFinalInicial := bloqueInicial + tamArchivoOriginalEnBloques //- 1 //es decir el final del archivo actual //TODO: revisar si es -1 o no
+	fmt.Println("BLoque final archivo actual", bloqueFinalInicial)
 
 	// Chequeamos si el archivo tiene que crecer o achicarse
 	// Si el archivo crece
 	if tamanio > archivo.Size {
 		tamanioATruncarEnBytes := tamanio - archivo.Size
 		tamanioATruncarEnBloques := int(math.Ceil(float64(tamanioATruncarEnBytes) / float64(globals.ConfigIO.Dialfs_block_size)))
+		fmt.Println("Tamaño a agrandar el archivo en bloques", tamanioATruncarEnBloques)
 
 		bloquesLibresAlFinalDelArchivo := ioutils.CalcularBloquesLibreAPartirDe(bloqueFinalInicial)
 
@@ -420,6 +425,8 @@ func IO_DIALFS_WRITE(pid int, direccionesFisicas []globals.DireccionTamanio) []b
 	for _, sliceBytes := range response {
 		bytesConcatenados = append(bytesConcatenados, sliceBytes...)
 	}
+
+	fmt.Println("LO leido en memoria es ", bytesConcatenados)
 
 	return bytesConcatenados
 }

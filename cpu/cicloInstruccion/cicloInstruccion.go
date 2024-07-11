@@ -174,7 +174,7 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 			var tamanioEnInt int
 
 			tipoActualReg2 := reflect.TypeOf(currentPCB.CPU_reg[instruccionDecodificada[3]]).String()
-			fmt.Println("EL tamaño del archivo es: ", tamanio_archivo)
+			fmt.Println("EL tamaño a convertir del archivo es : ", tamanio_archivo)
 
 			if tipoActualReg2 == "uint32" {
 				tamanioEnInt = int(Convertir[uint32](tipoActualReg2, tamanio_archivo))
@@ -198,6 +198,7 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 
 				SendIOData(fsCreateBody, "iodata-dialfs")
 				currentPCB.EvictionReason = "BLOCKED_IO_DIALFS"
+
 			} else {
 				currentPCB.EvictionReason = "EXIT"
 			}
@@ -247,6 +248,8 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 			} else {
 				punteroEnInt = int(Convertir[uint8](tipoActualRegPuntero, puntero))
 			}
+
+			fmt.Println("la posicion donde hay que escribir en memoria es ", punteroEnInt)
 
 			direccionesFisicas := mmu.ObtenerDireccionesFisicas(direccionEnInt, tamanioEnInt, int(currentPCB.PID))
 

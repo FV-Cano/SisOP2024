@@ -2,6 +2,7 @@ package ioutils
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"math"
@@ -124,11 +125,13 @@ func WriteFs(contenido []byte, byteInicial int) {
 
 	for i := 0; i < len(contenido); i++ {
 		globals.Blocks[byteInicial+i] = contenido[i]
+		fmt.Printf("Bloque: %d, Contenido: %d ", byteInicial+i, contenido[i])
 	}
 
 	tamanioFinalEnBloques := int(math.Ceil(float64(len(contenido)) / float64(globals.ConfigIO.Dialfs_block_size)))
 	OcuparBloquesDesde(bloqueInicial, tamanioFinalEnBloques)
 	ActualizarBloques()
+
 }
 
 func EntraEnDisco(tamanioTotalEnBloques int) int {
@@ -235,7 +238,8 @@ func OcuparBloquesDesde(numBloque int, tamanioASetear int) {
 	var contador = 0                // Inicializa el contador
 	for contador < tamanioASetear { // Continúa mientras el contador sea menor que tamanioASetear
 		if IsNotSet(i) { // Si el bloque actual no está seteado
-			Set(i)     // Setea el bloque
+			Set(i) // Setea el bloque
+			fmt.Println("Se setteo el bloque ", i)
 			contador++ // Incrementa el contador
 		} else { // Si el bloque ya está seteado
 			break // Rompe el bucle

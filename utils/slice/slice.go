@@ -11,6 +11,17 @@ func RemoveAtIndex[T any](slice *[]T, index int) {
 }
 
 /**
+ * InsertAtIndex: Inserta un elemento en un slice en el índice proporcionado.
+
+ * @param slice: Slice de cualquier tipo.
+ * @param index: Índice donde se va a ingresar el elemento.
+ * @param elem:  Elemento a ingresar.
+ */
+func InsertAtIndex[T any](slice *[]T, index int, elem T) {
+	*slice = append((*slice)[:index], append([]T{elem}, (*slice)[index:]...)...)
+}
+
+/**
  * Pop: Remueve el último elemento de un slice
 
  * @param slice: Slice de cualquier tipo.

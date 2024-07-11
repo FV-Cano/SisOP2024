@@ -10,18 +10,13 @@ import (
 	"github.com/sisoputnfrba/tp-golang/utils/pcb"
 )
 
-type InterfaceController struct {
-	IoInterf 					device.T_IOInterface
-	Controller 					chan bool
-}
-
 var (
 	NextPID 					uint32 = 0
 	LTS 						[]pcb.T_PCB
 	STS 						[]pcb.T_PCB
 	Blocked 					[]pcb.T_PCB
 	STS_Priority 				[]pcb.T_PCB
-	Interfaces 					[]InterfaceController
+	Interfaces 					[]device.T_IOInterface
 	ResourceMap					map[string][]pcb.T_PCB
 	Resource_instances  		map[string]int
 )
@@ -31,19 +26,23 @@ var (
 	// * Mutex
 		PidMutex 				sync.Mutex
 		ProcessesMutex 			sync.Mutex
-		STSMutex 				sync.Mutex
+		STSMutex 				sync.Mutex //!chequear
+		//ControlMutex 			sync.Mutex		// Creería que no es necesario
 		LTSMutex 				sync.Mutex
+		BlockedMutex			sync.Mutex
 		MapMutex 				sync.Mutex
 		EmptiedListMutex		sync.Mutex
 		EnganiaPichangaMutex	sync.Mutex
 	// * Binarios
-		PlanBinary  			= make (chan bool, 1)
+		LTSPlanBinary  			= make (chan bool, 1)
+		STSPlanBinary  			= make (chan bool, 1)
 		JobExecBinary			= make (chan bool, 1)
 		PcbReceived				= make (chan bool, 1)
 		AvailablePcb			= make (chan bool, 1)
 	// * Contadores
 		// Chequea si hay procesos en la cola de listos, lo usamos en EvictionManagement y en ProcessInit
 		MultiprogrammingCounter chan int
+		STSCounter 				chan int
 )
 
 // CurrentJob (kernel_api funcion PCB_Send) se lee

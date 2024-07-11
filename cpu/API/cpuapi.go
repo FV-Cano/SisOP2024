@@ -25,10 +25,10 @@ func PCB_recv(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	globals.CurrentJob = received_pcb
-		
+	globals.CurrentJob = &received_pcb
+
 	for !pcb.EvictionFlag {
-		cicloInstruccion.DecodeAndExecute(&globals.CurrentJob)
+		cicloInstruccion.DecodeAndExecute(globals.CurrentJob)
 
 		fmt.Println("Los registros de la cpu son", globals.CurrentJob.CPU_reg)
 	}
@@ -36,7 +36,7 @@ func PCB_recv(w http.ResponseWriter, r *http.Request) {
 	//fmt.Println("ABER MOSTRAMELON: ", pcb.EvictionFlag) // * Se recordará su contribución a la ciencia
 	pcb.EvictionFlag = false
 	//fmt.Println("C PUSO FOLS ", pcb.EvictionFlag)
-	
+
 	jsonResp, err := json.Marshal(globals.CurrentJob)
 	if err != nil {
 		http.Error((w), "Failed to encode PCB response", http.StatusInternalServerError)
@@ -48,14 +48,15 @@ func PCB_recv(w http.ResponseWriter, r *http.Request) {
 
 type InterruptionRequest struct {
 	InterruptionReason string `json:"InterruptionReason"`
-	Pid uint32 `json:"pid"`
+	Pid                uint32 `json:"pid"`
 }
+
 /**
- * HandleInterruption: Maneja las interrupciones de CPU	
-*/
+ * HandleInterruption: Maneja las interrupciones de CPU
+ */
 func HandleInterruption(w http.ResponseWriter, r *http.Request) {
 	var request InterruptionRequest
-	
+
 	// Decode json payload
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
@@ -66,13 +67,18 @@ func HandleInterruption(w http.ResponseWriter, r *http.Request) {
 	evictionReasons := map[string]struct{}{
 		"EXIT":       {},
 		"BLOCKED_IO": {},
+		"OUT_OF_MEMORY": {},
 	}
-	
+
 	if _, ok := evictionReasons[globals.CurrentJob.EvictionReason]; !ok && request.Pid == globals.CurrentJob.PID {
+		pcb.EvictionFlag = true
+
 		switch request.InterruptionReason {
-			case "QUANTUM":
-				pcb.EvictionFlag = true
-				globals.CurrentJob.EvictionReason = "TIMEOUT"
+		case "QUANTUM":
+			globals.CurrentJob.EvictionReason = "TIMEOUT"
+
+		case "DELETE":
+			globals.CurrentJob.EvictionReason = "INTERRUPTED_BY_USER"
 		}
 	}
 

@@ -21,7 +21,7 @@ type T_CPU struct {
 	Algorithm_tlb      	string `json:"algorithm_tlb"`
 }
 
-var CurrentJob pcb.T_PCB
+var CurrentJob *pcb.T_PCB
 
 // Global semaphores
 var (

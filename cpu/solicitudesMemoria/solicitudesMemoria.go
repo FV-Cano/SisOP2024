@@ -5,61 +5,61 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/sisoputnfrba/tp-golang/cpu/globals"
 )
 
 // Peticion para RESIZE de memoria (DESDE CPU A MEMORIA)
-func Resize(tamanio int) {
+func Resize(tamanio int) string {
 	cliente := &http.Client{}
-	url := fmt.Sprintf("http://%s:%d/resize", globals.Configcpu.IP_memory,globals.Configcpu.Port_memory)
+	url := fmt.Sprintf("http://%s:%d/resize", globals.Configcpu.IP_memory, globals.Configcpu.Port_memory)
 	req, err := http.NewRequest("PATCH", url, nil)
 	if err != nil {
-		return 
+		return "error"
 	}
 
 	q := req.URL.Query()
-	q.Add("tamanio", "tamanio")
+	tamanioEnString := strconv.Itoa(tamanio)
+	q.Add("tamanio", tamanioEnString)
+	q.Add("pid", strconv.Itoa(int(globals.CurrentJob.PID)))
 	req.URL.RawQuery = q.Encode()
 
 	req.Header.Set("Content-Type", "application/json")
 	respuesta, err := cliente.Do(req)
 	if err != nil {
-		return 
+		return "error"
 	}
 
 	// Verificar el código de estado de la respuesta
 	if respuesta.StatusCode != http.StatusOK {
-		return 
+		return "Error al realizar la petición de resize"
 	}
 
 	bodyBytes, err := io.ReadAll(respuesta.Body)
 	if err != nil {
-		return 	
+		return "error"
 	}
 	//En caso de que la respuesta de la memoria sea Out of Memory, se deberá devolver el contexto de ejecución al Kernel informando de esta situación
 	// Y Avisar que el error es por out of memory
-	var respuestaResize = string(bodyBytes)
-	if respuestaResize != "OK" {
-		//TODO: pcb.EvictionFlag = true
-		//hacer esto
-	} 
+	return string(bodyBytes)
 }
-
 
 type BodyRequestEscribir struct {
 	DireccionesTamanios []globals.DireccionTamanio `json:"direcciones_tamanios"`
-	Valor_a_escribir    string             `json:"valor_a_escribir"`
-	Pid                 int                `json:"pid"`
+	Valor_a_escribir    string                     `json:"valor_a_escribir"`
+	Pid                 int                        `json:"pid"`
 }
 
 func SolicitarEscritura(direccionesTamanios []globals.DireccionTamanio, valorAEscribir string, pid int) {
 	body, err := json.Marshal(BodyRequestEscribir{
-		DireccionesTamanios : direccionesTamanios,
-		Valor_a_escribir    : valorAEscribir,
-		Pid                 : pid,
-	})          
+		DireccionesTamanios: direccionesTamanios,
+		Valor_a_escribir:    valorAEscribir,
+		Pid:                 pid,
+	})
 	if err != nil {
 		return
 	}
@@ -89,49 +89,92 @@ func SolicitarEscritura(direccionesTamanios []globals.DireccionTamanio, valorAEs
 	// La respuesta puede ser un "Ok" o u "Error: dirección o tamanio fuera de rango"
 
 	respuestaEnString := string(bodyBytes)
-	if respuestaEnString != "OK" {
-		fmt.Println("Se produjo un error al escribir", respuestaEnString)
+
+	respuestaSinComillas := strings.Trim(respuestaEnString, `"`)
+
+	fmt.Println("Respuesta de memoria: ", respuestaSinComillas)
+	fmt.Println("Valor a escribir: ", valorAEscribir)
+	valorAEscribirEnBytes := []byte(valorAEscribir)
+	fmt.Println("Valor a escribir en bytes: ", valorAEscribirEnBytes)
+	
+	if respuestaSinComillas != "OK" {
+		fmt.Println("Se produjo un error al escribir", respuestaSinComillas)
 	} else {
-		fmt.Println("Se realizó la escritura correctamente", respuestaEnString)
+		for _, df := range direccionesTamanios {
+			cantEscrita := 0
+			log.Printf("PID: %d - Acción: ESCRIBIR - Dirección Física: %d - Valor: %b", pid, df.DireccionFisica, valorAEscribirEnBytes[cantEscrita: df.Tamanio]) 
+			cantEscrita += df.Tamanio
+		}
 	}
 }
-
 
 type BodyRequestLeer struct {
 	DireccionesTamanios []globals.DireccionTamanio `json:"direcciones_tamanios"`
+	Pid                 int                        `json:"pid"`
 }
 
+type BodyADevolver struct {
+	Contenido [][]byte `json:"contenido"`
+}
 // LE SOLICITO A MEMORIA LEER Y DEVOLVER LO QUE ESTÉ EN LA DIREC FISICA INDICADA
-func SolicitarLectura(direccionesFisicas []globals.DireccionTamanio) string {
+func SolicitarLectura(direccionesFisicas []globals.DireccionTamanio, pid int) []byte {
+	var bodyResponseLeer BodyADevolver
 
 	jsonDirecYTamanio, err := json.Marshal(BodyRequestLeer{
 		DireccionesTamanios: direccionesFisicas,
+		Pid:                 pid,
 	})
 	if err != nil {
-		return "error"
+		return []byte("error")
 	}
+	/*jsonDirecYTamanio, err := json.Marshal(direccionesFisicas)
+	if err != nil {
+		return []byte("error")
+	}*/
 
 	cliente := &http.Client{}
 	url := fmt.Sprintf("http://%s:%d/read", globals.Configcpu.IP_memory, globals.Configcpu.Port_memory)
-	leerMemoria, err := http.NewRequest("GET", url, bytes.NewBuffer(jsonDirecYTamanio))
+	leerMemoria, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonDirecYTamanio))
 	if err != nil {
-		return "error"
+		return []byte("error")
 	}
+
+	fmt.Println("Solicito lectura de memoria", jsonDirecYTamanio)
 
 	leerMemoria.Header.Set("Content-Type", "application/json")
 	respuesta, err := cliente.Do(leerMemoria)
 	if err != nil {
-		return "error"
+		return []byte("error")
 	}
+
 
 	if respuesta.StatusCode != http.StatusOK {
-		return "Error al realizar la lectura"	
+		return []byte("Error al realizar la lectura")
 	}
 
-	bodyBytes, err := io.ReadAll(respuesta.Body)
+	fmt.Println("A VER QUE ONDA")
+
+	/*bodyBytes, err := io.ReadAll(respuesta.Body)
 	if err != nil {
-		return "error"
+		return []byte("error")
+	}*/
+	//fmt.Println("Recibí respuesta de memoria: ", string(bodyBytes))
+	
+	err = json.NewDecoder(respuesta.Body).Decode(&bodyResponseLeer) 
+	if err != nil {
+		return []byte("error al deserializar la respuesta")
+	}
+	fmt.Println("DIRECCCIONES FISICAS: ", direccionesFisicas)
+
+	for i, df := range direccionesFisicas {
+		contenido := bodyResponseLeer.Contenido[i]
+		fmt.Println("Contenido: ", contenido)
+		log.Printf("PID: %d - Acción: LEER - Dirección Física: %d - Valor: %b", pid, df.DireccionFisica, contenido) 
 	}
 
-	return string(bodyBytes)
+	var bytesConcatenados []byte
+    for _, sliceBytes := range bodyResponseLeer.Contenido {
+        bytesConcatenados = append(bytesConcatenados, sliceBytes...)
+    }
+	return bytesConcatenados
 }

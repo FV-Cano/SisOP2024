@@ -112,19 +112,19 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		} else {
 			nombre_archivo := instruccionDecodificada[2]
 			if cond {
-				
+
 				var fsCreateBody = struct {
 					InterfaceName string
 					FileName      string
 					Operation     string
-					}{
-						InterfaceName: instruccionDecodificada[1],
-						FileName:      nombre_archivo,
-						Operation:     "CREATE",
-					}
-					
-					SendIOData(fsCreateBody, "iodata-dialfs")
-					currentPCB.EvictionReason = "BLOCKED_IO_DIALFS"
+				}{
+					InterfaceName: instruccionDecodificada[1],
+					FileName:      nombre_archivo,
+					Operation:     "CREATE",
+				}
+
+				SendIOData(fsCreateBody, "iodata-dialfs")
+				currentPCB.EvictionReason = "BLOCKED_IO_DIALFS"
 			} else {
 				currentPCB.EvictionReason = "EXIT"
 			}
@@ -139,25 +139,30 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		} else {
 			nombre_archivo := instruccionDecodificada[2]
 			if cond {
-				
+
 				var fsCreateBody = struct {
 					InterfaceName string
 					FileName      string
 					Operation     string
-					}{
-						InterfaceName: instruccionDecodificada[1],
-						FileName:      nombre_archivo,
-						Operation:     "DELETE",
-					}
-					
-					SendIOData(fsCreateBody, "iodata-dialfs")
-					currentPCB.EvictionReason = "BLOCKED_IO_DIALFS"
+				}{
+					InterfaceName: instruccionDecodificada[1],
+					FileName:      nombre_archivo,
+					Operation:     "DELETE",
+				}
+
+				SendIOData(fsCreateBody, "iodata-dialfs")
+				currentPCB.EvictionReason = "BLOCKED_IO_DIALFS"
 			} else {
 				currentPCB.EvictionReason = "EXIT"
 			}
 		}
 		pcb.EvictionFlag = true
 
+		/* (Interfaz, Nombre Archivo, Registro Tamaño): Esta instrucción
+		solicita al Kernel que mediante la interfaz seleccionada, se modifique
+		el tamaño del archivo en el FS montado en dicha interfaz, actualizando al
+		valor que se encuentra en el registro indicado por Registro Tamaño.
+		*/
 	case "IO_FS_TRUNCATE":
 		cond, err := HallarInterfaz(instruccionDecodificada[1], "DIALFS")
 		if err != nil {
@@ -165,32 +170,44 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 			currentPCB.EvictionReason = "EXIT"
 		} else {
 			nombre_archivo := instruccionDecodificada[2]
-			tamanio_archivo, err := strconv.Atoi(instruccionDecodificada[3])
-			if err != nil {
-				log.Fatal("Error al convertir el tamaño del archivo a entero")
+			tamanio_archivo := currentPCB.CPU_reg[instruccionDecodificada[3]]
+			var tamanioEnInt int
+
+			tipoActualReg2 := reflect.TypeOf(currentPCB.CPU_reg[instruccionDecodificada[3]]).String()
+			fmt.Println("EL tamaño del archivo es: ", tamanio_archivo)
+
+			if tipoActualReg2 == "uint32" {
+				tamanioEnInt = int(Convertir[uint32](tipoActualReg2, tamanio_archivo))
+			} else {
+				tamanioEnInt = int(Convertir[uint8](tipoActualReg2, tamanio_archivo))
 			}
+
 			if cond {
-				
+
 				var fsCreateBody = struct {
 					InterfaceName string
 					FileName      string
-					Size		  int
+					Size          int
 					Operation     string
-					}{
-						InterfaceName:	instruccionDecodificada[1],
-						FileName:		nombre_archivo,
-						Size:			tamanio_archivo,
-						Operation:		"TRUNCATE",
-					}
-					
-					SendIOData(fsCreateBody, "iodata-dialfs")
-					currentPCB.EvictionReason = "BLOCKED_IO_DIALFS"
+				}{
+					InterfaceName: instruccionDecodificada[1],
+					FileName:      nombre_archivo,
+					Size:          tamanioEnInt,
+					Operation:     "TRUNCATE",
+				}
+
+				SendIOData(fsCreateBody, "iodata-dialfs")
+				currentPCB.EvictionReason = "BLOCKED_IO_DIALFS"
 			} else {
 				currentPCB.EvictionReason = "EXIT"
 			}
 		}
 		pcb.EvictionFlag = true
-
+		/* IO_FS_WRITE (Interfaz, Nombre Archivo, Registro Dirección, Registro Tamaño, Registro Puntero Archivo):
+		   Esta instrucción solicita al Kernel que mediante la interfaz seleccionada, se lea desde Memoria la cantidad
+		    de bytes indicadas por el Registro Tamaño a partir de la dirección lógica que se encuentra en el Registro
+		    Dirección y se escriban en el archivo a partir del valor del Registro Puntero Archivo.
+		*/
 	case "IO_FS_WRITE":
 		cond, err := HallarInterfaz(instruccionDecodificada[1], "DIALFS")
 		if err != nil {
@@ -198,47 +215,70 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 			currentPCB.EvictionReason = "EXIT"
 		} else {
 			nombre_archivo := instruccionDecodificada[2]
-			direccion, err := strconv.Atoi(instruccionDecodificada[3])
-			if err != nil {
-				log.Fatal("Error al convertir la dirección a entero")
-			}
-			tamanio_archivo, err := strconv.Atoi(instruccionDecodificada[4])
-			if err != nil {
-				log.Fatal("Error al convertir el tamaño del archivo a entero")
-			}
-			puntero, err := strconv.Atoi(instruccionDecodificada[5])
-			if err != nil {
-				log.Fatal("Error al convertir el puntero a entero")
+			direccion := currentPCB.CPU_reg[instruccionDecodificada[3]]
+			var direccionEnInt int
+
+			tipoActualRegDireccion := reflect.TypeOf(currentPCB.CPU_reg[instruccionDecodificada[3]]).String()
+
+			if tipoActualRegDireccion == "uint32" {
+				direccionEnInt = int(Convertir[uint32](tipoActualRegDireccion, direccion))
+			} else {
+				direccionEnInt = int(Convertir[uint8](tipoActualRegDireccion, direccion))
 			}
 
-			direccionesFisicas := mmu.ObtenerDireccionesFisicas(direccion, tamanio_archivo, int(currentPCB.PID))
+			tamanio := currentPCB.CPU_reg[instruccionDecodificada[4]]
+			var tamanioEnInt int
+
+			tipoActualRegTamanio := reflect.TypeOf(currentPCB.CPU_reg[instruccionDecodificada[4]]).String()
+
+			if tipoActualRegTamanio == "uint32" {
+				tamanioEnInt = int(Convertir[uint32](tipoActualRegTamanio, tamanio))
+			} else {
+				tamanioEnInt = int(Convertir[uint8](tipoActualRegTamanio, tamanio))
+			}
+
+			puntero := currentPCB.CPU_reg[instruccionDecodificada[5]]
+			var punteroEnInt int
+
+			tipoActualRegPuntero := reflect.TypeOf(currentPCB.CPU_reg[instruccionDecodificada[5]]).String()
+
+			if tipoActualRegPuntero == "uint32" {
+				punteroEnInt = int(Convertir[uint32](tipoActualRegPuntero, puntero))
+			} else {
+				punteroEnInt = int(Convertir[uint8](tipoActualRegPuntero, puntero))
+			}
+
+			direccionesFisicas := mmu.ObtenerDireccionesFisicas(direccionEnInt, tamanioEnInt, int(currentPCB.PID))
 
 			if cond {
-				
+
 				var fsCreateBody = struct {
-					InterfaceName		string
-					FileName			string
-					Address				[]globals.DireccionTamanio
-					Size				int
-					Pointer				int
-					Operation			string
-					}{
-						InterfaceName:	instruccionDecodificada[1],
-						FileName:		nombre_archivo,
-						Address:		direccionesFisicas,
-						Size:			tamanio_archivo,
-						Pointer:		puntero,
-						Operation:		"WRITE",
-					}
-					
-					SendIOData(fsCreateBody, "iodata-dialfs")
-					currentPCB.EvictionReason = "BLOCKED_IO_DIALFS"
+					InterfaceName string
+					FileName      string
+					Address       []globals.DireccionTamanio
+					Size          int
+					Pointer       int
+					Operation     string
+				}{
+					InterfaceName: instruccionDecodificada[1],
+					FileName:      nombre_archivo,
+					Address:       direccionesFisicas,
+					Size:          tamanioEnInt,
+					Pointer:       punteroEnInt,
+					Operation:     "WRITE",
+				}
+
+				SendIOData(fsCreateBody, "iodata-dialfs")
+				currentPCB.EvictionReason = "BLOCKED_IO_DIALFS"
 			} else {
 				currentPCB.EvictionReason = "EXIT"
 			}
 		}
 		pcb.EvictionFlag = true
-
+		/*IO_FS_READ (Interfaz, Nombre Archivo, Registro Dirección, Registro Tamaño, Registro Puntero Archivo):
+		  Esta instrucción solicita al Kernel que mediante la interfaz seleccionada, se lea desde el archivo a
+		  partir del valor del Registro Puntero Archivo la cantidad de bytes indicada por Registro Tamaño y
+		  se escriban en la Memoria a partir de la dirección lógica indicada en el Registro Dirección.*/
 	case "IO_FS_READ":
 		cond, err := HallarInterfaz(instruccionDecodificada[1], "DIALFS")
 		if err != nil {
@@ -246,47 +286,68 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 			currentPCB.EvictionReason = "EXIT"
 		} else {
 			nombre_archivo := instruccionDecodificada[2]
-			direccion, err := strconv.Atoi(instruccionDecodificada[3])
-			if err != nil {
-				log.Fatal("Error al convertir la dirección a entero")
-			}
-	
-			tamanio_archivo, err := strconv.Atoi(instruccionDecodificada[4])
-			if err != nil {
-				log.Fatal("Error al convertir el tamaño del archivo a entero")
-			}
-			direccionesFisicas := mmu.ObtenerDireccionesFisicas(direccion, tamanio_archivo, int(currentPCB.PID))
 
-			puntero, err := strconv.Atoi(instruccionDecodificada[5])
-			if err != nil {
-				log.Fatal("Error al convertir el puntero a entero")
+			direccion := currentPCB.CPU_reg[instruccionDecodificada[3]]
+			var direccionEnInt int
+
+			tipoActualRegDireccion := reflect.TypeOf(currentPCB.CPU_reg[instruccionDecodificada[3]]).String()
+
+			if tipoActualRegDireccion == "uint32" {
+				direccionEnInt = int(Convertir[uint32](tipoActualRegDireccion, direccion))
+			} else {
+				direccionEnInt = int(Convertir[uint8](tipoActualRegDireccion, direccion))
 			}
+
+			tamanio := currentPCB.CPU_reg[instruccionDecodificada[4]]
+			var tamanioEnInt int
+
+			tipoActualRegTamanio := reflect.TypeOf(currentPCB.CPU_reg[instruccionDecodificada[4]]).String()
+
+			if tipoActualRegTamanio == "uint32" {
+				tamanioEnInt = int(Convertir[uint32](tipoActualRegTamanio, tamanio))
+			} else {
+				tamanioEnInt = int(Convertir[uint8](tipoActualRegTamanio, tamanio))
+			}
+
+			puntero := currentPCB.CPU_reg[instruccionDecodificada[5]]
+			var punteroEnInt int
+
+			tipoActualRegPuntero := reflect.TypeOf(currentPCB.CPU_reg[instruccionDecodificada[5]]).String()
+
+			if tipoActualRegPuntero == "uint32" {
+				punteroEnInt = int(Convertir[uint32](tipoActualRegPuntero, puntero))
+			} else {
+				punteroEnInt = int(Convertir[uint8](tipoActualRegPuntero, puntero))
+			}
+
+			direccionesFisicas := mmu.ObtenerDireccionesFisicas(direccionEnInt, tamanioEnInt, int(currentPCB.PID))
+
 			if cond {
-				
+
 				var fsCreateBody = struct {
-					InterfaceName		string
-					FileName			string
-					Address				[]globals.DireccionTamanio
-					Size				int
-					Pointer				int
-					Operation			string
-					}{
-						InterfaceName:	instruccionDecodificada[1],
-						FileName:		nombre_archivo,
-						Address:		direccionesFisicas,
-						Size:			tamanio_archivo,
-						Pointer:		puntero,
-						Operation:		"READ",
-					}
-					
-					SendIOData(fsCreateBody, "iodata-dialfs")
-					currentPCB.EvictionReason = "BLOCKED_IO_DIALFS"
+					InterfaceName string
+					FileName      string
+					Address       []globals.DireccionTamanio
+					Size          int
+					Pointer       int
+					Operation     string
+				}{
+					InterfaceName: instruccionDecodificada[1],
+					FileName:      nombre_archivo,
+					Address:       direccionesFisicas,
+					Size:          tamanioEnInt,
+					Pointer:       punteroEnInt,
+					Operation:     "READ",
+				}
+
+				SendIOData(fsCreateBody, "iodata-dialfs")
+				currentPCB.EvictionReason = "BLOCKED_IO_DIALFS"
 			} else {
 				currentPCB.EvictionReason = "EXIT"
 			}
 		}
 		pcb.EvictionFlag = true
-		
+
 	case "IO_GEN_SLEEP":
 		cond, err := HallarInterfaz(instruccionDecodificada[1], "GENERICA")
 		if err != nil {
@@ -298,17 +359,17 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 				log.Fatal("Error al convertir el tiempo de espera a entero")
 			}
 			if cond {
-				
+
 				var genSleepBody = struct {
 					InterfaceName string
 					SleepTime     int
-					}{
-						InterfaceName: instruccionDecodificada[1],
-						SleepTime:     tiempo_esp,
-					}
-					
-					SendIOData(genSleepBody, "iodata-gensleep")
-					currentPCB.EvictionReason = "BLOCKED_IO_GEN"
+				}{
+					InterfaceName: instruccionDecodificada[1],
+					SleepTime:     tiempo_esp,
+				}
+
+				SendIOData(genSleepBody, "iodata-gensleep")
+				currentPCB.EvictionReason = "BLOCKED_IO_GEN"
 			} else {
 				currentPCB.EvictionReason = "EXIT"
 			}
@@ -330,36 +391,36 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 				fmt.Println("A PUNTO DE CONVERTIR EL MEMORY ADDRESS")
 				memoryAddressInt := int(Convertir[uint32](tipoActualReg2, memoryAddress))
 				fmt.Println("TERMINO DE CONVERTIR")
-	
+
 				// Obtener la cantidad de datos a leer desde el registro
 				dataSize := currentPCB.CPU_reg[instruccionDecodificada[3]]
 				tipoActualReg3 := reflect.TypeOf(currentPCB.CPU_reg[instruccionDecodificada[3]]).String()
-				
+
 				fmt.Println("A PUNTO DE CONVERTIR EL DATA SIZE")
 				dataSizeInt := int(Convertir[uint32](tipoActualReg3, dataSize))
 				fmt.Println("ME VOY A TRADUCIR LAS DIRECSS")
-	
+
 				direccionesFisicas := mmu.ObtenerDireccionesFisicas(memoryAddressInt, dataSizeInt, int(currentPCB.PID))
-	
+
 				var stdinreadBody = struct {
-					DireccionesFisicas	[]globals.DireccionTamanio
-					InterfaceName		string
-					Tamanio				int	
+					DireccionesFisicas []globals.DireccionTamanio
+					InterfaceName      string
+					Tamanio            int
 				}{
 					DireccionesFisicas: direccionesFisicas,
-					InterfaceName: 		instruccionDecodificada[1],
-					Tamanio: 			dataSizeInt,
+					InterfaceName:      instruccionDecodificada[1],
+					Tamanio:            dataSizeInt,
 				}
 
 				SendIOData(stdinreadBody, "iodata-stdin")
 				currentPCB.EvictionReason = "BLOCKED_IO_STDIN"
-	
+
 			} else {
 				currentPCB.EvictionReason = "EXIT"
 			}
 		}
 		pcb.EvictionFlag = true
-		
+
 	case "IO_STDOUT_WRITE":
 		cond, err := HallarInterfaz(instruccionDecodificada[1], "STDOUT")
 		if err != nil {
@@ -371,20 +432,20 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 				memoryAddress := currentPCB.CPU_reg[instruccionDecodificada[2]]
 				tipoActualReg2 := reflect.TypeOf(currentPCB.CPU_reg[instruccionDecodificada[2]]).String()
 				memoryAddressInt := int(Convertir[uint32](tipoActualReg2, memoryAddress))
-	
+
 				// Obtener la cantidad de datos a leer desde el registro
 				dataSize := currentPCB.CPU_reg[instruccionDecodificada[3]]
 				tipoActualReg3 := reflect.TypeOf(currentPCB.CPU_reg[instruccionDecodificada[3]]).String()
 				dataSizeInt := int(Convertir[uint32](tipoActualReg3, dataSize))
-	
+
 				direccionesFisicas := mmu.ObtenerDireccionesFisicas(memoryAddressInt, dataSizeInt, int(currentPCB.PID))
 
 				var stdoutBody = struct {
-					DireccionesFisicas	[]globals.DireccionTamanio
-					InterfaceName		string
+					DireccionesFisicas []globals.DireccionTamanio
+					InterfaceName      string
 				}{
 					DireccionesFisicas: direccionesFisicas,
-					InterfaceName: 		instruccionDecodificada[1],
+					InterfaceName:      instruccionDecodificada[1],
 				}
 
 				SendIOData(stdoutBody, "iodata-stdout")
@@ -449,14 +510,14 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		} else {
 			currentPCB.CPU_reg[instruccionDecodificada[1]] = Convertir[uint8](tipoActualReg1, currentPCB.CPU_reg[instruccionDecodificada[1]]) - Convertir[uint8](tipoActualReg2, valorReg2)
 		}
-		
+
 		if instruccionDecodificada[1] == "PC" {
 			currentPCB.PC = currentPCB.CPU_reg["PC"].(uint32)
 		}
 
 	case "WAIT":
 		currentPCB.RequestedResource = instruccionDecodificada[1]
-		fmt.Print("Requested Resource: ", currentPCB.RequestedResource + "\n") // *Lo hace bien 
+		fmt.Print("Requested Resource: ", currentPCB.RequestedResource+"\n") // *Lo hace bien
 		currentPCB.EvictionReason = "WAIT"
 		//currentPCB.PC++
 		pcb.EvictionFlag = true
@@ -467,7 +528,6 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		//currentPCB.PC++
 		pcb.EvictionFlag = true
 
-
 	case "MOV_OUT":
 		// MOV_OUT (Registro Dirección, Registro Origen): Mueve el contenido del Registro Origen al Registro Dirección (DL).
 
@@ -477,18 +537,18 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		// Leer el valor y tamaño del registro de datos (2)
 		var tamanio2 int
 		tipoReg2 := pcb.TipoReg(instruccionDecodificada[2])
-		if (tipoReg2 == "uint32") {
+		if tipoReg2 == "uint32" {
 			tamanio2 = 4
-		} else if (tipoReg2 == "uint8") {
+		} else if tipoReg2 == "uint8" {
 			tamanio2 = 1
 		}
-		
+
 		// Leer la dirección lógica del registro de dirección (1)
 		valorReg1 := currentPCB.CPU_reg[instruccionDecodificada[1]]
 		tipoActualReg1 := reflect.TypeOf(valorReg1).String()
 
 		direc_log := Convertir[uint32](tipoActualReg1, valorReg1)
-		
+
 		fmt.Println("LA INST DECODIFICADA 1 ES", instruccionDecodificada[1])
 		fmt.Println("LA INST DECODIFICADA 2 ES", instruccionDecodificada[2])
 
@@ -497,10 +557,9 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		direcsFisicas := mmu.ObtenerDireccionesFisicas(int(direc_log), tamanio2, int(currentPCB.PID))
 		fmt.Println("ACA TAMBIEN LLEGO", direcsFisicas)
 
-
 		valorReg2 := currentPCB.CPU_reg[instruccionDecodificada[2]]
 		tipoActualReg2 := reflect.TypeOf(valorReg2).String()
-		
+
 		var valor2EnString string
 
 		if tipoReg2 == "uint32" {
@@ -513,7 +572,6 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 
 		solicitudesmemoria.SolicitarEscritura(direcsFisicas, valor2EnString, int(currentPCB.PID)) //([direccion fisica y tamanio], valorAEscribir, pid
 
-	
 		//----------------------------------------------------------------------------
 
 		// MOV_IN (Registro Datos, Registro Dirección): Lee el valor
@@ -528,38 +586,37 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		var tamanio int
 		//tamanio a leer es del tipo del registro de datos?
 		tipoReg1 := pcb.TipoReg(instruccionDecodificada[1])
-		if (tipoReg1 == "uint32") {
+		if tipoReg1 == "uint32" {
 			tamanio = 4
-		} else if (tipoReg1 == "uint8") {
+		} else if tipoReg1 == "uint8" {
 			tamanio = 1
 		}
 		//agregue lo de arriba
 
 		valorReg2 := currentPCB.CPU_reg[instruccionDecodificada[2]]
 		tipoActualReg2 := reflect.TypeOf(valorReg2).String()
-		
+
 		direc_log := Convertir[uint32](tipoActualReg2, valorReg2)
-		
+
 		fmt.Println("El valor de la direc logica es", int(direc_log))
 
 		// Obtenemos la direcion fisica del reg direccion
 		direcsFisicas := mmu.ObtenerDireccionesFisicas(int(direc_log), tamanio, int(currentPCB.PID))
 
 		fmt.Println("Direcciones fisicas: ", direcsFisicas)
-		
+
 		//Obtenemos el valor guardado en las direcciones fisicas
 		datos := solicitudesmemoria.SolicitarLectura(direcsFisicas, int(currentPCB.PID))
 		fmt.Println("Los datos MOSTRAMELLON son: ", datos)
-		
+
 		// Almacenamos lo leido en el registro destino
 		fmt.Println("ACA ENTRO? EL TIPOREG1 ME LO DIO?: ", tipoReg1)
 		var datosAAlmacenar uint64
-		
-	
+
 		if tipoReg1 == "uint32" {
 
 			bigInt := big.NewInt(0).SetBytes(datos)
-    		datosAAlmacenar = bigInt.Uint64()
+			datosAAlmacenar = bigInt.Uint64()
 
 			currentPCB.CPU_reg[instruccionDecodificada[1]] = uint32(datosAAlmacenar)
 
@@ -574,8 +631,7 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 
 			fmt.Println("LO GUARDE EN 8: ", currentPCB.CPU_reg[instruccionDecodificada[1]])
 		}
-		
-		
+
 		//-----------------------------------------------------------------------------
 		//COPY_STRING (Tamaño): Toma del string apuntado por el registro SI y
 		//copia la cantidad de bytes indicadas en el parámetro tamaño a la
@@ -587,7 +643,7 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		valorRegSI := currentPCB.CPU_reg["SI"]
 		tipoActualRegSI := reflect.TypeOf(valorRegSI).String()
 		direc_logicaSI := int(Convertir[uint32](tipoActualRegSI, valorRegSI))
-		
+
 		direcsFisicasSI := mmu.ObtenerDireccionesFisicas(direc_logicaSI, tamanio, int(currentPCB.PID))
 
 		// Lee lo que hay en esa direccion fisica pero no todo, lees lo que te pasaron x param
@@ -597,13 +653,12 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		valorRegDI := currentPCB.CPU_reg["DI"]
 		tipoActualRegDI := reflect.TypeOf(valorRegDI).String()
 		direc_logicaDI := int(Convertir[uint32](tipoActualRegDI, valorRegDI))
-		
+
 		// Obtiene la direccion Fisica asociada
 		direcsFisicasDI := mmu.ObtenerDireccionesFisicas(direc_logicaDI, tamanio, int(currentPCB.PID))
-		
+
 		// Carga en esa direccion fisica lo que leiste antes
 		solicitudesmemoria.SolicitarEscritura(direcsFisicasDI, string(datos), int(currentPCB.PID)) //([direccion fisica y tamanio], valorAEscribir, pid)
-
 
 	//RESIZE (Tamaño)
 	case "RESIZE":
@@ -682,20 +737,24 @@ func HallarInterfaz(nombre string, tipo string) (bool, error) {
 		return false, fmt.Errorf("failed to decode response: %v", err)
 	}
 
+	fmt.Println("ENCONTRE LA INTERFAZZ")
+
 	return response, nil
 }
 
 /*
- SendIOData: Comunica la información necesaria a kernel para el uso de cualquier body de interfaz de entrada/salida
+	 SendIOData: Comunica la información necesaria a kernel para el uso de cualquier body de interfaz de entrada/salida
 
- @param datum: Estructura con la información necesaria para la comunicación (La estructura usada va a depender de la interfaz a utilizar)
- @param endpoint: Endpoint al que se va a enviar la información
-	- "iodata-gensleep"
-	- "iodata-stdin"
-	- "iodata-stdout"
-	- "iodata-dialfs"
- @return error: Error en caso de que la comunicación falle
-**/
+	 @param datum: Estructura con la información necesaria para la comunicación (La estructura usada va a depender de la interfaz a utilizar)
+	 @param endpoint: Endpoint al que se va a enviar la información
+		- "iodata-gensleep"
+		- "iodata-stdin"
+		- "iodata-stdout"
+		- "iodata-dialfs"
+	 @return error: Error en caso de que la comunicación falle
+
+*
+*/
 func SendIOData(datum interface{}, endpoint string) error {
 	jsonData, err := json.Marshal(datum)
 	if err != nil {

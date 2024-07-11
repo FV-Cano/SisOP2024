@@ -1,22 +1,32 @@
 package ioutils
 
 import (
-	"log"
-	"github.com/sisoputnfrba/tp-golang/entradasalida/globals"
-	"os"
-	"math"
 	"encoding/json"
 	"io"
+	"log"
+	"math"
+	"os"
+
+	"github.com/sisoputnfrba/tp-golang/entradasalida/globals"
 )
 
-/**
-  * CrearModificarArchivo: carga un archivo en el sistema de archivos
+/*
+*
+
+  - CrearModificarArchivo: carga un archivo en el sistema de archivos
 
   - @param nombreArchivo: nombre del archivo a cargar
+
   - @param contenido: contenido del archivo a cargar (en bytes)
 */
 func CrearModificarArchivo(nombreArchivo string, contenido []byte) {
 	var file *os.File
+
+	//TODO REVISAR
+	if nombreArchivo != "dialfs/bitmap.dat" && nombreArchivo != "dialfs/bloques.dat" {
+		nombreArchivo = "dialfs/" + nombreArchivo
+
+	}
 
 	// Crea un nuevo archivo si no existe
 	if _, err := os.Stat(nombreArchivo); os.IsNotExist(err) {
@@ -73,15 +83,20 @@ func LeerArchivoEnStruct(nombreArchivo string) *globals.Metadata {
 	return &metadata
 }
 
-/**
- * ReadFs: Lee un archivo del sistema de archivos
+/*
+*
 
-	* @param nombreArchivo: nombre del archivo a leer
-	* @param desplazamiento: desplazamiento en bytes desde el inicio del archivo
-	* @param tamanio: cantidad de bytes a leer (si es -1, se lee todo el archivo)
-	* @return contenido: contenido del archivo leído
- */
- func ReadFs(nombreArchivo string, desplazamiento int, tamanio int) []byte {
+  - ReadFs: Lee un archivo del sistema de archivos
+
+  - @param nombreArchivo: nombre del archivo a leer
+
+  - @param desplazamiento: desplazamiento en bytes desde el inicio del archivo
+
+  - @param tamanio: cantidad de bytes a leer (si es -1, se lee todo el archivo)
+
+  - @return contenido: contenido del archivo leído
+*/
+func ReadFs(nombreArchivo string, desplazamiento int, tamanio int) []byte {
 	archivo := globals.Fcbs[nombreArchivo]
 	var tamanioALeer int
 	if tamanio == -1 {
@@ -94,7 +109,7 @@ func LeerArchivoEnStruct(nombreArchivo string) *globals.Metadata {
 	byteInicial := (archivo.InitialBlock * globals.ConfigIO.Dialfs_block_size) + desplazamiento
 
 	for i := 0; i < tamanioALeer; i++ {
-		contenido[i] = globals.Blocks[byteInicial + i]
+		contenido[i] = globals.Blocks[byteInicial+i]
 	}
 
 	return contenido
@@ -104,7 +119,7 @@ func WriteFs(contenido []byte, byteInicial int) {
 	bloqueInicial := int(math.Ceil(float64(byteInicial) / float64(globals.ConfigIO.Dialfs_block_size)))
 
 	for i := 0; i < len(contenido); i++ {
-		globals.Blocks[byteInicial + i] = contenido[i]
+		globals.Blocks[byteInicial+i] = contenido[i]
 	}
 
 	tamanioFinalEnBloques := int(math.Ceil(float64(len(contenido)) / float64(globals.ConfigIO.Dialfs_block_size)))
@@ -127,7 +142,6 @@ func EntraEnDisco(tamanioTotalEnBloques int) int {
 	return (-1)
 }
 
-
 // * Manejo de BLOQUES
 /**
  * ContadorDeEspaciosLibres: cuenta la cantidad de bloques libres TOTAL en el sistema de archivos
@@ -146,6 +160,9 @@ func ContadorDeEspaciosLibres() int {
  * CalcularBloquesLibreAPartirDe: calcula la cantidad de bloques libres a partir de un bloque inicial hasta encontrar uno seteado
  */
 func CalcularBloquesLibreAPartirDe(bloqueInicial int) int {
+	if bloqueInicial < 0 || bloqueInicial >= globals.ConfigIO.Dialfs_block_count {
+		log.Fatalf("Initial block index out of range: %d", bloqueInicial)
+	}
 	var i = bloqueInicial
 	var contadorLibres = 0 // Inicializamos el contador de bloques libres
 	for i < globals.ConfigIO.Dialfs_block_count {
@@ -157,12 +174,11 @@ func CalcularBloquesLibreAPartirDe(bloqueInicial int) int {
 		i++ // Pasamos al siguiente bloque
 	}
 	return contadorLibres // Devolvemos el contador de bloques libres
-
 }
 
 /**
  * CalcularBloqueLibre: calcula el primer bloque libre en el sistema de archivos
-*/
+ */
 // TODO: Tirar excepción si no hay bloques libres
 func CalcularBloqueLibre() int {
 	var i = 0
@@ -182,6 +198,10 @@ func LiberarBloquesDesde(numBloque int, tamanioABorrar int) {
 	var i = numBloque
 	var contador = 0 // Inicializa el contador
 	for contador < tamanioABorrar {
+		if i >= globals.ConfigIO.Dialfs_block_count {
+			log.Fatalf("Block index out of range: %d", i)
+			break
+		}
 		if !IsNotSet(i) {
 			Clear(i)
 			contador++
@@ -197,9 +217,9 @@ func LiberarBloquesDesde(numBloque int, tamanioABorrar int) {
  * LiberarBloque: libera bloques desde el bloque final del archivo hasta el tamaño a borrar
  */
 func LiberarBloque(bloque int, tamanioABorrar int) {
-    for i := 0; i < tamanioABorrar; i++ {
-        Clear(bloque - i)
-    }
+	for i := 0; i < tamanioABorrar; i++ {
+		Clear(bloque - i)
+	}
 	ActualizarBitmap()
 }
 
@@ -224,10 +244,9 @@ func OcuparBloquesDesde(numBloque int, tamanioASetear int) {
 /**
  * ActualizarBloques: actualiza el archivo de bloques en el sistema de archivos
  */
-func ActualizarBloques(){
+func ActualizarBloques() {
 	CrearModificarArchivo("dialfs/bloques.dat", globals.Blocks)
 }
-
 
 // * Manejo de BITMAP
 func NewBitMap(size int) []int {

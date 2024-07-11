@@ -297,6 +297,7 @@ func RecvData_gensleep(w http.ResponseWriter, r *http.Request) {
 	- Nombre de Interfaz
 	- Tamaño
 **/
+
 func RecvData_stdin(w http.ResponseWriter, r *http.Request) {
 	var received_data struct {
 		DireccionesFisicas 	[]globals.DireccionTamanio
@@ -377,9 +378,11 @@ func RecvPCB_IO(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	
-	RemoveByID(received_pcb.PID)
+	fmt.Println("PCB que nos manda IO (Kernel): PC: ", received_pcb.PC, "PID: ", received_pcb.PID)
+
+	//RemoveByID(received_pcb.PID)
 	globals.ChangeState(&received_pcb, "READY")
-	slice.Push(&globals.STS, received_pcb)
+	//slice.Push(&globals.STS, received_pcb)
 	globals.STSCounter <- int(received_pcb.PID)
 
 	w.WriteHeader(http.StatusOK)

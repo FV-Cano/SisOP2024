@@ -326,18 +326,12 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 				// Obtener la dirección de memoria desde el registro
 				memoryAddress := currentPCB.CPU_reg[instruccionDecodificada[2]]
 				tipoActualReg2 := reflect.TypeOf(currentPCB.CPU_reg[instruccionDecodificada[2]]).String()
-
-				fmt.Println("A PUNTO DE CONVERTIR EL MEMORY ADDRESS")
 				memoryAddressInt := int(Convertir[uint32](tipoActualReg2, memoryAddress))
-				fmt.Println("TERMINO DE CONVERTIR")
 	
 				// Obtener la cantidad de datos a leer desde el registro
 				dataSize := currentPCB.CPU_reg[instruccionDecodificada[3]]
 				tipoActualReg3 := reflect.TypeOf(currentPCB.CPU_reg[instruccionDecodificada[3]]).String()
-				
-				fmt.Println("A PUNTO DE CONVERTIR EL DATA SIZE")
 				dataSizeInt := int(Convertir[uint32](tipoActualReg3, dataSize))
-				fmt.Println("ME VOY A TRADUCIR LAS DIRECSS")
 	
 				direccionesFisicas := mmu.ObtenerDireccionesFisicas(memoryAddressInt, dataSizeInt, int(currentPCB.PID))
 	
@@ -466,7 +460,6 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		currentPCB.EvictionReason = "SIGNAL"
 		//currentPCB.PC++
 		pcb.EvictionFlag = true
-
 
 	case "MOV_OUT":
 		// MOV_OUT (Registro Dirección, Registro Origen): Mueve el contenido del Registro Origen al Registro Dirección (DL).

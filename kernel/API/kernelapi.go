@@ -326,7 +326,7 @@ func PCB_Send() error {
 }
 
 // * Esto no es código deprecado?
-func PCB_recv(w http.ResponseWriter, r *http.Request) {
+/* func PCB_recv(w http.ResponseWriter, r *http.Request) {
 	var received_pcb pcb.T_PCB
 
 	// Decode PCB
@@ -349,7 +349,7 @@ func PCB_recv(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(jsonResp)	
-}
+} */
 
 /**
  * SearchByID: Busca un proceso en la lista de procesos en base a su PID

@@ -110,6 +110,7 @@ func FIFO_Plan() {
 /**
   - RR_Plan
 */
+/*
 func RR_Plan(quantum uint32) {
 	//globals.EnganiaPichangaMutex.Lock()
 	// 1. Tomo el primer proceso de la lista y lo quito de la misma
@@ -128,6 +129,33 @@ func RR_Plan(quantum uint32) {
  	 
 	// 5. Manejo de desalojo
 	EvictionManagement()
+}
+*/
+
+func RR_Plan(quantum uint32) {
+    globals.EnganiaPichangaMutex.Lock() // Paso 1: Bloquear el mutex para asegurar la exclusión mutua
+    if len(globals.STS) == 0 { // Verificar si hay procesos listos
+        globals.EnganiaPichangaMutex.Unlock()
+        return // Si no hay procesos, desbloquear y retornar
+    }
+    globals.CurrentJob = slice.Shift(&globals.STS) // Paso 2: Tomar el primer proceso
+    globals.ChangeState(&globals.CurrentJob, "EXEC") // Cambiar estado a EXEC
+    globals.EnganiaPichangaMutex.Unlock() // Desbloquear el mutex después de modificar las variables compartidas
+
+    kernel_api.PCB_Send() // Paso 3: Enviar el PCB al CPU
+    timer := time.NewTimer(time.Duration(quantum) * time.Millisecond) // Paso 4: Iniciar el temporizador
+
+    select {
+    case <-globals.PcbReceived: // Paso 5: Esperar a que el proceso termine
+        // El proceso ha terminado, manejar la finalización
+    case <-timer.C: // El temporizador ha expirado antes de que el proceso termine
+        globals.EnganiaPichangaMutex.Lock()
+        globals.STS = append(globals.STS, globals.CurrentJob) // Paso 6: Agregar el proceso al final de la lista
+        globals.ChangeState(&globals.CurrentJob, "READY") // Cambiar el estado a READY
+        globals.EnganiaPichangaMutex.Unlock()
+    }
+
+    EvictionManagement() // Paso 7: Manejar el desalojo
 }
 
 func VRR_Plan() {

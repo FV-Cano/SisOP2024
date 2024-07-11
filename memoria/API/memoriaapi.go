@@ -31,41 +31,6 @@ func AbrirArchivo(filePath string) *os.File {
 	return file
 }
 
-func InstruccionActual(w http.ResponseWriter, r *http.Request) {
-
-	queryParams := r.URL.Query()
-	pid := queryParams.Get("pid")
-	pc := queryParams.Get("pc")
-
-	respuesta, err := json.Marshal((BuscarInstruccionMap(PasarAInt(pc), PasarAInt(pid))))
-	if err != nil {
-		http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
-		return
-	}
-	
-	log.Printf("La instruccion buscada para el PID: %s fue: %s", pid, BuscarInstruccionMap(PasarAInt(pc), PasarAInt(pid)))
-
-	time.Sleep(time.Duration(globals.Configmemory.Delay_response))
-
-	w.WriteHeader(http.StatusOK)
-	w.Write(respuesta)
-
-}
-
-func BuscarInstruccionMap(pc int, pid int) string {
-	resultado := globals.InstruccionesProceso[pid][pc]
-	return resultado
-}
-
-
-func PasarAInt(cadena string) int {
-	num, err := strconv.Atoi(cadena)
-	if err != nil {
-		fmt.Println("Error: ", err)
-	}
-	return num
-}
-
 func CargarInstrucciones(w http.ResponseWriter, r *http.Request) {
 	var request GetInstructions_BRQ
 	err := json.NewDecoder(r.Body).Decode(&request)
@@ -113,6 +78,44 @@ func CargarInstrucciones(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write(respuesta)
 }
+
+
+
+func InstruccionActual(w http.ResponseWriter, r *http.Request) {
+
+	queryParams := r.URL.Query()
+	pid := queryParams.Get("pid")
+	pc := queryParams.Get("pc")
+
+	respuesta, err := json.Marshal((BuscarInstruccionMap(PasarAInt(pc), PasarAInt(pid))))
+	if err != nil {
+		http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
+		return
+	}
+	
+	log.Printf("La instruccion buscada para el PID: %s fue: %s", pid, BuscarInstruccionMap(PasarAInt(pc), PasarAInt(pid)))
+
+	time.Sleep(time.Duration(globals.Configmemory.Delay_response))
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(respuesta)
+
+}
+
+func BuscarInstruccionMap(pc int, pid int) string {
+	resultado := globals.InstruccionesProceso[pid][pc]
+	return resultado
+}
+
+
+func PasarAInt(cadena string) int {
+	num, err := strconv.Atoi(cadena)
+	if err != nil {
+		fmt.Println("Error: ", err)
+	}
+	return num
+}
+
 
 // --------------------------------------------------------------------------------------//
 // AJUSTAR TAMANiO DE UN PROCESO: CPU le hace la peticion desde estoVaParaCpuApi.go

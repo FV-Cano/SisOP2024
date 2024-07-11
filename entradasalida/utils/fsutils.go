@@ -21,11 +21,11 @@ import (
 */
 func CrearModificarArchivo(nombreArchivo string, contenido []byte) {
 	var file *os.File
+	var err error
 
-	//TODO REVISAR
+	// TODO REVISAR
 	if nombreArchivo != "dialfs/bitmap.dat" && nombreArchivo != "dialfs/bloques.dat" {
 		nombreArchivo = "dialfs/" + nombreArchivo
-
 	}
 
 	// Crea un nuevo archivo si no existe
@@ -35,17 +35,21 @@ func CrearModificarArchivo(nombreArchivo string, contenido []byte) {
 			log.Fatalf("Failed creating file: %s", err)
 		}
 	} else {
-		file, err = os.Open(nombreArchivo)
+		file, err = os.OpenFile(nombreArchivo, os.O_WRONLY|os.O_CREATE, 0644)
 		if err != nil {
 			log.Fatalf("Failed opening file: %s", err)
 		}
 	}
 
 	// Cierra el archivo al final de la función
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			log.Fatalf("Failed closing file: %s", err)
+		}
+	}()
 
 	// Escribe el contenido en el archivo
-	_, err := file.Write(contenido)
+	_, err = file.Write(contenido)
 	if err != nil {
 		log.Fatalf("Failed writing to file: %s", err)
 	}

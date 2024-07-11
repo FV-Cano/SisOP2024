@@ -379,11 +379,16 @@ func RecvPCB_IO(w http.ResponseWriter, r *http.Request) {
 	}
 	
 	fmt.Println("PCB que nos manda IO (Kernel): PC: ", received_pcb.PC, "PID: ", received_pcb.PID)
-
-	//RemoveByID(received_pcb.PID)
+	
+	fmt.Println("Blocked: ", globals.Blocked)
+	
+	RemoveByID(received_pcb.PID)
 	globals.ChangeState(&received_pcb, "READY")
-	//slice.Push(&globals.STS, received_pcb)
+	slice.Push(&globals.STS, received_pcb)
 	globals.STSCounter <- int(received_pcb.PID)
+
+	fmt.Println("LTS: ", globals.LTS)
+	fmt.Println("STS: ", globals.STS)
 
 	w.WriteHeader(http.StatusOK)
 }

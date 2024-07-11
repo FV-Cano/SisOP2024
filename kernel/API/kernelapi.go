@@ -109,12 +109,15 @@ func ProcessInit(w http.ResponseWriter, r *http.Request) {
 
 	// Si la lista está vacía, la desbloqueo
 	if len(globals.LTS) == 0 {
-		globals.EmptiedListMutex.Unlock()
+		globals.LTSMutex.Lock()
+		slice.Push(&globals.LTS, *newPcb)
+		defer globals.LTSMutex.Unlock()
+		<- globals.EmptiedList
+	} else {
+		globals.LTSMutex.Lock()
+		slice.Push(&globals.LTS, *newPcb)
+		defer globals.LTSMutex.Unlock()
 	}
-
-	globals.LTSMutex.Lock()
-	slice.Push(&globals.LTS, *newPcb)
-	defer globals.LTSMutex.Unlock()
 
 	log.Printf("Se crea el proceso %d en %s\n", newPcb.PID, newPcb.State)
 
@@ -324,32 +327,6 @@ func PCB_Send() error {
 
 	return nil
 }
-
-// * Esto no es código deprecado?
-/* func PCB_recv(w http.ResponseWriter, r *http.Request) {
-	var received_pcb pcb.T_PCB
-
-	// Decode PCB
-	err := json.NewDecoder(r.Body).Decode(&received_pcb)
-	if err != nil {
-		http.Error(w, "Failed to decode PCB", http.StatusBadRequest)
-		return
-	}
-		
-	globals.CurrentJob = received_pcb
-	globals.PcbReceived <- true
-
-	// Encode PCB
-	jsonResp, err := json.Marshal(received_pcb)
-	if err != nil {
-		http.Error((w), "Failed to encode PCB response", http.StatusInternalServerError)
-	}
-
-	// Send back PCB
-	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(jsonResp)	
-} */
 
 /**
  * SearchByID: Busca un proceso en la lista de procesos en base a su PID

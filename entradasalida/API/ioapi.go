@@ -280,5 +280,8 @@ func IO_DIALFS(interfaceToWork globals.DialFSRequest) {
 
 	case "TRUNCATE":
 		TruncateFile(pid, nombreArchivo, interfaceToWork.Tamanio)
+
 	}
+
+	fmt.Println("El archivo de bloques.dat es: " , globals.Blocks)
 }

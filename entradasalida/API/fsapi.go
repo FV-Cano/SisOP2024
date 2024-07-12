@@ -31,6 +31,8 @@ func InicializarFS() {
 		if err != nil {
 			log.Fatalf("Failed creating directory: %s", err)
 		}
+
+		fmt.Println("FS - Directorio CREADO")
 	}
 
 	// * Crea el archivo de bitmap si no existe
@@ -38,6 +40,8 @@ func InicializarFS() {
 		// Carga elf bitmap en globals
 		globals.CurrentBitMap = ioutils.NewBitMap(globals.ConfigIO.Dialfs_block_count)
 		ioutils.ActualizarBitmap()
+
+		fmt.Println("FS - Bitmap.dat CREADO")
 
 	} else {
 		// Carga el contenido del archivo
@@ -48,22 +52,29 @@ func InicializarFS() {
 		defer file.Close()
 
 		// Lee el contenido del archivo
-		contenidoBitmap := make([]byte, globals.ConfigIO.Dialfs_block_count)
-		_, err = file.Read(contenidoBitmap)
+		contenidoBitmap, err := os.ReadFile(dirName + "/" + bitmapFile)
 		if err != nil {
-			log.Fatalf("Failed reading file: %s", err)
+			log.Fatalf("Failed to read file: %s", err)
 		}
 
+		fmt.Println("Quiero leer el contenido del bitmap: ", contenidoBitmap)
+		fmt.Println("El contenido del bitmap es: ", string(contenidoBitmap))
+
+		var bitmapAux globals.T_Bitmap
 		// Convierte el contenido a JSON y lo carga en globals
-		err = json.Unmarshal(contenidoBitmap, &globals.CurrentBitMap)
+		err = json.Unmarshal(contenidoBitmap, &bitmapAux)
 		if err != nil {
 			log.Fatalf("Failed to unmarshal contenido: %s", err)
 		}
+
+		globals.CurrentBitMap = bitmapAux.BitMap
 
 		// Verifica que el tamaño del bitmap sea el correcto
 		if len(globals.CurrentBitMap) != globals.ConfigIO.Dialfs_block_count {
 			log.Fatalf("Bitmap size is incorrect")
 		}
+
+		fmt.Println("FS - Bitmap.dat LEIDO")
 	}
 
 	// * Crea el archivo de bloques si no existe
@@ -71,6 +82,8 @@ func InicializarFS() {
 		// Carga los bloques en globals
 		globals.Blocks = make([]byte, globals.ConfigIO.Dialfs_block_count*globals.ConfigIO.Dialfs_block_size)
 		ioutils.ActualizarBloques()
+
+		fmt.Println("FS - Bloques.dat CREADO")
 
 	} else {
 		// Carga el contenido del archivo
@@ -81,22 +94,27 @@ func InicializarFS() {
 		defer file.Close()
 
 		// Lee el contenido del archivo
-		contenidoBloques := make([]byte, globals.ConfigIO.Dialfs_block_count*globals.ConfigIO.Dialfs_block_size)
-		_, err = file.Read(contenidoBloques)
+		contenidoBloques, err := os.ReadFile(dirName + "/" + blocksFile)
 		if err != nil {
-			log.Fatalf("Failed reading file: %s", err)
+			log.Fatalf("Failed to read file: %s", err)
 		}
 
+		var bloquesAux globals.T_Blocks
+
 		// Convierte el contenido a JSON y lo carga en globals
-		err = json.Unmarshal(contenidoBloques, &globals.Blocks)
+		err = json.Unmarshal(contenidoBloques, &bloquesAux)
 		if err != nil {
 			log.Fatalf("Failed to unmarshal contenido: %s", err)
 		}
+
+		globals.Blocks = bloquesAux.Blocks
 
 		// Verifica que el tamaño del slice de bloques sea el correcto
 		if len(globals.Blocks) != globals.ConfigIO.Dialfs_block_count*globals.ConfigIO.Dialfs_block_size {
 			log.Fatalf("Blocks slice size is incorrect")
 		}
+
+		fmt.Println("FS - Bloques.dat LEIDO")
 	}
 
 	// * Carga los archivos metadata del directorio si existen
@@ -111,6 +129,8 @@ func InicializarFS() {
 		}
 		archivo := ioutils.LeerArchivoEnStruct(dirName + "/" + file.Name())
 		globals.Fcbs[file.Name()] = *archivo
+
+		fmt.Println("FS - Archivo CARGADO: ", file.Name())
 	}
 }
 
@@ -128,7 +148,7 @@ func CreateFile(pid int, nombreArchivo string) {
 
 	// Crea la metadata
 	metadata := globals.Metadata{
-		InitialBlock: bloqueInicial,
+		InitialBlock: bloqueInicial + 1,
 		Size:         0,
 	}
 
@@ -150,36 +170,39 @@ func CreateFile(pid int, nombreArchivo string) {
  * DeleteFile: elimina un archivo del sistema de archivos y su FCB asociado (incluye liberar los bloques de datos)
  */
 func DeleteFile(pid int, nombreArchivo string) error {
-	// Paso 1: Verificar si el archivo existe
-	if _, err := os.Stat(nombreArchivo); os.IsNotExist(err) {
-		// El archivo no existe
-		return errors.New("el archivo no existe")
-	}
+	nombreArchivo = "dialfs/" + nombreArchivo
 
-	// Paso 2: Eliminar el archivo del sistema de archivos
-	err := os.Remove(nombreArchivo)
-	if err != nil {
-		// Error al intentar eliminar el archivo
-		return err
-	}
+    // Paso 1: Verificar si el archivo existe
+    if _, err := os.Stat(nombreArchivo); os.IsNotExist(err) {
+        // El archivo no existe
+        return errors.New("el archivo no existe")
+    }
 
-	// Paso 3: Eliminar el FCB asociado y liberar los bloques de datos
-	delete(globals.Fcbs, nombreArchivo)
+    // Leer la información del archivo antes de eliminarlo
+    archivo := ioutils.LeerArchivoEnStruct(nombreArchivo)
+   
+    sizeArchivo := archivo.Size
+    sizeArchivoEnBloques := int(math.Ceil(float64(sizeArchivo) / float64(globals.ConfigIO.Dialfs_block_size)))
+    bloqueInicial := archivo.InitialBlock
 
-	archivo := ioutils.LeerArchivoEnStruct(nombreArchivo) //TODO: VER QUE NO LO LEA SIEMPRE
-	sizeArchivo := archivo.Size
-	sizeArchivoEnBloques := int(math.Ceil(float64(sizeArchivo) / float64(globals.ConfigIO.Dialfs_block_size)))
-	bloqueInicial := archivo.InitialBlock
+    // Paso 2: Eliminar el archivo del sistema de archivos
+    err := os.Remove(nombreArchivo)
+    if err != nil {
+        // Error al intentar eliminar el archivo
+        return err
+    }
 
-	for i := 0; i < sizeArchivoEnBloques; i++ {
-		ioutils.Clear(bloqueInicial + i)
-	}
-	log.Printf("PID: %d - Eliminar Archivo: %s", pid, nombreArchivo)
-	return nil
+    // Paso 3: Eliminar el FCB asociado y liberar los bloques de datos
+    delete(globals.Fcbs, nombreArchivo)
+
+    for i := 0; i < sizeArchivoEnBloques; i++ {
+        ioutils.Clear(bloqueInicial + i)
+    }
+    log.Printf("PID: %d - Eliminar Archivo: %s", pid, nombreArchivo)
+    return nil
 }
 
-/*
-*
+/**
   - ReadFile: Lee un archivo del sistema de archivos
     // Leer un bloque de fs implica escribirlo en memoria
     (Interfaz, Nombre Archivo, Registro Dirección, Registro Tamaño, Registro Puntero Archivo):
@@ -223,7 +246,6 @@ func WriteFile(pid int, nombreArchivo string, direccion []globals.DireccionTaman
 	punteroEnArchivo := primerByteArchivo + puntero
 	ultimoByteArchivo := globals.Fcbs[nombreArchivo].Size + primerByteArchivo
 	leerDeMemoria := IO_DIALFS_WRITE(pid, direccion)
-	fmt.Println("YA LEI PARA ESCRIBIR EL FS")
 	cantidadBytesLeidos := len(leerDeMemoria)
 	cantidadBytesAEscribir := punteroEnArchivo + cantidadBytesLeidos
 	cantidadBytesDisponibles := ultimoByteArchivo - punteroEnArchivo
@@ -232,8 +254,9 @@ func WriteFile(pid int, nombreArchivo string, direccion []globals.DireccionTaman
 		TruncateFile(pid, nombreArchivo, puntero+cantidadBytesLeidos)
 	}
 
+	fmt.Println("CONTENIDO A ESCRIBIR EN FS: ", leerDeMemoria)
+
 	ioutils.WriteFs(leerDeMemoria, punteroEnArchivo)
-	fmt.Print("YA ESCRIBI EL FS PIBE")
 
 	log.Printf("PID: %d - Escribir Archivo: %s - Tamaño a Escribir: %d - Puntero Archivo: %d", pid, nombreArchivo, tamanio, puntero)
 }
@@ -247,7 +270,7 @@ func TruncateFile(pid int, nombreArchivo string, tamanio int) { //revisar si tie
 	tamanioFinalEnBloques := int(math.Ceil(float64(tamanio) / float64(globals.ConfigIO.Dialfs_block_size)))
 
 	bloqueInicial := archivo.InitialBlock
-	tamArchivoOriginalEnBloques := int(math.Ceil(float64(archivo.Size) / float64(globals.ConfigIO.Dialfs_block_size)))
+	tamArchivoOriginalEnBloques := int(math.Max(1, math.Ceil(float64(archivo.Size)/float64(globals.ConfigIO.Dialfs_block_size))))
 	fmt.Println("El tamaño original del archivo en bloques es ", tamArchivoOriginalEnBloques)
 	bloqueFinalInicial := bloqueInicial + tamArchivoOriginalEnBloques //- 1 //es decir el final del archivo actual //TODO: revisar si es -1 o no
 	fmt.Println("BLoque final archivo actual", bloqueFinalInicial)
@@ -343,7 +366,7 @@ func Compactar() {
 
 	for _, metadata := range globals.Fcbs {
 
-		tamanioArchivoEnBloques := int(math.Ceil(float64(metadata.Size) / float64(globals.ConfigIO.Dialfs_block_size)))
+		tamanioArchivoEnBloques := int(math.Max(1, math.Ceil(float64(metadata.Size)/float64(globals.ConfigIO.Dialfs_block_size))))
 
 		limite := metadata.InitialBlock + tamanioArchivoEnBloques
 		nuevoBloqueInicial := c
@@ -352,7 +375,7 @@ func Compactar() {
 			c++
 		}
 
-		metadata.InitialBlock = nuevoBloqueInicial
+		metadata.InitialBlock = nuevoBloqueInicial + 1
 	}
 
 	for i := range globals.CurrentBitMap {
@@ -406,6 +429,8 @@ func IO_DIALFS_WRITE(pid int, direccionesFisicas []globals.DireccionTamanio) []b
 		return nil
 	}
 
+	fmt.Println("IO DIALFS WRITE BODY READ")
+
 	datosLeidos, err := http.Post(url, "application/json", bytes.NewBuffer(bodyRead))
 	if err != nil {
 		log.Printf("Failed to receive data: %v", err)
@@ -414,19 +439,19 @@ func IO_DIALFS_WRITE(pid int, direccionesFisicas []globals.DireccionTamanio) []b
 	if datosLeidos.StatusCode != http.StatusOK {
 		log.Printf("Unexpected response status: %s", datosLeidos.Status)
 	}
-
-	var response [][]byte
+	
+	var response BodyADevolver
 	err = json.NewDecoder(datosLeidos.Body).Decode(&response)
 	if err != nil {
-		return nil
+		return []byte("error al deserializar la respuesta")
 	}
-
+	
 	var bytesConcatenados []byte
-	for _, sliceBytes := range response {
+	for _, sliceBytes := range response.Contenido {
 		bytesConcatenados = append(bytesConcatenados, sliceBytes...)
 	}
-
-	fmt.Println("LO leido en memoria es ", bytesConcatenados)
+	
+	fmt.Println("IO_DIALFS_WRITE DATOS CONC: ", bytesConcatenados)
 
 	return bytesConcatenados
 }

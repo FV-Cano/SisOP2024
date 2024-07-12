@@ -88,17 +88,12 @@ func LeerArchivoEnStruct(nombreArchivo string) *globals.Metadata {
 	return &metadata
 }
 
-/*
-*
-
-  - ReadFs: Lee un archivo del sistema de archivos
+/**
+  * ReadFs: Lee un archivo del sistema de archivos
 
   - @param nombreArchivo: nombre del archivo a leer
-
   - @param desplazamiento: desplazamiento en bytes desde el inicio del archivo
-
   - @param tamanio: cantidad de bytes a leer (si es -1, se lee todo el archivo)
-
   - @return contenido: contenido del archivo leído
 */
 func ReadFs(nombreArchivo string, desplazamiento int, tamanio int) []byte {
@@ -125,13 +120,12 @@ func WriteFs(contenido []byte, byteInicial int) {
 
 	for i := 0; i < len(contenido); i++ {
 		globals.Blocks[byteInicial+i] = contenido[i]
-		fmt.Printf("Bloque: %d, Contenido: %d ", byteInicial+i, contenido[i])
+		fmt.Println("Byte: ", byteInicial+i, "Contenido: ", contenido[i])
 	}
 
 	tamanioFinalEnBloques := int(math.Ceil(float64(len(contenido)) / float64(globals.ConfigIO.Dialfs_block_size)))
 	OcuparBloquesDesde(bloqueInicial, tamanioFinalEnBloques)
 	ActualizarBloques()
-
 }
 
 func EntraEnDisco(tamanioTotalEnBloques int) int {
@@ -141,9 +135,7 @@ func EntraEnDisco(tamanioTotalEnBloques int) int {
 		if espacioActual >= tamanioTotalEnBloques {
 			return i
 		} else {
-
 			i += espacioActual
-
 		}
 	}
 	return (-1)
@@ -241,7 +233,7 @@ func OcuparBloquesDesde(numBloque int, tamanioASetear int) {
 			Set(i) // Setea el bloque
 			fmt.Println("Se setteo el bloque ", i)
 			contador++ // Incrementa el contador
-		} else { // Si el bloque ya está seteado
+		} else { // Si el byte ya está seteado
 			break // Rompe el bucle
 		}
 		i++ // Incrementa el índice para revisar el siguiente bloque
@@ -253,7 +245,15 @@ func OcuparBloquesDesde(numBloque int, tamanioASetear int) {
  * ActualizarBloques: actualiza el archivo de bloques en el sistema de archivos
  */
 func ActualizarBloques() {
-	CrearModificarArchivo("dialfs/bloques.dat", globals.Blocks)
+	var bloquesActualizado globals.T_Blocks
+	bloquesActualizado.Blocks = globals.Blocks
+
+	archivoMarshallado, err := json.Marshal(bloquesActualizado)
+	if err != nil {
+		log.Fatalf("Failed to marshal metadata: %s", err)
+	}
+
+	CrearModificarArchivo("dialfs/bloques.dat", archivoMarshallado)
 }
 
 // * Manejo de BITMAP
@@ -278,7 +278,10 @@ func IsNotSet(i int) bool {
 }
 
 func ActualizarBitmap() {
-	archivoMarshallado, err := json.Marshal(globals.CurrentBitMap)
+	var bitmapActualizado globals.T_Bitmap
+	bitmapActualizado.BitMap = globals.CurrentBitMap
+
+	archivoMarshallado, err := json.Marshal(bitmapActualizado)
 	if err != nil {
 		log.Fatalf("Failed to marshal metadata: %s", err)
 	}

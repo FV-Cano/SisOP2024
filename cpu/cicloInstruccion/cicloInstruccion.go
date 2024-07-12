@@ -390,18 +390,12 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 				// Obtener la dirección de memoria desde el registro
 				memoryAddress := currentPCB.CPU_reg[instruccionDecodificada[2]]
 				tipoActualReg2 := reflect.TypeOf(currentPCB.CPU_reg[instruccionDecodificada[2]]).String()
-
-				fmt.Println("A PUNTO DE CONVERTIR EL MEMORY ADDRESS")
 				memoryAddressInt := int(Convertir[uint32](tipoActualReg2, memoryAddress))
-				fmt.Println("TERMINO DE CONVERTIR")
 
 				// Obtener la cantidad de datos a leer desde el registro
 				dataSize := currentPCB.CPU_reg[instruccionDecodificada[3]]
 				tipoActualReg3 := reflect.TypeOf(currentPCB.CPU_reg[instruccionDecodificada[3]]).String()
-
-				fmt.Println("A PUNTO DE CONVERTIR EL DATA SIZE")
 				dataSizeInt := int(Convertir[uint32](tipoActualReg3, dataSize))
-				fmt.Println("ME VOY A TRADUCIR LAS DIRECSS")
 
 				direccionesFisicas := mmu.ObtenerDireccionesFisicas(memoryAddressInt, dataSizeInt, int(currentPCB.PID))
 
@@ -552,13 +546,13 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 
 		direc_log := Convertir[uint32](tipoActualReg1, valorReg1)
 
-		fmt.Println("LA INST DECODIFICADA 1 ES", instruccionDecodificada[1])
-		fmt.Println("LA INST DECODIFICADA 2 ES", instruccionDecodificada[2])
+		log.Println("LA INST DECODIFICADA 1 ES", instruccionDecodificada[1])
+		log.Println("LA INST DECODIFICADA 2 ES", instruccionDecodificada[2])
 
-		fmt.Println("ACA LLEGO", instruccionDecodificada[2])
+		log.Println("ACA LLEGO", instruccionDecodificada[2])
 
 		direcsFisicas := mmu.ObtenerDireccionesFisicas(int(direc_log), tamanio2, int(currentPCB.PID))
-		fmt.Println("ACA TAMBIEN LLEGO", direcsFisicas)
+		log.Println("ACA TAMBIEN LLEGO", direcsFisicas)
 
 		valorReg2 := currentPCB.CPU_reg[instruccionDecodificada[2]]
 		tipoActualReg2 := reflect.TypeOf(valorReg2).String()
@@ -571,7 +565,7 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 			valor2EnString = string(Convertir[uint8](tipoActualReg2, valorReg2))
 		}
 
-		fmt.Println("EL STRING ES", valor2EnString)
+		log.Println("EL STRING ES", valor2EnString)
 
 		solicitudesmemoria.SolicitarEscritura(direcsFisicas, valor2EnString, int(currentPCB.PID)) //([direccion fisica y tamanio], valorAEscribir, pid
 
@@ -603,17 +597,19 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 
 		fmt.Println("El valor de la direc logica es", int(direc_log))
 
+		log.Println("El valor de la direc logica es", int(direc_log))
+
 		// Obtenemos la direcion fisica del reg direccion
 		direcsFisicas := mmu.ObtenerDireccionesFisicas(int(direc_log), tamanio, int(currentPCB.PID))
 
-		fmt.Println("Direcciones fisicas: ", direcsFisicas)
+		log.Println("Direcciones fisicas: ", direcsFisicas)
 
 		//Obtenemos el valor guardado en las direcciones fisicas
 		datos := solicitudesmemoria.SolicitarLectura(direcsFisicas, int(currentPCB.PID))
-		fmt.Println("Los datos MOSTRAMELLON son: ", datos)
+		log.Println("Los datos MOSTRAMELLON son: ", datos)
 
 		// Almacenamos lo leido en el registro destino
-		fmt.Println("ACA ENTRO? EL TIPOREG1 ME LO DIO?: ", tipoReg1)
+		log.Println("ACA ENTRO? EL TIPOREG1 ME LO DIO?: ", tipoReg1)
 		var datosAAlmacenar uint64
 
 		if tipoReg1 == "uint32" {
@@ -623,16 +619,16 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 
 			currentPCB.CPU_reg[instruccionDecodificada[1]] = uint32(datosAAlmacenar)
 
-			fmt.Println("LO GUARDE EN 32: ", currentPCB.CPU_reg[instruccionDecodificada[1]])
+			log.Println("LO GUARDE EN 32: ", currentPCB.CPU_reg[instruccionDecodificada[1]])
 		} else {
-			fmt.Println("ACA LLEGO A ENTRAR")
+			log.Println("ACA LLEGO A ENTRAR")
 
 			datosAAlmacenar = uint64(datos[0])
-			fmt.Println("ACA LLEGO A ENTRAR TAMBIEN Y LOS DATOS ALMACENADOS SON: ", datosAAlmacenar)
+			log.Println("ACA LLEGO A ENTRAR TAMBIEN Y LOS DATOS ALMACENADOS SON: ", datosAAlmacenar)
 
 			currentPCB.CPU_reg[instruccionDecodificada[1]] = uint8(datosAAlmacenar)
 
-			fmt.Println("LO GUARDE EN 8: ", currentPCB.CPU_reg[instruccionDecodificada[1]])
+			log.Println("LO GUARDE EN 8: ", currentPCB.CPU_reg[instruccionDecodificada[1]])
 		}
 
 		//-----------------------------------------------------------------------------
@@ -645,13 +641,27 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		//Buscar la direccion logica del registro SI
 		valorRegSI := currentPCB.CPU_reg["SI"]
 		tipoActualRegSI := reflect.TypeOf(valorRegSI).String()
-		direc_logicaSI := int(Convertir[uint32](tipoActualRegSI, valorRegSI))
+		var direc_logicaSI int
+		
+		if tipoActualRegSI == "uint32" {
+			valorSIConv := Convertir[uint32](tipoActualRegSI, valorRegSI)
+			direc_logicaSI = int(valorSIConv)
+
+
+		} else {
+			valorSIConv := Convertir[uint8](tipoActualRegSI, valorRegSI)
+			direc_logicaSI = int(valorSIConv)
+		}
+
+		//direc_logicaSI := int(Convertir[uint32](tipoActualRegSI, valorRegSI))
+		log.Println("La direccion logica de SI es: ", direc_logicaSI)
 
 		direcsFisicasSI := mmu.ObtenerDireccionesFisicas(direc_logicaSI, tamanio, int(currentPCB.PID))
 
+		log.Println("Las direcciones fisicas de SI son: ", direcsFisicasSI)
 		// Lee lo que hay en esa direccion fisica pero no todo, lees lo que te pasaron x param
 		datos := solicitudesmemoria.SolicitarLectura(direcsFisicasSI, int(currentPCB.PID))
-
+		log.Println("Los datos son: ", datos)
 		// Busca la direccion logica del registro DI
 		valorRegDI := currentPCB.CPU_reg["DI"]
 		tipoActualRegDI := reflect.TypeOf(valorRegDI).String()
@@ -666,16 +676,16 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 	//RESIZE (Tamaño)
 	case "RESIZE":
 		tamanio := globals.PasarAInt(instruccionDecodificada[1])
-		fmt.Println("MIRA EL TAMNIOOO: ", tamanio)
+		log.Println("MIRA EL TAMNIOOO: ", tamanio)
 
 		respuestaResize := solicitudesmemoria.Resize(tamanio)
-		fmt.Println("el resize devuelve", respuestaResize)
+		log.Println("el resize devuelve", respuestaResize)
 		if respuestaResize != "\"OK\"" {
-			fmt.Println("ME LAS TOMO DE CPU")
+			log.Println("ME LAS TOMO DE CPU")
 			currentPCB.EvictionReason = "OUT_OF_MEMORY"
 			pcb.EvictionFlag = true
 		}
-		fmt.Println("sigoo en cpu")
+		log.Println("sigoo en cpu")
 	}
 }
 

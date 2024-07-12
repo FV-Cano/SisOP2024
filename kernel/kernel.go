@@ -40,7 +40,8 @@ func main() {
 	resources.InitResourceMap()
 
 	// ! globals.ControlMutex.Lock()
-	globals.EmptiedListMutex.Lock() // Bloqueamos la lista de jobs vacía
+	// globals.EmptiedListMutex.Lock() // Bloqueamos la lista de jobs vacía
+	globals.EmptiedList <- false
 	globals.LTSPlanBinary <- false
 	globals.STSPlanBinary <- false
 

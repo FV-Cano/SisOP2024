@@ -68,7 +68,7 @@ func ExisteInterfaz(w http.ResponseWriter, r *http.Request) {
 func SearchDeviceByName(deviceName string) (device.T_IOInterface, error) {
 	for _, interf := range globals.Interfaces {
 		if interf.InterfaceName == deviceName {
-			fmt.Println("Interfaz encontrada: ", interf)
+			log.Println("Interfaz encontrada: ", interf)
 			return interf, nil
 		}
 	}
@@ -146,7 +146,7 @@ func SolicitarStdinRead(pcb pcb.T_PCB) {
 		Tamanio            int
 	})
 
-	fmt.Println("RECIBE STDIN READ: ", stdinDataDecoded)
+	log.Println("RECIBE STDIN READ: ", stdinDataDecoded)
 
 	newInter, err := SearchDeviceByName(stdinDataDecoded.InterfaceName)
 	if err != nil {
@@ -159,7 +159,7 @@ func SolicitarStdinRead(pcb pcb.T_PCB) {
 		DireccionesFisicas: stdinDataDecoded.DireccionesFisicas,
 	}
 
-	fmt.Println("LE QUIERE MANDAR A IO: ", stdinRead)
+	log.Println("LE QUIERE MANDAR A IO: ", stdinRead)
 
 	globals.EnganiaPichangaMutex.Unlock()
 
@@ -295,13 +295,12 @@ func RecvData_gensleep(w http.ResponseWriter, r *http.Request) {
 /*
 	 RecvData_stdin: Recibe desde CPU la información necesaria para solicitar un STDIN_READ.
 
-	 Opera con estructura:
-		- Direcciones físicas
-		- Nombre de Interfaz
-		- Tamaño
+ Opera con estructura:
+	- Direcciones físicas
+	- Nombre de Interfaz
+	- Tamaño
+**/
 
-*
-*/
 func RecvData_stdin(w http.ResponseWriter, r *http.Request) {
 	var received_data struct {
 		DireccionesFisicas []globals.DireccionTamanio
@@ -315,7 +314,7 @@ func RecvData_stdin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println("Received data: ", received_data)
+	log.Println("Received data: ", received_data)
 	genericInterfaceBody = received_data
 
 	w.WriteHeader(http.StatusOK)
@@ -385,10 +384,17 @@ func RecvPCB_IO(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Println("PCB que nos manda IO (Kernel): PC: ", received_pcb.PC, "PID: ", received_pcb.PID)
+
+	log.Println("Blocked: ", globals.Blocked)
+
 	RemoveByID(received_pcb.PID)
 	globals.ChangeState(&received_pcb, "READY")
 	slice.Push(&globals.STS, received_pcb)
 	globals.STSCounter <- int(received_pcb.PID)
+
+	log.Println("LTS: ", globals.LTS)
+	log.Println("STS: ", globals.STS)
 
 	w.WriteHeader(http.StatusOK)
 }

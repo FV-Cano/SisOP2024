@@ -51,7 +51,7 @@ func HandshakeKernel(nombre string) error {
 // * Hay que declarar los tipos de body que se van a recibir desde kernel porque por alguna razón no se puede crear un struct type dentro de una función con un tipo creado por uno mismo, están todos en globals
 
 func InterfaceQueuePCB(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("InterfaceQueuePCB")
+	log.Println("InterfaceQueuePCB")
 	switch globals.ConfigIO.Type {
 	case "GENERICA":
 		var decodedStruct globals.GenSleep

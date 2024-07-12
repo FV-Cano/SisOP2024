@@ -151,9 +151,14 @@ func ProcessDelete(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	DeleteByID(pid)
 
-	SendInterrupt("DELETE", pid)	// ? Esto es en el caso de que el proceso esté en ejecución?
+
+	// Si el proceso está en ejecución, se envía una interrupción para desalojarlo con INTERRUPTED_BY_USER, de lo contrario se elimina directamente y se saca de la cola en la que se encuentre 
+	if pid == globals.CurrentJob.PID {
+		SendInterrupt("DELETE", pid)
+	} else {
+		DeleteByID(pid)
+	}
 
 	w.WriteHeader(http.StatusOK)
 	// w.Write([]byte("Job deleted")) // ! No tiene que devolver nada
@@ -340,6 +345,17 @@ func SearchByID(pid uint32, processList []pcb.T_PCB) (*pcb.T_PCB, int) {
 	* @param pid: PID del proceso a remover
 */
 func DeleteByID(pid uint32) error {
+	pcbToDelete := RemoveByID(pid)
+	if pcbToDelete.PID == 0 {
+		return fmt.Errorf("process with PID %d not found", pid)
+	} else {
+		KillJob(pcbToDelete)
+	}
+
+	return nil
+}
+
+func RemoveByID(pid uint32) pcb.T_PCB {
 	_, ltsIndex := SearchByID(pid, globals.LTS)
 	_, stsIndex := SearchByID(pid, globals.STS)
 	_, blockedIndex := SearchByID(pid, globals.Blocked)
@@ -350,22 +366,24 @@ func DeleteByID(pid uint32) error {
 		globals.LTSMutex.Lock()
 		defer globals.LTSMutex.Unlock()
 		removedPCB = slice.RemoveAtIndex(&globals.LTS, ltsIndex)
-		KillJob(removedPCB)
+		// Evita bloqueo de lista vacía
+		if (len(globals.LTS) == 0) {
+			globals.EmptiedList <- true
+		}
 	} else if stsIndex != -1 {
 		globals.STSMutex.Lock()
 		defer globals.STSMutex.Unlock()
 		removedPCB = slice.RemoveAtIndex(&globals.STS, stsIndex)
-		KillJob(removedPCB)
+		<- globals.MultiprogrammingCounter
 	} else if blockedIndex != -1 {
 		globals.BlockedMutex.Lock()
 		defer globals.BlockedMutex.Unlock()
 		removedPCB = slice.RemoveAtIndex(&globals.Blocked, blockedIndex)
-		KillJob(removedPCB)
+	} else {
+		return pcb.T_PCB{PID: 0} 
 	}
 
-
-
-	return nil
+	return removedPCB
 }
 
 func KillJob(pcb pcb.T_PCB) {

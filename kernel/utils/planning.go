@@ -291,14 +291,14 @@ func EvictionManagement() {
 			EvictionManagement()
 		}
 
-	case "OUT_OF_MEMORY":
+	case "OUT_OF_MEMORY":	// ? En qué caso llega acá?
 		globals.ChangeState(&globals.CurrentJob, "TERMINATED")
 		kernel_api.KillJob(globals.CurrentJob)
 		//globals.JobExecBinary <- true
 		<-globals.MultiprogrammingCounter
 		log.Printf("Finaliza el proceso %d - Motivo: %s\n", globals.CurrentJob.PID, evictionReason)
 
-	case "INTERRUPTED_BY_USER":	// ? El interrupt de delete llega acá?
+	case "INTERRUPTED_BY_USER":
 		globals.ChangeState(&globals.CurrentJob, "TERMINATED")
 		kernel_api.KillJob(globals.CurrentJob)
 		//globals.JobExecBinary <- true

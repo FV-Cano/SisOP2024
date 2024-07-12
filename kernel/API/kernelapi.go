@@ -122,6 +122,7 @@ func ProcessInit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("Se crea el proceso %d en %s\n", newPcb.PID, newPcb.State)
+	
 
 	w.WriteHeader(http.StatusOK)
 	w.Write(response)
@@ -375,6 +376,7 @@ func RemoveByID(pid uint32) pcb.T_PCB {
 		defer globals.STSMutex.Unlock()
 		removedPCB = slice.RemoveAtIndex(&globals.STS, stsIndex)
 		<- globals.MultiprogrammingCounter
+		<- globals.STSCounter
 	} else if blockedIndex != -1 {
 		globals.BlockedMutex.Lock()
 		defer globals.BlockedMutex.Unlock()

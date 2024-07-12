@@ -258,6 +258,7 @@ func EvictionManagement() {
 		//globals.JobExecBinary <- true
 
 	case "TIMEOUT":
+		// TODO: Doble inserción en STS
 		globals.ChangeState(&globals.CurrentJob, "READY")
 		globals.STS = append(globals.STS, globals.CurrentJob)
 		log.Printf("PID: %d - Desalojado por fin de quantum\n", globals.CurrentJob.PID)

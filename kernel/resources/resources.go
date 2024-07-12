@@ -5,7 +5,6 @@ import (
 	"log"
 	"net/http"
 
-	kernel_api "github.com/sisoputnfrba/tp-golang/kernel/API"
 	"github.com/sisoputnfrba/tp-golang/kernel/globals"
 	"github.com/sisoputnfrba/tp-golang/utils/pcb"
 	"github.com/sisoputnfrba/tp-golang/utils/slice"
@@ -45,8 +44,16 @@ func DequeueProcess(resource string) pcb.T_PCB {
 	pcb := globals.ResourceMap[resource][0]
 	globals.ResourceMap[resource] = globals.ResourceMap[resource][1:]
 
-	kernel_api.RemoveFromBlocked(uint32(pcb.PID))
+	RemoveFromBlocked(uint32(pcb.PID))
 	return pcb
+}
+
+func RemoveFromBlocked(pid uint32) {
+	for i, pcb := range globals.Blocked {
+		if pcb.PID == pid {
+			slice.RemoveAtIndex(&globals.Blocked, i)
+		}
+	}
 }
 
 /**

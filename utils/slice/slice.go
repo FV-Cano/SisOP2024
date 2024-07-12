@@ -6,8 +6,10 @@ package slice
  * @param slice: Slice de cualquier tipo.
  * @param index: Índice del elemento a remover.
  */
-func RemoveAtIndex[T any](slice *[]T, index int) {
+func RemoveAtIndex[T any](slice *[]T, index int) T {
+	element := (*slice)[index]
 	*slice = append((*slice)[:index], (*slice)[index+1:]...)
+	return element
 }
 
 /**

@@ -265,10 +265,8 @@ func EvictionManagement() {
 		globals.STSCounter <- int(globals.CurrentJob.PID)
 
 	case "EXIT":
-		if resource.HasResources(globals.CurrentJob) {
-			globals.CurrentJob = resource.ReleaseAllResources(globals.CurrentJob)
-		}
 		globals.ChangeState(&globals.CurrentJob, "TERMINATED")
+		kernel_api.KillJob(globals.CurrentJob)
 		//globals.JobExecBinary <- true
 		<-globals.MultiprogrammingCounter
 		log.Printf("Finaliza el proceso %d - Motivo: %s\n", globals.CurrentJob.PID, evictionReason)
@@ -295,15 +293,14 @@ func EvictionManagement() {
 
 	case "OUT_OF_MEMORY":
 		globals.ChangeState(&globals.CurrentJob, "TERMINATED")
+		kernel_api.KillJob(globals.CurrentJob)
 		//globals.JobExecBinary <- true
 		<-globals.MultiprogrammingCounter
 		log.Printf("Finaliza el proceso %d - Motivo: %s\n", globals.CurrentJob.PID, evictionReason)
 
-	case "INTERRUPTED_BY_USER":
-		if resource.HasResources(globals.CurrentJob) {
-			globals.CurrentJob = resource.ReleaseAllResources(globals.CurrentJob)
-		}
+	case "INTERRUPTED_BY_USER":	// ? El interrupt de delete llega acá?
 		globals.ChangeState(&globals.CurrentJob, "TERMINATED")
+		kernel_api.KillJob(globals.CurrentJob)
 		//globals.JobExecBinary <- true
 		<-globals.MultiprogrammingCounter
 		log.Printf("Finaliza el proceso %d - Motivo: %s\n", globals.CurrentJob.PID, evictionReason)

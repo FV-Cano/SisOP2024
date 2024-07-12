@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/sisoputnfrba/tp-golang/kernel/globals"
+	resource "github.com/sisoputnfrba/tp-golang/kernel/resources"
 	"github.com/sisoputnfrba/tp-golang/utils/pcb"
 	"github.com/sisoputnfrba/tp-golang/utils/slice"
 )
@@ -150,37 +151,9 @@ func ProcessDelete(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	DeleteByID(pid)
 
-	// Elimino el proceso de la lista de procesos
-	RemoveByID(pid)
-
-	// Le solicito a memoria que elimine el proceso
-	cliente := &http.Client{}
-	url := fmt.Sprintf("http://%s:%d/finalizarProceso", globals.Configkernel.IP_memory, globals.Configkernel.Port_memory)
-
-	req, err := http.NewRequest("PATCH", url, nil)
-	if err != nil {
-		return
-	}
-
-	q := req.URL.Query()
-	q.Add("pid", strconv.Itoa(int(pid)))
-	req.URL.RawQuery = q.Encode()
-
-	req.Header.Set("Content-Type", "application/json")
-	respuesta, err := cliente.Do(req)
-	if err != nil {
-		return
-	}
-
-	// Verificar el código de estado de la respuesta
-	if respuesta.StatusCode != http.StatusOK {
-		return
-	}
-
-	// TODO: Falta liberar recursos
-
-	SendInterrupt("DELETE", pid)
+	SendInterrupt("DELETE", pid)	// ? Esto es en el caso de que el proceso esté en ejecución?
 
 	w.WriteHeader(http.StatusOK)
 	// w.Write([]byte("Job deleted")) // ! No tiene que devolver nada
@@ -349,42 +322,58 @@ func PCB_Send() error {
   - @return *pcb.T_PCB: Proceso encontrado
 */
 func SearchByID(pid uint32, processList []pcb.T_PCB) (*pcb.T_PCB, int) {
-	for i, process := range processList {
-		if process.PID == pid {
-			return &process, i
+	if len(processList) == 0 {
+		return nil, -1
+	} else {
+		for i, process := range processList {
+			if process.PID == pid {
+				return &process, i
+			}
 		}
 	}
 	return nil, -1
 }
 
 /*
-*
-
 	// TODO: Mover a utils/slice
-	* RemoveByID: Remueve un proceso de la lista de procesos en base a su PID
-
+	* DeleteByID: Remueve un proceso de la lista de procesos en base a su PID
 	* @param pid: PID del proceso a remover
 */
-func RemoveByID(pid uint32) error {
+func DeleteByID(pid uint32) error {
 	_, ltsIndex := SearchByID(pid, globals.LTS)
 	_, stsIndex := SearchByID(pid, globals.STS)
 	_, blockedIndex := SearchByID(pid, globals.Blocked)
 
+	var removedPCB pcb.T_PCB
+
 	if ltsIndex != -1 {
 		globals.LTSMutex.Lock()
 		defer globals.LTSMutex.Unlock()
-		slice.RemoveAtIndex(&globals.LTS, ltsIndex)
+		removedPCB = slice.RemoveAtIndex(&globals.LTS, ltsIndex)
+		KillJob(removedPCB)
 	} else if stsIndex != -1 {
 		globals.STSMutex.Lock()
 		defer globals.STSMutex.Unlock()
-		slice.RemoveAtIndex(&globals.STS, stsIndex)
+		removedPCB = slice.RemoveAtIndex(&globals.STS, stsIndex)
+		KillJob(removedPCB)
 	} else if blockedIndex != -1 {
 		globals.BlockedMutex.Lock()
 		defer globals.BlockedMutex.Unlock()
-		slice.RemoveAtIndex(&globals.Blocked, blockedIndex)
+		removedPCB = slice.RemoveAtIndex(&globals.Blocked, blockedIndex)
+		KillJob(removedPCB)
 	}
 
+
+
 	return nil
+}
+
+func KillJob(pcb pcb.T_PCB) {
+	if (resource.HasResources(pcb)) {
+		resource.ReleaseAllResources(pcb)
+	}
+	RequestMemoryRelease(pcb.PID)
+	fmt.Print("Se eliminó el proceso ", pcb.PID, " satisfactoriamente\n")
 }
 
 /*
@@ -435,5 +424,30 @@ func SendInterrupt(reason string, pid uint32) {
 	recibirRta, err := cliente.Do(enviarInterrupcion)
 	if err != nil || recibirRta.StatusCode != http.StatusOK {
 		log.Fatal("Error al interrupir proceso", err)
+	}
+}
+
+func RequestMemoryRelease(pid uint32) {
+	cliente := &http.Client{}
+	url := fmt.Sprintf("http://%s:%d/finalizarProceso", globals.Configkernel.IP_memory, globals.Configkernel.Port_memory)
+
+	req, err := http.NewRequest("PATCH", url, nil)
+	if err != nil {
+		fmt.Printf("Error al crear request para finalizar proceso: %v", err)
+	}
+
+	q := req.URL.Query()
+	q.Add("pid", strconv.Itoa(int(pid)))
+	req.URL.RawQuery = q.Encode()
+
+	req.Header.Set("Content-Type", "application/json")
+	respuesta, err := cliente.Do(req)
+	if err != nil {
+		fmt.Printf("Error al finalizar proceso en memoria: %v", err)
+	}
+
+	// Verificar el código de estado de la respuesta
+	if respuesta.StatusCode != http.StatusOK {
+		fmt.Printf("Error al finalizar proceso en memoria: %v", err)
 	}
 }

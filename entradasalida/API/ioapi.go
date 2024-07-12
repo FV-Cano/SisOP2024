@@ -285,3 +285,62 @@ func IO_DIALFS(interfaceToWork globals.DialFSRequest) {
 	fmt.Println("El archivo de bloques.dat es: " , globals.Blocks)
 	fmt.Println("El archivo de bitmap.dat es: " , globals.CurrentBitMap)
 }
+
+func IO_DIALFS_READ(pid int, direccionesFisicas []globals.DireccionTamanio, contenido string) {
+
+	// Le pido a memoria que me guarde los datos
+	url := fmt.Sprintf("http://%s:%d/write", globals.ConfigIO.Ip_memory, globals.ConfigIO.Port_memory)
+
+	bodyWrite, err := json.Marshal(struct {
+		DireccionesTamanios []globals.DireccionTamanio `json:"direcciones_tamanios"`
+		Valor_a_escribir    string                     `json:"valor_a_escribir"`
+		Pid                 int                        `json:"pid"`
+	}{direccionesFisicas, contenido, pid})
+	if err != nil {
+		log.Printf("Failed to encode data: %v", err)
+	}
+
+	response, err := http.Post(url, "application/json", bytes.NewBuffer(bodyWrite))
+	if err != nil {
+		log.Printf("Failed to send data: %v", err)
+	}
+
+	if response.StatusCode != http.StatusOK {
+		log.Printf("Unexpected response status: %s", response.Status)
+	}
+}
+
+func IO_DIALFS_WRITE(pid int, direccionesFisicas []globals.DireccionTamanio) []byte {
+
+	url := fmt.Sprintf("http://%s:%d/read", globals.ConfigIO.Ip_memory, globals.ConfigIO.Port_memory)
+
+	bodyRead, err := json.Marshal(BodyRequestLeer{
+		DireccionesTamanios: direccionesFisicas,
+		Pid:                 pid,
+	})
+	if err != nil {
+		return nil
+	}
+
+	datosLeidos, err := http.Post(url, "application/json", bytes.NewBuffer(bodyRead))
+	if err != nil {
+		log.Printf("Failed to receive data: %v", err)
+	}
+
+	if datosLeidos.StatusCode != http.StatusOK {
+		log.Printf("Unexpected response status: %s", datosLeidos.Status)
+	}
+
+	var response BodyADevolver
+	err = json.NewDecoder(datosLeidos.Body).Decode(&response)
+	if err != nil {
+		return []byte("error al deserializar la respuesta")
+	}
+
+	var bytesConcatenados []byte
+	for _, sliceBytes := range response.Contenido {
+		bytesConcatenados = append(bytesConcatenados, sliceBytes...)
+	}
+
+	return bytesConcatenados
+}

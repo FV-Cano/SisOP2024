@@ -1,13 +1,11 @@
 package IO_api
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
 	"math"
-	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -267,12 +265,6 @@ func WriteFile(pid int, nombreArchivo string, direccion []globals.DireccionTaman
 	// x    					puntero en el byte 2
 	// 8 			 			nuevo contenido 4 bytes
 	// 8 2 3 4					archivo final 5 bytes
-	
-	//cantidadBytesDisponibles := ultimoByteArchivo - posicionPuntero
-
-	/* if posInicialByteAEscribir > cantidadBytesDisponibles {
-		TruncateFile(pid, nombreArchivo, puntero + cantidadBytesLeidos)
-	} */
 
 	if posInicialByteAEscribir > ultimoByteArchivo {
 		TruncateFile(pid, nombreArchivo, int(cantidadBytesFinales))
@@ -292,10 +284,17 @@ func TruncateFile(pid int, nombreArchivo string, tamanioDeseado int) { //revisar
 	archivo := globals.Fcbs[nombreArchivo]
 
 	bloqueInicial := archivo.InitialBlock
-	posBloqueInicial := bloqueInicial - 1
+	//posBloqueInicial := bloqueInicial - 1
 
 	tamOriginalEnBloques := int(math.Max(1, math.Ceil(float64(archivo.Size)/float64(globals.ConfigIO.Dialfs_block_size))))
 	tamFinalEnBloques := int(math.Ceil(float64(tamanioDeseado) / float64(globals.ConfigIO.Dialfs_block_size)))
+
+	var tamanioATruncarEnBloques int
+	if tamanioDeseado > archivo.Size {
+		tamanioATruncarEnBloques = tamFinalEnBloques - tamOriginalEnBloques
+	} else {
+		tamanioATruncarEnBloques = tamOriginalEnBloques - tamFinalEnBloques
+	}
 
 	fmt.Println("El tamaño original del archivo en bloques es ", tamOriginalEnBloques)
 
@@ -310,16 +309,18 @@ func TruncateFile(pid int, nombreArchivo string, tamanioDeseado int) { //revisar
 	// Chequeamos si el archivo tiene que crecer o achicarse
 	// Si el archivo crece
 	if tamanioDeseado > archivo.Size {
-		tamanioATruncarEnBytes := tamanioDeseado - archivo.Size
-		tamanioATruncarEnBloques := int(math.Ceil(float64(tamanioATruncarEnBytes) / float64(globals.ConfigIO.Dialfs_block_size)))
+		//tamanioATruncarEnBytes := tamanioDeseado - archivo.Size
+		//tamanioATruncarEnBloques := int(math.Ceil(float64(tamanioATruncarEnBytes) / float64(globals.ConfigIO.Dialfs_block_size)))
 
-		if tamanioDeseado < globals.ConfigIO.Dialfs_block_size && archivo.Size < globals.ConfigIO.Dialfs_block_size {
+		/* if tamanioDeseado < globals.ConfigIO.Dialfs_block_size && archivo.Size < globals.ConfigIO.Dialfs_block_size {
 			tamanioATruncarEnBloques = 0
-		}
+		} */
 
+		// ! Revisar
 		fmt.Println("Tamaño a agrandar el archivo en bloques", tamanioATruncarEnBloques)
+		bloquesLibresAlFinalDelArchivo := ioutils.CalcularBloquesLibreAPartirDe(bloqueFinalInicial)
 
-		bloquesLibresAlFinalDelArchivo, _:= ioutils.CalcularBloquesLibreAPartirDe(bloqueFinalInicial, tamanioATruncarEnBloques)
+		//bloquesLibresAlFinalDelArchivo, _:= ioutils.CalcularBloquesLibreAPartirDe(bloqueFinalInicial, tamanioATruncarEnBloques)
 
 		// Hay bloques libres al final del archivo
 		if bloquesLibresAlFinalDelArchivo >= tamanioATruncarEnBloques {
@@ -335,28 +336,28 @@ func TruncateFile(pid int, nombreArchivo string, tamanioDeseado int) { //revisar
 
 			ioutils.CrearModificarArchivo(nombreArchivo, archivoMarshallado)
 
-			// No hay bloques libres al final del archivo
+		// No hay bloques libres al final del archivo
 		} else if bloquesLibresAlFinalDelArchivo < tamanioATruncarEnBloques {
 			// Buscar si entra en algún lugar el archivo completo
-			posbloqueEnElQueEntro := ioutils.EntraEnDisco(tamOriginalEnBloques)
-			bloqueEnElQueEntro := posbloqueEnElQueEntro + 1
+			posBloqueEnElQueEntro := ioutils.EntraEnDisco(tamOriginalEnBloques)
+			bloqueEnElQueEntro := posBloqueEnElQueEntro + 1
 
-			fmt.Println("EL ARCHIVO ENTRA EN EL BLOQUE ", bloqueEnElQueEntro)
+			fmt.Println("EL ARCHIVO ENTRA A PARTIR DEL BLOQUE ", bloqueEnElQueEntro)
 
 			// Entra en algún lugar el archivo completo todo junto
-			if bloqueEnElQueEntro != -1 {
+			if posBloqueEnElQueEntro != -1 {
 				fmt.Println("FS - Entra en algún lugar el archivo completo")
 				// Limpiar el bitmap
-				ioutils.LiberarBloquesDesde(posBloqueInicial+1, tamOriginalEnBloques)
+				ioutils.LiberarBloquesDesde(bloqueInicial, tamOriginalEnBloques)
 				archivo.InitialBlock = bloqueEnElQueEntro
 				archivo.Size = tamanioDeseado
 				// Setear en el nuevo lugar
-				ioutils.OcuparBloquesDesde(posbloqueEnElQueEntro, tamFinalEnBloques)
+				ioutils.OcuparBloquesDesde(bloqueEnElQueEntro, tamFinalEnBloques)
 
 				contenidoArchivo := ioutils.ReadFs(nombreArchivo, 0, -1)
 
-				byteInicioDestino := bloqueEnElQueEntro * globals.ConfigIO.Dialfs_block_size
-				ioutils.WriteFs(contenidoArchivo, byteInicioDestino)
+				byteInicialDestino := bloqueEnElQueEntro * globals.ConfigIO.Dialfs_block_size
+				ioutils.WriteFs(contenidoArchivo, byteInicialDestino)
 
 				archivoMarshallado, err := json.Marshal(archivo)
 				if err != nil {
@@ -365,14 +366,19 @@ func TruncateFile(pid int, nombreArchivo string, tamanioDeseado int) { //revisar
 
 				ioutils.CrearModificarArchivo(nombreArchivo, archivoMarshallado)
 
-				// No entra el archivo pero alcanza la cantidad de bloques libres
+				fmt.Println("FS - Archivo movido a otro lugar")
+
+			// No entra el archivo pero alcanza la cantidad de bloques libres
 			} else if ioutils.ContadorDeEspaciosLibres() >= tamFinalEnBloques {
 				fmt.Println("FS - No entra el archivo pero alcanza la cantidad de bloques libres")
 				//Si no entra en ningún lugar, compactar
 				contenidoArchivo := ioutils.ReadFs(nombreArchivo, 0, -1)
+
 				Compactar()
+
 				primerBloqueLibre := ioutils.CalcularBloqueLibre()
-				ioutils.WriteFs(contenidoArchivo, primerBloqueLibre*globals.ConfigIO.Dialfs_block_size)
+				posPrimerBloqueLibre := primerBloqueLibre - 1
+				ioutils.WriteFs(contenidoArchivo, posPrimerBloqueLibre * globals.ConfigIO.Dialfs_block_size)
 
 				archivo.InitialBlock = primerBloqueLibre
 				archivo.Size = tamanioDeseado
@@ -381,24 +387,30 @@ func TruncateFile(pid int, nombreArchivo string, tamanioDeseado int) { //revisar
 				if err != nil {
 					log.Fatalf("Failed to marshal metadata: %s", err)
 				}
+
 				ioutils.CrearModificarArchivo(nombreArchivo, archivoMarshallado)
+
 			} else {
 				log.Print("No hay espacio suficiente para el archivo.")
 			}
 		}
 
-		// Si el archivo se achica
+	// Si el archivo se achica
 	} else if tamanioDeseado < archivo.Size {
-		tamanioATruncarEnBytes := archivo.Size - tamanioDeseado
-		tamanioATruncarEnBloques := int(math.Ceil(float64(tamanioATruncarEnBytes) / float64(globals.ConfigIO.Dialfs_block_size)))
+		//tamanioATruncarEnBytes := archivo.Size - tamanioDeseado
+		//tamanioATruncarEnBloques := int(math.Ceil(float64(tamanioATruncarEnBytes) / float64(globals.ConfigIO.Dialfs_block_size)))
+
 		// Liberar los bloques que ya no se usan
-		ioutils.LiberarBloque(bloqueFinalInicial, tamanioATruncarEnBloques)
+		bloqueFinal := bloqueFinalInicial - 1
+		ioutils.LiberarBloque(bloqueFinal, tamanioATruncarEnBloques)
+
 		archivo.Size = tamanioDeseado
 
 		archivoMarshallado, err := json.Marshal(archivo)
 		if err != nil {
 			log.Fatalf("Failed to marshal metadata: %s", err)
 		}
+
 		ioutils.CrearModificarArchivo(nombreArchivo, archivoMarshallado)
 	}
 
@@ -438,65 +450,3 @@ func Compactar() {
 	time.Sleep(time.Duration(globals.ConfigIO.Dialfs_compaction_delay))
 }
 
-func IO_DIALFS_READ(pid int, direccionesFisicas []globals.DireccionTamanio, contenido string) {
-
-	// Le pido a memoria que me guarde los datos
-	url := fmt.Sprintf("http://%s:%d/write", globals.ConfigIO.Ip_memory, globals.ConfigIO.Port_memory)
-
-	bodyWrite, err := json.Marshal(struct {
-		DireccionesTamanios []globals.DireccionTamanio `json:"direcciones_tamanios"`
-		Valor_a_escribir    string                     `json:"valor_a_escribir"`
-		Pid                 int                        `json:"pid"`
-	}{direccionesFisicas, contenido, pid})
-	if err != nil {
-		log.Printf("Failed to encode data: %v", err)
-	}
-
-	response, err := http.Post(url, "application/json", bytes.NewBuffer(bodyWrite))
-	if err != nil {
-		log.Printf("Failed to send data: %v", err)
-	}
-
-	if response.StatusCode != http.StatusOK {
-		log.Printf("Unexpected response status: %s", response.Status)
-	}
-}
-
-func IO_DIALFS_WRITE(pid int, direccionesFisicas []globals.DireccionTamanio) []byte {
-
-	url := fmt.Sprintf("http://%s:%d/read", globals.ConfigIO.Ip_memory, globals.ConfigIO.Port_memory)
-
-	bodyRead, err := json.Marshal(BodyRequestLeer{
-		DireccionesTamanios: direccionesFisicas,
-		Pid:                 pid,
-	})
-	if err != nil {
-		return nil
-	}
-
-	fmt.Println("IO DIALFS WRITE BODY READ")
-
-	datosLeidos, err := http.Post(url, "application/json", bytes.NewBuffer(bodyRead))
-	if err != nil {
-		log.Printf("Failed to receive data: %v", err)
-	}
-
-	if datosLeidos.StatusCode != http.StatusOK {
-		log.Printf("Unexpected response status: %s", datosLeidos.Status)
-	}
-
-	var response BodyADevolver
-	err = json.NewDecoder(datosLeidos.Body).Decode(&response)
-	if err != nil {
-		return []byte("error al deserializar la respuesta")
-	}
-
-	var bytesConcatenados []byte
-	for _, sliceBytes := range response.Contenido {
-		bytesConcatenados = append(bytesConcatenados, sliceBytes...)
-	}
-
-	fmt.Println("IO_DIALFS_WRITE DATOS CONC: ", bytesConcatenados)
-
-	return bytesConcatenados
-}

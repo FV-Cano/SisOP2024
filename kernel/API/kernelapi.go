@@ -20,7 +20,7 @@ import (
 */
 
 type ProcessStart_BRQ struct {
-	PID uint32 `json:"pid"`
+	PID  uint32 `json:"pid"`
 	Path string `json:"path"`
 }
 
@@ -31,12 +31,13 @@ type ProcessStart_BRS struct {
 type GetInstructions_BRQ struct {
 	Path string `json:"path"`
 	Pid  uint32 `json:"pid"`
-	Pc 	uint32  `json:"pc"`
+	Pc   uint32 `json:"pc"`
 }
 
-/**
- * ProcessInit: Inicia un proceso en base a un archivo dentro del FS de Linux.
- 	[ ] Testeada
+/*
+*
+  - ProcessInit: Inicia un proceso en base a un archivo dentro del FS de Linux.
+    [ ] Testeada
 */
 func ProcessInit(w http.ResponseWriter, r *http.Request) {
 	var request ProcessStart_BRQ
@@ -47,32 +48,32 @@ func ProcessInit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	pathInst, err := json.Marshal(fmt.Sprintf(request.Path))
-    if err != nil {
-        http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
-        return
-    }
+	if err != nil {
+		http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
+		return
+	}
 	pathInstString := string(pathInst)
-	
+
 	newPcb := &pcb.T_PCB{
-		PID: 			request.PID, // ! ESTO NO ESTABA >:v
-		PC: 			0,
-		Quantum: 		uint32(globals.Configkernel.Quantum * int(time.Millisecond)),
-		CPU_reg: 		map[string]interface{}{
-							"AX": uint8(0),
-							"BX": uint8(0),
-							"CX": uint8(0),
-							"DX": uint8(0),
-							"EAX": uint32(0),
-							"EBX": uint32(0),
-							"ECX": uint32(0),
-							"EDX": uint32(0),
-							"SI": uint32(0),
-							"DI": uint32(0),
-							"PC": uint32(0),
-						},
-		State: 			"NEW",
-		EvictionReason: "",
-		Resources: 		make(map[string]int),	// * El valor por defecto es 0, tener en cuenta por las dudas a la hora de testear
+		PID:     request.PID, // ! ESTO NO ESTABA >:v
+		PC:      0,
+		Quantum: uint32(globals.Configkernel.Quantum * int(time.Millisecond)),
+		CPU_reg: map[string]interface{}{
+			"AX":  uint8(0),
+			"BX":  uint8(0),
+			"CX":  uint8(0),
+			"DX":  uint8(0),
+			"EAX": uint32(0),
+			"EBX": uint32(0),
+			"ECX": uint32(0),
+			"EDX": uint32(0),
+			"SI":  uint32(0),
+			"DI":  uint32(0),
+			"PC":  uint32(0),
+		},
+		State:             "NEW",
+		EvictionReason:    "",
+		Resources:         make(map[string]int), // * El valor por defecto es 0, tener en cuenta por las dudas a la hora de testear
 		RequestedResource: "",
 	}
 
@@ -88,22 +89,22 @@ func ProcessInit(w http.ResponseWriter, r *http.Request) {
 
 	bodyInst, err := json.Marshal(GetInstructions_BRQ{
 		Path: pathInstString,
-		Pid: newPcb.PID,
-		Pc: newPcb.PC,
+		Pid:  newPcb.PID,
+		Pc:   newPcb.PC,
 	})
 	if err != nil {
 		return
 	}
-	
+
 	requerirInstrucciones, err := http.NewRequest("POST", url, bytes.NewBuffer(bodyInst))
 	if err != nil {
 		log.Printf("POST request failed (No se pueden cargar instrucciones): %v", err)
 	}
-	
+
 	cliente := &http.Client{}
 	requerirInstrucciones.Header.Set("Content-Type", "application/json")
 	recibirRespuestaInstrucciones, err := cliente.Do(requerirInstrucciones)
-	if (err != nil || recibirRespuestaInstrucciones.StatusCode != http.StatusOK) {
+	if err != nil || recibirRespuestaInstrucciones.StatusCode != http.StatusOK {
 		log.Fatal("Error en CargarInstrucciones (memoria)", err)
 	}
 
@@ -112,7 +113,7 @@ func ProcessInit(w http.ResponseWriter, r *http.Request) {
 		globals.LTSMutex.Lock()
 		slice.Push(&globals.LTS, *newPcb)
 		defer globals.LTSMutex.Unlock()
-		<- globals.EmptiedList
+		<-globals.EmptiedList
 	} else {
 		globals.LTSMutex.Lock()
 		slice.Push(&globals.LTS, *newPcb)
@@ -132,13 +133,15 @@ func ProcessInit(w http.ResponseWriter, r *http.Request) {
 	return globals.NextPID
 } */
 
-/**
- * ProcessDelete: Elimina un proceso en base a un PID. Realiza las operaciones como si el proceso llegase a EXIT
-	[ ] Cambio de estado de proceso: EXIT
-	[ ] Liberación de recursos
-	[ ] Liberación de memoria 
+/*
+*
 
-	[ ] Testeada
+  - ProcessDelete: Elimina un proceso en base a un PID. Realiza las operaciones como si el proceso llegase a EXIT
+    [ ] Cambio de estado de proceso: EXIT
+    [ ] Liberación de recursos
+    [ ] Liberación de memoria
+
+    [ ] Testeada
 */
 func ProcessDelete(w http.ResponseWriter, r *http.Request) {
 	pidString := r.PathValue("pid")
@@ -187,21 +190,22 @@ type ProcessStatus_BRS struct {
 	State string `json:"state"`
 }
 
-/**
- * ProcessState: Devuelve el estado de un proceso en base a un PID
-	[ ] Testeada
+/*
+*
+  - ProcessState: Devuelve el estado de un proceso en base a un PID
+    [ ] Testeada
 */
 func ProcessState(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("HOLAAA ESTOY EN PROCESS STATE")
+	log.Println("HOLAAA ESTOY EN PROCESS STATE")
 	pidString := r.PathValue("pid")
 	pid, err := GetPIDFromString(pidString)
 	if err != nil {
-		fmt.Println("Error al convertir PID a string: ", pidString, err)
+		log.Println("Error al convertir PID a string: ", pidString, err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	fmt.Println("Vamos a buscar el proceso con PID: ", pid)
+	log.Println("Vamos a buscar el proceso con PID: ", pid)
 
 	process, _ := SearchByID(pid, getProcessList())
 	if process == nil {
@@ -209,7 +213,7 @@ func ProcessState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println("Encontré esto: ", process)
+	log.Println("Encontré esto: ", process)
 
 	result := ProcessStatus_BRS{State: process.State}
 
@@ -225,17 +229,18 @@ func ProcessState(w http.ResponseWriter, r *http.Request) {
 
 /**
  * PlanificationStart: Retoma el STS y LTS en caso de que la planificación se encuentre pausada. Si no, ignora la petición.
-*/
+ */
 func PlanificationStart(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	<- globals.LTSPlanBinary
-	<- globals.STSPlanBinary
+	<-globals.LTSPlanBinary
+	<-globals.STSPlanBinary
 }
 
-/**
- * PlanificationStop: Detiene el STS y LTS en caso de que la planificación se encuentre en ejecución. Si no, ignora la petición.
-	El proceso que se encuentra en ejecución NO es desalojado. Una vez que salga de EXEC se pausa el manejo de su motivo de desalojo.
-	El resto de procesos bloqueados van a pausar su transición a la cola de Ready
+/*
+*
+  - PlanificationStop: Detiene el STS y LTS en caso de que la planificación se encuentre en ejecución. Si no, ignora la petición.
+    El proceso que se encuentra en ejecución NO es desalojado. Una vez que salga de EXEC se pausa el manejo de su motivo de desalojo.
+    El resto de procesos bloqueados van a pausar su transición a la cola de Ready
 */
 func PlanificationStop(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
@@ -244,13 +249,13 @@ func PlanificationStop(w http.ResponseWriter, r *http.Request) {
 }
 
 type ProcessList_BRS struct {
-	Pid int `json:"pid"`
+	Pid   int    `json:"pid"`
 	State string `json:"state"`
 }
 
 /**
  * ProcessList: Devuelve una lista de procesos con su PID y estado
-*/
+ */
 func ProcessList(w http.ResponseWriter, r *http.Request) {
 	allProcesses := getProcessList()
 
@@ -270,10 +275,12 @@ func ProcessList(w http.ResponseWriter, r *http.Request) {
 	w.Write(response)
 }
 
-/**
- * getProcessList: Devuelve una lista de todos los procesos en el sistema (LTS, STS, Blocked, STS_Priority, CurrentJob)
+/*
+*
 
- * @return []pcb.T_PCB: Lista de procesos
+  - getProcessList: Devuelve una lista de todos los procesos en el sistema (LTS, STS, Blocked, STS_Priority, CurrentJob)
+
+  - @return []pcb.T_PCB: Lista de procesos
 */
 func getProcessList() []pcb.T_PCB {
 	var allProcesses []pcb.T_PCB
@@ -287,10 +294,12 @@ func getProcessList() []pcb.T_PCB {
 	return allProcesses
 }
 
-/**
- * PCB_Send: Envía un PCB al CPU y recibe la respuesta
+/*
+*
 
- * @return error: Error en caso de que falle el envío
+  - PCB_Send: Envía un PCB al CPU y recibe la respuesta
+
+  - @return error: Error en caso de que falle el envío
 */
 func PCB_Send() error {
 	//Encode data
@@ -328,12 +337,16 @@ func PCB_Send() error {
 	return nil
 }
 
-/**
- * SearchByID: Busca un proceso en la lista de procesos en base a su PID
+/*
+*
 
- * @param pid: PID del proceso a buscar
- * @param processList: Lista de procesos
- * @return *pcb.T_PCB: Proceso encontrado
+  - SearchByID: Busca un proceso en la lista de procesos en base a su PID
+
+  - @param pid: PID del proceso a buscar
+
+  - @param processList: Lista de procesos
+
+  - @return *pcb.T_PCB: Proceso encontrado
 */
 func SearchByID(pid uint32, processList []pcb.T_PCB) (*pcb.T_PCB, int) {
 	for i, process := range processList {
@@ -344,21 +357,23 @@ func SearchByID(pid uint32, processList []pcb.T_PCB) (*pcb.T_PCB, int) {
 	return nil, -1
 }
 
-/**
- // TODO: Mover a utils/slice
- * RemoveByID: Remueve un proceso de la lista de procesos en base a su PID
+/*
+*
 
- * @param pid: PID del proceso a remover
+	// TODO: Mover a utils/slice
+	* RemoveByID: Remueve un proceso de la lista de procesos en base a su PID
+
+	* @param pid: PID del proceso a remover
 */
 func RemoveByID(pid uint32) error {
 	_, ltsIndex := SearchByID(pid, globals.LTS)
 	_, stsIndex := SearchByID(pid, globals.STS)
 	_, blockedIndex := SearchByID(pid, globals.Blocked)
-	
+
 	if ltsIndex != -1 {
 		globals.LTSMutex.Lock()
 		defer globals.LTSMutex.Unlock()
-		slice.RemoveAtIndex(&globals.LTS, ltsIndex)	
+		slice.RemoveAtIndex(&globals.LTS, ltsIndex)
 	} else if stsIndex != -1 {
 		globals.STSMutex.Lock()
 		defer globals.STSMutex.Unlock()
@@ -368,15 +383,18 @@ func RemoveByID(pid uint32) error {
 		defer globals.BlockedMutex.Unlock()
 		slice.RemoveAtIndex(&globals.Blocked, blockedIndex)
 	}
-	
+
 	return nil
 }
 
-/**
- * GetPIDFromQueryPath: Convierte un PID en formato string a uint32
+/*
+*
 
- * @param pidString: PID en formato string
- * @return uint32: PID extraído
+  - GetPIDFromQueryPath: Convierte un PID en formato string a uint32
+
+  - @param pidString: PID en formato string
+
+  - @return uint32: PID extraído
 */
 func GetPIDFromString(pidString string) (uint32, error) {
 	pid64, error := strconv.ParseUint(pidString, 10, 32)
@@ -391,10 +409,9 @@ func RemoveFromBlocked(pid uint32) {
 	}
 }
 
-
 type InterruptionRequest struct {
 	InterruptionReason string `json:"InterruptionReason"`
-	Pid uint32 `json:"pid"`
+	Pid                uint32 `json:"pid"`
 }
 
 func SendInterrupt(reason string, pid uint32) {
@@ -402,21 +419,21 @@ func SendInterrupt(reason string, pid uint32) {
 
 	bodyInt, err := json.Marshal(InterruptionRequest{
 		InterruptionReason: reason,
-		Pid: pid,
+		Pid:                pid,
 	})
 	if err != nil {
 		return
 	}
-	
+
 	enviarInterrupcion, err := http.NewRequest("POST", url, bytes.NewBuffer(bodyInt))
 	if err != nil {
 		log.Fatalf("POST request failed (No se puede enviar interrupción): %v", err)
 	}
-	
+
 	cliente := &http.Client{}
 	enviarInterrupcion.Header.Set("Content-Type", "application/json")
 	recibirRta, err := cliente.Do(enviarInterrupcion)
-	if (err != nil || recibirRta.StatusCode != http.StatusOK) {
+	if err != nil || recibirRta.StatusCode != http.StatusOK {
 		log.Fatal("Error al interrupir proceso", err)
 	}
 }

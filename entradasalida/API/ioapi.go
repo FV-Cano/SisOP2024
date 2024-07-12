@@ -24,7 +24,7 @@ func HandshakeKernel(nombre string) error {
 	genInterface := device.T_IOInterface{
 		InterfaceName: nombre,
 		InterfaceType: globals.ConfigIO.Type,
-		InterfaceIP: globals.ConfigIO.Ip,
+		InterfaceIP:   globals.ConfigIO.Ip,
 		InterfacePort: globals.ConfigIO.Port,
 	}
 
@@ -51,7 +51,7 @@ func HandshakeKernel(nombre string) error {
 // * Hay que declarar los tipos de body que se van a recibir desde kernel porque por alguna razón no se puede crear un struct type dentro de una función con un tipo creado por uno mismo, están todos en globals
 
 func InterfaceQueuePCB(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("InterfaceQueuePCB")
+	log.Println("InterfaceQueuePCB")
 	switch globals.ConfigIO.Type {
 	case "GENERICA":
 		var decodedStruct globals.GenSleep
@@ -67,16 +67,16 @@ func InterfaceQueuePCB(w http.ResponseWriter, r *http.Request) {
 
 	case "STDIN":
 		var decodedStruct globals.StdinRead
-		
+
 		err := json.NewDecoder(r.Body).Decode(&decodedStruct)
 		if err != nil {
 			http.Error(w, "Bad request", http.StatusBadRequest)
 			return
 		}
-		
+
 		log.Print("Nueva PCB ID: ", decodedStruct.Pcb.PID, " para usar Interfaz")
 		globals.Stdin_QueueChannel <- decodedStruct
-		
+
 	case "STDOUT":
 		var decodedStruct globals.StdoutWrite
 
@@ -88,7 +88,7 @@ func InterfaceQueuePCB(w http.ResponseWriter, r *http.Request) {
 
 		log.Print("Nueva PCB ID: ", decodedStruct.Pcb.PID, " para usar Interfaz")
 		globals.Stdout_QueueChannel <- decodedStruct
-	
+
 	case "DIALFS":
 		var decodedStruct globals.DialFSRequest
 
@@ -101,7 +101,7 @@ func InterfaceQueuePCB(w http.ResponseWriter, r *http.Request) {
 		log.Print("Nueva PCB ID: ", decodedStruct.Pcb.PID, " para usar Interfaz")
 		globals.DialFS_QueueChannel <- decodedStruct
 	}
-	
+
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -110,7 +110,7 @@ func IOWork() {
 	case "GENERICA":
 		var interfaceToWork globals.GenSleep
 		for {
-			interfaceToWork = <- globals.Generic_QueueChannel
+			interfaceToWork = <-globals.Generic_QueueChannel
 
 			IO_GEN_SLEEP(interfaceToWork.TimeToSleep, interfaceToWork.Pcb)
 			log.Println("Fin de bloqueo")
@@ -119,7 +119,7 @@ func IOWork() {
 	case "STDIN":
 		var interfaceToWork globals.StdinRead
 		for {
-			interfaceToWork = <- globals.Stdin_QueueChannel
+			interfaceToWork = <-globals.Stdin_QueueChannel
 
 			IO_STDIN_READ(interfaceToWork.Pcb, interfaceToWork.DireccionesFisicas)
 			log.Println("Fin de bloqueo")
@@ -128,7 +128,7 @@ func IOWork() {
 	case "STDOUT":
 		var interfaceToWork globals.StdoutWrite
 		for {
-			interfaceToWork = <- globals.Stdout_QueueChannel
+			interfaceToWork = <-globals.Stdout_QueueChannel
 
 			IO_STDOUT_WRITE(interfaceToWork.Pcb, interfaceToWork.DireccionesFisicas)
 			log.Println("Fin de bloqueo")
@@ -138,8 +138,8 @@ func IOWork() {
 	case "DIALFS":
 		var interfaceToWork globals.DialFSRequest
 		for {
-			interfaceToWork = <- globals.DialFS_QueueChannel
-			
+			interfaceToWork = <-globals.DialFS_QueueChannel
+
 			IO_DIALFS(interfaceToWork)
 			log.Println("Fin de bloqueo")
 			returnPCB(interfaceToWork.Pcb)
@@ -150,7 +150,6 @@ func IOWork() {
 func returnPCB(pcb pcb.T_PCB) {
 	generics.DoRequest("POST", fmt.Sprintf("http://%s:%d/io-return-pcb", globals.ConfigIO.Ip_kernel, globals.ConfigIO.Port_kernel), pcb, nil)
 }
-	
 
 // ------------------------- OPERACIONES -------------------------
 
@@ -173,10 +172,10 @@ func IO_STDIN_READ(pcb pcb.T_PCB, direccionesFisicas []globals.DireccionTamanio)
 	url := fmt.Sprintf("http://%s:%d/write", globals.ConfigIO.Ip_memory, globals.ConfigIO.Port_memory)
 
 	bodyWrite, err := json.Marshal(struct {
-		DireccionesTamanios []globals.DireccionTamanio  `json:"direcciones_tamanios"`
-		Valor_a_escribir    string 					    `json:"valor_a_escribir"`
-		Pid                 int 						`json:"pid"`
-	} {direccionesFisicas, data, int(pcb.PID)})
+		DireccionesTamanios []globals.DireccionTamanio `json:"direcciones_tamanios"`
+		Valor_a_escribir    string                     `json:"valor_a_escribir"`
+		Pid                 int                        `json:"pid"`
+	}{direccionesFisicas, data, int(pcb.PID)})
 	if err != nil {
 		log.Printf("Failed to encode data: %v", err)
 	}
@@ -191,14 +190,14 @@ func IO_STDIN_READ(pcb pcb.T_PCB, direccionesFisicas []globals.DireccionTamanio)
 	}
 }
 
-
 type BodyRequestLeer struct {
 	DireccionesTamanios []globals.DireccionTamanio `json:"direcciones_tamanios"`
-	Pid				 	int 					   `json:"pid"`
+	Pid                 int                        `json:"pid"`
 }
 type BodyADevolver struct {
 	Contenido [][]byte `json:"contenido"`
 }
+
 func IO_STDOUT_WRITE(pcb pcb.T_PCB, direccionesFisicas []globals.DireccionTamanio) {
 	log.Printf("PID: %d - Operacion: IO_STDOUT_WRITE", pcb.PID)
 	url := fmt.Sprintf("http://%s:%d/read", globals.ConfigIO.Ip_memory, globals.ConfigIO.Port_memory)
@@ -208,16 +207,16 @@ func IO_STDOUT_WRITE(pcb pcb.T_PCB, direccionesFisicas []globals.DireccionTamani
 		Pid:                 int(pcb.PID),
 	})
 	if err != nil {
-		return 
+		return
 	}
-/*
-	bodyRead, err := json.Marshal(struct {
-		DireccionesTamanios 			[]globals.DireccionTamanio `json:"direcciones_tamanios"`
-		Pid 							int  					   `json:"pid"`		
-	} {direccionesFisicas, int(pcb.PID)})
-	if err != nil {
-		log.Printf("Failed to encode data: %v", err)
-	}*/
+	/*
+		bodyRead, err := json.Marshal(struct {
+			DireccionesTamanios 			[]globals.DireccionTamanio `json:"direcciones_tamanios"`
+			Pid 							int  					   `json:"pid"`
+		} {direccionesFisicas, int(pcb.PID)})
+		if err != nil {
+			log.Printf("Failed to encode data: %v", err)
+		}*/
 
 	datosLeidos, err := http.Post(url, "application/json", bytes.NewBuffer(bodyRead))
 	if err != nil {
@@ -228,18 +227,17 @@ func IO_STDOUT_WRITE(pcb pcb.T_PCB, direccionesFisicas []globals.DireccionTamani
 		log.Printf("Unexpected response status: %s", datosLeidos.Status)
 	}
 
-
 	var response BodyADevolver
 
-	err = json.NewDecoder(datosLeidos.Body).Decode(&response) 
+	err = json.NewDecoder(datosLeidos.Body).Decode(&response)
 	if err != nil {
 		return
 	}
 
 	var bytesConcatenados []byte
-    for _, sliceBytes := range response.Contenido {
-        bytesConcatenados = append(bytesConcatenados, sliceBytes...)
-    }
+	for _, sliceBytes := range response.Contenido {
+		bytesConcatenados = append(bytesConcatenados, sliceBytes...)
+	}
 
 	// Lee los datos de la respuesta
 	/* response, err := io.ReadAll(datosLeidos.Body)
@@ -270,19 +268,17 @@ func IO_DIALFS(interfaceToWork globals.DialFSRequest) {
 	switch interfaceToWork.Operacion {
 	case "CREATE":
 		CreateFile(pid, nombreArchivo)
-		
+
 	case "DELETE":
 		DeleteFile(pid, nombreArchivo)
-		
+
 	case "READ":
 		ReadFile(pid, nombreArchivo, interfaceToWork.Direccion, interfaceToWork.Tamanio, interfaceToWork.Puntero)
 
 	case "WRITE":
 		WriteFile(pid, nombreArchivo, interfaceToWork.Direccion, interfaceToWork.Tamanio, interfaceToWork.Puntero)
-	
-	case "TRUNCATE":	
-		TruncateFile(pid, nombreArchivo, interfaceToWork.Tamanio)	
+
+	case "TRUNCATE":
+		TruncateFile(pid, nombreArchivo, interfaceToWork.Tamanio)
 	}
 }
-
-	

@@ -88,12 +88,17 @@ func LeerArchivoEnStruct(nombreArchivo string) *globals.Metadata {
 	return &metadata
 }
 
-/**
-  * ReadFs: Lee un archivo del sistema de archivos
+/*
+*
+
+  - ReadFs: Lee un archivo del sistema de archivos
 
   - @param nombreArchivo: nombre del archivo a leer
+
   - @param desplazamiento: desplazamiento en bytes desde el inicio del archivo
+
   - @param tamanio: cantidad de bytes a leer (si es -1, se lee todo el archivo)
+
   - @return contenido: contenido del archivo leído
 */
 func ReadFs(nombreArchivo string, desplazamiento int, tamanio int) []byte {
@@ -106,10 +111,12 @@ func ReadFs(nombreArchivo string, desplazamiento int, tamanio int) []byte {
 	}
 
 	contenido := make([]byte, tamanioALeer)
-	byteInicial := (archivo.InitialBlock * globals.ConfigIO.Dialfs_block_size) + desplazamiento
+
+	posBloqueInicial := archivo.InitialBlock - 1
+	primerByteArchivo := posBloqueInicial*globals.ConfigIO.Dialfs_block_size + desplazamiento
 
 	for i := 0; i < tamanioALeer; i++ {
-		contenido[i] = globals.Blocks[byteInicial+i]
+		contenido[i] = globals.Blocks[primerByteArchivo+i]
 	}
 
 	return contenido
@@ -128,7 +135,7 @@ func WriteFs(contenido []byte, byteInicial int) {
 	ActualizarBloques()
 }
 
-func EntraEnDisco(tamanioTotalEnBloques int) int {
+/*func EntraEnDisco(tamanioTotalEnBloques int) int {
 	for i := 0; i < globals.ConfigIO.Dialfs_block_count; i++ {
 		espacioActual := CalcularBloquesLibreAPartirDe(i)
 
@@ -139,6 +146,19 @@ func EntraEnDisco(tamanioTotalEnBloques int) int {
 		}
 	}
 	return (-1)
+}*/
+
+func EntraEnDisco(tamanioTotalEnBloques int) int {
+
+	var i int
+
+	espacio, posicion := CalcularBloquesLibreAPartirDe(i, tamanioTotalEnBloques)
+
+	if espacio <= tamanioTotalEnBloques {
+		return (-1)
+	} else {
+		return posicion
+	}
 }
 
 // * Manejo de BLOQUES
@@ -158,21 +178,52 @@ func ContadorDeEspaciosLibres() int {
 /**
  * CalcularBloquesLibreAPartirDe: calcula la cantidad de bloques libres a partir de un bloque inicial hasta encontrar uno seteado
  */
-func CalcularBloquesLibreAPartirDe(bloqueInicial int) int {
+
+/*
+	func CalcularBloquesLibreAPartirDe(bloqueInicial int) int {
+		var i = bloqueInicial
+		var contadorLibres = 0 // Inicializamos el contador de bloques libres
+		for i < globals.ConfigIO.Dialfs_block_count {
+			if IsNotSet(i) { // Si el bloque actual no está seteado (es 0),
+				contadorLibres++ // Incrementamos el contador de bloques libres
+			} else { // Si encontramos un bloque seteado (es 1),
+				break // Terminamos la iteración
+			}
+			i++ // Pasamos al siguiente bloque
+		}
+		return contadorLibres // Devolvemos el contador de bloques libres
+
+}
+*/
+func CalcularBloquesLibreAPartirDe(bloqueInicial int, bloquesTotales int) (int, int) {
 	if bloqueInicial < 0 || bloqueInicial >= globals.ConfigIO.Dialfs_block_count {
 		log.Fatalf("Initial block index out of range: %d", bloqueInicial)
 	}
 	var i = bloqueInicial
-	var contadorLibres = 0 // Inicializamos el contador de bloques libres
+	var posicion = -1
+	var contadorLibres = 0       // Inicializamos el contador de bloques libres
+	var contadorConsecutivos = 0 // Contador de bloques libres consecutivos
+
 	for i < globals.ConfigIO.Dialfs_block_count {
 		if IsNotSet(i) { // Si el bloque actual no está seteado (es 0),
-			contadorLibres++ // Incrementamos el contador de bloques libres
+			contadorLibres++       // Incrementamos el contador de bloques libres
+			contadorConsecutivos++ // Incrementamos el contador de bloques libres consecutivos
+			if contadorConsecutivos == bloquesTotales {
+				posicion = i - (bloquesTotales - 1)
+				break // Terminamos la iteración si encontramos suficientes bloques contiguos
+			}
 		} else { // Si encontramos un bloque seteado (es 1),
-			break // Terminamos la iteración
+			contadorConsecutivos = 0 // Reiniciamos el contador de bloques libres consecutivos
 		}
 		i++ // Pasamos al siguiente bloque
 	}
-	return contadorLibres // Devolvemos el contador de bloques libres
+
+	if contadorConsecutivos < bloquesTotales {
+		posicion = -1 // No se encontraron suficientes bloques libres contiguos
+	}
+
+	fmt.Println("La cantidad de bloques libres es ", contadorLibres)
+	return contadorLibres, posicion // Devolvemos el contador de bloques libres y la posición del primer bloque libre contiguo
 }
 
 /**
@@ -187,7 +238,7 @@ func CalcularBloqueLibre() int {
 		}
 		i++
 	}
-	return i
+	return i + 1
 }
 
 /**
@@ -231,7 +282,7 @@ func OcuparBloquesDesde(numBloque int, tamanioASetear int) {
 	for contador < tamanioASetear { // Continúa mientras el contador sea menor que tamanioASetear
 		if IsNotSet(i) { // Si el bloque actual no está seteado
 			Set(i) // Setea el bloque
-			fmt.Println("Se setteo el bloque ", i)
+			fmt.Println("Se setteo el bloque ", i+1)
 			contador++ // Incrementa el contador
 		} else { // Si el byte ya está seteado
 			break // Rompe el bucle

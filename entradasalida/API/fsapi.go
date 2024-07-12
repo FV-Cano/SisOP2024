@@ -144,11 +144,11 @@ func CreateFile(pid int, nombreArchivo string) {
 	//Archivos de metadata en el módulo FS cargados en alguna estructura para que les sea fácil acceder
 
 	bloqueInicial := ioutils.CalcularBloqueLibre()
-	ioutils.Set(bloqueInicial)
+	ioutils.Set(bloqueInicial - 1)
 
 	// Crea la metadata
 	metadata := globals.Metadata{
-		InitialBlock: bloqueInicial + 1,
+		InitialBlock: bloqueInicial,
 		Size:         0,
 	}
 
@@ -172,37 +172,41 @@ func CreateFile(pid int, nombreArchivo string) {
 func DeleteFile(pid int, nombreArchivo string) error {
 	nombreArchivo = "dialfs/" + nombreArchivo
 
-    // Paso 1: Verificar si el archivo existe
-    if _, err := os.Stat(nombreArchivo); os.IsNotExist(err) {
-        // El archivo no existe
-        return errors.New("el archivo no existe")
-    }
+	// Paso 1: Verificar si el archivo existe
+	if _, err := os.Stat(nombreArchivo); os.IsNotExist(err) {
+		// El archivo no existe
+		return errors.New("el archivo no existe")
+	}
 
-    // Leer la información del archivo antes de eliminarlo
-    archivo := ioutils.LeerArchivoEnStruct(nombreArchivo)
-   
-    sizeArchivo := archivo.Size
-    sizeArchivoEnBloques := int(math.Ceil(float64(sizeArchivo) / float64(globals.ConfigIO.Dialfs_block_size)))
-    bloqueInicial := archivo.InitialBlock
+	// Leer la información del archivo antes de eliminarlo
+	archivo := ioutils.LeerArchivoEnStruct(nombreArchivo)
 
-    // Paso 2: Eliminar el archivo del sistema de archivos
-    err := os.Remove(nombreArchivo)
-    if err != nil {
-        // Error al intentar eliminar el archivo
-        return err
-    }
+	sizeArchivo := archivo.Size
+	sizeArchivoEnBloques := int(math.Max(1, math.Ceil(float64(sizeArchivo)/float64(globals.ConfigIO.Dialfs_block_size))))
 
-    // Paso 3: Eliminar el FCB asociado y liberar los bloques de datos
-    delete(globals.Fcbs, nombreArchivo)
+	bloqueInicial := archivo.InitialBlock
 
-    for i := 0; i < sizeArchivoEnBloques; i++ {
-        ioutils.Clear(bloqueInicial + i)
-    }
-    log.Printf("PID: %d - Eliminar Archivo: %s", pid, nombreArchivo)
-    return nil
+	// Paso 2: Eliminar el archivo del sistema de archivos
+	err := os.Remove(nombreArchivo)
+	if err != nil {
+		// Error al intentar eliminar el archivo
+		return err
+	}
+
+	// Paso 3: Eliminar el FCB asociado y liberar los bloques de datos
+	delete(globals.Fcbs, nombreArchivo)
+
+	for i := 0; i < sizeArchivoEnBloques; i++ {
+		ioutils.Clear(bloqueInicial + i)
+	}
+
+	log.Printf("PID: %d - Eliminar Archivo: %s", pid, nombreArchivo)
+
+	return nil
 }
 
-/**
+/*
+*
   - ReadFile: Lee un archivo del sistema de archivos
     // Leer un bloque de fs implica escribirlo en memoria
     (Interfaz, Nombre Archivo, Registro Dirección, Registro Tamaño, Registro Puntero Archivo):
@@ -210,25 +214,26 @@ func DeleteFile(pid int, nombreArchivo string) error {
     archivo a partir del valor del Registro Puntero Archivo la cantidad de bytes indicada por Registro
     Tamaño y se escriban en la Memoria a partir de la dirección lógica indicada en el Registro Dirección.
 */
-func ReadFile(pid int, nombreArchivo string, direccion []globals.DireccionTamanio, tamanio int, puntero int) {
+func ReadFile(pid int, nombreArchivo string, direccionesFisicas []globals.DireccionTamanio, tamanioLeer int, puntero int) {
 	var contenidoALeer []byte
 
-	primerByteArchivo := globals.Fcbs[nombreArchivo].InitialBlock * globals.ConfigIO.Dialfs_block_size
-	posicionPuntero := primerByteArchivo + puntero
-	limite := tamanio + posicionPuntero
-	tamanioTotalArchivo := primerByteArchivo + globals.Fcbs[nombreArchivo].Size
+	posBloqueInicial := globals.Fcbs[nombreArchivo].InitialBlock - 1
+	primerByteArchivo := posBloqueInicial * globals.ConfigIO.Dialfs_block_size
 
-	// verificar tamaño del archivo a leer valido
-	if limite > tamanioTotalArchivo {
+	posicionPuntero := primerByteArchivo + puntero
+	limiteLeer := tamanioLeer + posicionPuntero
+
+	limiteArchivo := primerByteArchivo + globals.Fcbs[nombreArchivo].Size
+
+	// Verificar tamaño del archivo a leer valido
+	if limiteLeer > limiteArchivo {
 		log.Println("El tamaño a leer es superior a el correspondiente del archivo")
 	} else {
-		contenidoALeer = ioutils.ReadFs(nombreArchivo, posicionPuntero, limite)
-		IO_DIALFS_READ(pid, direccion, string(contenidoALeer))
-
+		contenidoALeer = ioutils.ReadFs(nombreArchivo, puntero, tamanioLeer)
+		IO_DIALFS_READ(pid, direccionesFisicas, string(contenidoALeer))
 	}
 
-	log.Printf("PID: %d - Leer Archivo: %s - Tamaño a Leer: %d - Puntero Archivo: %d", pid, nombreArchivo, tamanio, puntero)
-
+	log.Printf("PID: %d - Leer Archivo: %s - Tamaño a Leer: %d - Puntero Archivo: %d", pid, nombreArchivo, tamanioLeer, puntero)
 }
 
 /*
@@ -238,25 +243,44 @@ func ReadFile(pid int, nombreArchivo string, direccion []globals.DireccionTamani
     Esta instrucción solicita al Kernel que mediante la interfaz seleccionada, se lea desde Memoria
     la cantidad de bytes indicadas por el Registro Tamaño a partir de la dirección lógica que se encuentra
     en el Registro Dirección y se escriban en el archivo a partir del valor del Registro Puntero Archivo.
+  - Escritura de un bloque de fs implica leerlo de memoria para luego escribirlo en fs
 */
 func WriteFile(pid int, nombreArchivo string, direccion []globals.DireccionTamanio, tamanio int, puntero int) {
-	// Escritura de un bloque de fs implica leerlo de memoria para luego escribirlo en fs
+	archivo := globals.Fcbs[nombreArchivo]
 
-	primerByteArchivo := globals.Fcbs[nombreArchivo].InitialBlock * globals.ConfigIO.Dialfs_block_size
-	punteroEnArchivo := primerByteArchivo + puntero
-	ultimoByteArchivo := globals.Fcbs[nombreArchivo].Size + primerByteArchivo
-	leerDeMemoria := IO_DIALFS_WRITE(pid, direccion)
-	cantidadBytesLeidos := len(leerDeMemoria)
-	cantidadBytesAEscribir := punteroEnArchivo + cantidadBytesLeidos
-	cantidadBytesDisponibles := ultimoByteArchivo - punteroEnArchivo
+	bloqueInicial := archivo.InitialBlock
+	posBloqueInicial := bloqueInicial - 1
+	primerByteArchivo := posBloqueInicial * globals.ConfigIO.Dialfs_block_size
+	ultimoByteArchivo := primerByteArchivo + archivo.Size
 
-	if cantidadBytesAEscribir > cantidadBytesDisponibles {
-		TruncateFile(pid, nombreArchivo, puntero+cantidadBytesLeidos)
+	posicionPuntero := primerByteArchivo + puntero
+
+	leidoEnMemoria := IO_DIALFS_WRITE(pid, direccion)
+	cantidadBytesLeidos := len(leidoEnMemoria)
+
+	posInicialByteAEscribir := posicionPuntero + cantidadBytesLeidos
+	
+	// TODO: Revisar
+	cantidadBytesFinales := math.Max(float64(archivo.Size), float64(cantidadBytesLeidos + puntero))
+
+	// 1 2 3 4					archivo original 4 bytes
+	// x    					puntero en el byte 2
+	// 8 			 			nuevo contenido 4 bytes
+	// 8 2 3 4					archivo final 5 bytes
+	
+	//cantidadBytesDisponibles := ultimoByteArchivo - posicionPuntero
+
+	/* if posInicialByteAEscribir > cantidadBytesDisponibles {
+		TruncateFile(pid, nombreArchivo, puntero + cantidadBytesLeidos)
+	} */
+
+	if posInicialByteAEscribir > ultimoByteArchivo {
+		TruncateFile(pid, nombreArchivo, int(cantidadBytesFinales))
 	}
 
-	fmt.Println("CONTENIDO A ESCRIBIR EN FS: ", leerDeMemoria)
+	fmt.Println("CONTENIDO A ESCRIBIR EN FS: ", leidoEnMemoria)
 
-	ioutils.WriteFs(leerDeMemoria, punteroEnArchivo)
+	ioutils.WriteFs(leidoEnMemoria, posicionPuntero)
 
 	log.Printf("PID: %d - Escribir Archivo: %s - Tamaño a Escribir: %d - Puntero Archivo: %d", pid, nombreArchivo, tamanio, puntero)
 }
@@ -264,31 +288,45 @@ func WriteFile(pid int, nombreArchivo string, direccion []globals.DireccionTaman
 /**
  * TruncateFile: Trunca un archivo del sistema de archivos (puede incluir compactar el archivo)
  */
-func TruncateFile(pid int, nombreArchivo string, tamanio int) { //revisar si tiene que devolver un msje
+func TruncateFile(pid int, nombreArchivo string, tamanioDeseado int) { //revisar si tiene que devolver un msje
 	archivo := globals.Fcbs[nombreArchivo]
 
-	tamanioFinalEnBloques := int(math.Ceil(float64(tamanio) / float64(globals.ConfigIO.Dialfs_block_size)))
-
 	bloqueInicial := archivo.InitialBlock
-	tamArchivoOriginalEnBloques := int(math.Max(1, math.Ceil(float64(archivo.Size)/float64(globals.ConfigIO.Dialfs_block_size))))
-	fmt.Println("El tamaño original del archivo en bloques es ", tamArchivoOriginalEnBloques)
-	bloqueFinalInicial := bloqueInicial + tamArchivoOriginalEnBloques //- 1 //es decir el final del archivo actual //TODO: revisar si es -1 o no
-	fmt.Println("BLoque final archivo actual", bloqueFinalInicial)
+	posBloqueInicial := bloqueInicial - 1
+
+	tamOriginalEnBloques := int(math.Max(1, math.Ceil(float64(archivo.Size)/float64(globals.ConfigIO.Dialfs_block_size))))
+	tamFinalEnBloques := int(math.Ceil(float64(tamanioDeseado) / float64(globals.ConfigIO.Dialfs_block_size)))
+
+	fmt.Println("El tamaño original del archivo en bloques es ", tamOriginalEnBloques)
+
+	// ? bloqueFinalInicial: El final del archivo actual, bloque donde tiene que arrancar el siguiente archivo
+	// TODO: revisar si es -1 o no
+	bloqueFinalInicial := bloqueInicial + tamOriginalEnBloques
+	//posBloqueFinalInicial := bloqueFinalInicial - 1
+
+	fmt.Println("Bloque inicial archivo actual", bloqueInicial)
+	fmt.Println("Bloque final archivo actual", bloqueFinalInicial)
 
 	// Chequeamos si el archivo tiene que crecer o achicarse
 	// Si el archivo crece
-	if tamanio > archivo.Size {
-		tamanioATruncarEnBytes := tamanio - archivo.Size
+	if tamanioDeseado > archivo.Size {
+		tamanioATruncarEnBytes := tamanioDeseado - archivo.Size
 		tamanioATruncarEnBloques := int(math.Ceil(float64(tamanioATruncarEnBytes) / float64(globals.ConfigIO.Dialfs_block_size)))
+
+		if tamanioDeseado < globals.ConfigIO.Dialfs_block_size && archivo.Size < globals.ConfigIO.Dialfs_block_size {
+			tamanioATruncarEnBloques = 0
+		}
+
 		fmt.Println("Tamaño a agrandar el archivo en bloques", tamanioATruncarEnBloques)
 
-		bloquesLibresAlFinalDelArchivo := ioutils.CalcularBloquesLibreAPartirDe(bloqueFinalInicial)
+		bloquesLibresAlFinalDelArchivo, _:= ioutils.CalcularBloquesLibreAPartirDe(bloqueFinalInicial, tamanioATruncarEnBloques)
 
 		// Hay bloques libres al final del archivo
 		if bloquesLibresAlFinalDelArchivo >= tamanioATruncarEnBloques {
-			//le alcanza como está, seteamos los bloques finales
+			fmt.Println("FS - Hay bloques libres al final del archivo")
+
 			ioutils.OcuparBloquesDesde(bloqueFinalInicial, tamanioATruncarEnBloques)
-			archivo.Size = tamanio
+			archivo.Size = tamanioDeseado
 
 			archivoMarshallado, err := json.Marshal(archivo)
 			if err != nil {
@@ -300,19 +338,25 @@ func TruncateFile(pid int, nombreArchivo string, tamanio int) { //revisar si tie
 			// No hay bloques libres al final del archivo
 		} else if bloquesLibresAlFinalDelArchivo < tamanioATruncarEnBloques {
 			// Buscar si entra en algún lugar el archivo completo
-			bloqueEnElQueEntro := ioutils.EntraEnDisco(tamArchivoOriginalEnBloques)
+			posbloqueEnElQueEntro := ioutils.EntraEnDisco(tamOriginalEnBloques)
+			bloqueEnElQueEntro := posbloqueEnElQueEntro + 1
+
+			fmt.Println("EL ARCHIVO ENTRA EN EL BLOQUE ", bloqueEnElQueEntro)
 
 			// Entra en algún lugar el archivo completo todo junto
-			if bloqueEnElQueEntro != (-1) {
+			if bloqueEnElQueEntro != -1 {
+				fmt.Println("FS - Entra en algún lugar el archivo completo")
 				// Limpiar el bitmap
-				ioutils.LiberarBloquesDesde(bloqueInicial, tamArchivoOriginalEnBloques)
+				ioutils.LiberarBloquesDesde(posBloqueInicial+1, tamOriginalEnBloques)
 				archivo.InitialBlock = bloqueEnElQueEntro
-				archivo.Size = tamanio
+				archivo.Size = tamanioDeseado
 				// Setear en el nuevo lugar
-				ioutils.OcuparBloquesDesde(bloqueEnElQueEntro, tamanioFinalEnBloques)
+				ioutils.OcuparBloquesDesde(posbloqueEnElQueEntro, tamFinalEnBloques)
 
 				contenidoArchivo := ioutils.ReadFs(nombreArchivo, 0, -1)
-				ioutils.WriteFs(contenidoArchivo, bloqueEnElQueEntro*globals.ConfigIO.Dialfs_block_size)
+
+				byteInicioDestino := bloqueEnElQueEntro * globals.ConfigIO.Dialfs_block_size
+				ioutils.WriteFs(contenidoArchivo, byteInicioDestino)
 
 				archivoMarshallado, err := json.Marshal(archivo)
 				if err != nil {
@@ -322,7 +366,8 @@ func TruncateFile(pid int, nombreArchivo string, tamanio int) { //revisar si tie
 				ioutils.CrearModificarArchivo(nombreArchivo, archivoMarshallado)
 
 				// No entra el archivo pero alcanza la cantidad de bloques libres
-			} else if ioutils.ContadorDeEspaciosLibres() >= tamanioFinalEnBloques {
+			} else if ioutils.ContadorDeEspaciosLibres() >= tamFinalEnBloques {
+				fmt.Println("FS - No entra el archivo pero alcanza la cantidad de bloques libres")
 				//Si no entra en ningún lugar, compactar
 				contenidoArchivo := ioutils.ReadFs(nombreArchivo, 0, -1)
 				Compactar()
@@ -330,7 +375,7 @@ func TruncateFile(pid int, nombreArchivo string, tamanio int) { //revisar si tie
 				ioutils.WriteFs(contenidoArchivo, primerBloqueLibre*globals.ConfigIO.Dialfs_block_size)
 
 				archivo.InitialBlock = primerBloqueLibre
-				archivo.Size = tamanio
+				archivo.Size = tamanioDeseado
 
 				archivoMarshallado, err := json.Marshal(archivo)
 				if err != nil {
@@ -343,12 +388,12 @@ func TruncateFile(pid int, nombreArchivo string, tamanio int) { //revisar si tie
 		}
 
 		// Si el archivo se achica
-	} else if tamanio < archivo.Size {
-		tamanioATruncarEnBytes := archivo.Size - tamanio
+	} else if tamanioDeseado < archivo.Size {
+		tamanioATruncarEnBytes := archivo.Size - tamanioDeseado
 		tamanioATruncarEnBloques := int(math.Ceil(float64(tamanioATruncarEnBytes) / float64(globals.ConfigIO.Dialfs_block_size)))
 		// Liberar los bloques que ya no se usan
 		ioutils.LiberarBloque(bloqueFinalInicial, tamanioATruncarEnBloques)
-		archivo.Size = tamanio
+		archivo.Size = tamanioDeseado
 
 		archivoMarshallado, err := json.Marshal(archivo)
 		if err != nil {
@@ -357,7 +402,7 @@ func TruncateFile(pid int, nombreArchivo string, tamanio int) { //revisar si tie
 		ioutils.CrearModificarArchivo(nombreArchivo, archivoMarshallado)
 	}
 
-	log.Printf("PID: %d - Truncar Archivo: %s - Tamaño: %d", pid, nombreArchivo, tamanio)
+	log.Printf("PID: %d - Truncar Archivo: %s - Tamaño: %d", pid, nombreArchivo, tamanioDeseado)
 }
 
 func Compactar() {
@@ -439,18 +484,18 @@ func IO_DIALFS_WRITE(pid int, direccionesFisicas []globals.DireccionTamanio) []b
 	if datosLeidos.StatusCode != http.StatusOK {
 		log.Printf("Unexpected response status: %s", datosLeidos.Status)
 	}
-	
+
 	var response BodyADevolver
 	err = json.NewDecoder(datosLeidos.Body).Decode(&response)
 	if err != nil {
 		return []byte("error al deserializar la respuesta")
 	}
-	
+
 	var bytesConcatenados []byte
 	for _, sliceBytes := range response.Contenido {
 		bytesConcatenados = append(bytesConcatenados, sliceBytes...)
 	}
-	
+
 	fmt.Println("IO_DIALFS_WRITE DATOS CONC: ", bytesConcatenados)
 
 	return bytesConcatenados

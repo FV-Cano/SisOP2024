@@ -44,6 +44,7 @@ func main() {
 	globals.EmptiedList <- false
 	globals.LTSPlanBinary <- false
 	globals.STSPlanBinary <- false
+	globals.PlanningState = "STOPPED"
 
 	// Iniciar servidor
 	// go server.ServerStart(globals.Configkernel.Port, kernelRoutes)

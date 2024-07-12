@@ -210,9 +210,11 @@ func ProcessState(w http.ResponseWriter, r *http.Request) {
  * PlanificationStart: Retoma el STS y LTS en caso de que la planificación se encuentre pausada. Si no, ignora la petición.
  */
 func PlanificationStart(w http.ResponseWriter, r *http.Request) {
+	globals.PlanningState = "RUNNING"
+	<- globals.LTSPlanBinary
+	<- globals.STSPlanBinary
+	fmt.Println("Planification Started")
 	w.WriteHeader(http.StatusOK)
-	<-globals.LTSPlanBinary
-	<-globals.STSPlanBinary
 }
 
 /*
@@ -222,9 +224,11 @@ func PlanificationStart(w http.ResponseWriter, r *http.Request) {
     El resto de procesos bloqueados van a pausar su transición a la cola de Ready
 */
 func PlanificationStop(w http.ResponseWriter, r *http.Request) {
+	globals.PlanningState = "STOPPED"
+	globals.LTSPlanBinary <- true
+	globals.STSPlanBinary <- true
+	fmt.Println("Planification Stopped")
 	w.WriteHeader(http.StatusOK)
-	globals.LTSPlanBinary <- false
-	globals.STSPlanBinary <- false
 }
 
 type ProcessList_BRS struct {

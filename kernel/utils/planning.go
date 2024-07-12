@@ -14,20 +14,28 @@ import (
 
 func LTS_Plan() {
 	for {
-		globals.LTSPlanBinary <- true
+
+		if globals.PlanningState == "STOPPED" {
+			// fmt.Print("ESTOY PARADO MI REY\n")
+			// Si funciona es la engaña pichanga máxima
+			globals.LTSPlanBinary <- true
+			<- globals.LTSPlanBinary
+			continue
+		}
 
 		// Si la lista de jobs está vacía, esperar a que tenga al menos uno
 		if len(globals.LTS) == 0 {
 			globals.EmptiedList <- true
-			<-globals.LTSPlanBinary
-			continue // * Es necesario
+			continue
 		}
 
 		log.Println("Comienza el LTS")
 		log.Println("La lista es: ", globals.LTS)
 		log.Println("La lista tiene longitud: ", len(globals.LTS))
 
+		globals.LTSMutex.Lock()
 		auxJob := slice.Shift(&globals.LTS)
+		globals.LTSMutex.Unlock()
 		if auxJob.PID != 0 {
 			// Los procesos en READY, EXEC y BLOCKED afectan al grado de multiprogramación
 			globals.MultiprogrammingCounter <- int(auxJob.PID)
@@ -35,8 +43,6 @@ func LTS_Plan() {
 			slice.Push(&globals.STS, auxJob)
 			globals.STSCounter <- int(auxJob.PID)
 		}
-
-		<-globals.LTSPlanBinary
 	}
 }
 
@@ -45,38 +51,48 @@ func STS_Plan() {
 	case "FIFO":
 		log.Println("FIFO algorithm")
 		for {
-			globals.STSPlanBinary <- true
+			if globals.PlanningState == "STOPPED" {
+				globals.STSPlanBinary <- true
+				<- globals.STSPlanBinary
+				continue
+			}
+
 			<-globals.STSCounter
 			//log.Println("FIFO Planificandoooo")
 			FIFO_Plan()
 			//<- globals.JobExecBinary
-			<-globals.STSPlanBinary
 		}
 
 	case "RR":
 		log.Println("ROUND ROBIN algorithm")
 		quantum := uint32(globals.Configkernel.Quantum * int(time.Millisecond))
-		//quantum := uint32(globals.Configkernel.Quantum)
 		for {
+			if globals.PlanningState == "STOPPED" {
+				globals.STSPlanBinary <- true
+				<- globals.STSPlanBinary
+				continue
+			}
 			log.Println("RR Preparados")
-			globals.STSPlanBinary <- true
 			log.Println("RR Listos")
 			<-globals.STSCounter
 			log.Println("RR Planificandoooo")
 			RR_Plan(quantum)
 			//<- globals.JobExecBinary
-			<-globals.STSPlanBinary
 		}
 
 	case "VRR":
 		log.Println("VIRTUAL ROUND ROBIN algorithm")
 		for {
-			globals.STSPlanBinary <- true
+			if globals.PlanningState == "STOPPED" {
+				globals.STSPlanBinary <- true
+				<- globals.STSPlanBinary
+				continue
+			}
+
 			<-globals.STSCounter
 			//log.Println("VRR Planificandoooo")
 			VRR_Plan()
 			//<- globals.JobExecBinary
-			<-globals.STSPlanBinary
 		}
 
 	default:

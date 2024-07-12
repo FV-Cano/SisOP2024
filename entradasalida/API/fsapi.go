@@ -7,9 +7,10 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"net/http"
 	"os"
 	"strings"
-	"net/http"
+	"time"
 
 	"github.com/sisoputnfrba/tp-golang/entradasalida/globals"
 	ioutils "github.com/sisoputnfrba/tp-golang/entradasalida/utils"
@@ -20,7 +21,7 @@ import (
  */
 func InicializarFS() {
 	// * Define el nombre del directorio y los archivos
-	dirName := "dialfs"
+	dirName := "DIALFS"
 	bitmapFile := dirName + "/bitmap.dat"
 	blocksFile := dirName + "/bloques.dat"
 
@@ -34,7 +35,7 @@ func InicializarFS() {
 
 	// * Crea el archivo de bitmap si no existe
 	if _, err := os.Stat(bitmapFile); os.IsNotExist(err) {
-		// Carga el bitmap en globals
+		// Carga elf bitmap en globals
 		globals.CurrentBitMap = ioutils.NewBitMap(globals.ConfigIO.Dialfs_block_count)
 		ioutils.ActualizarBitmap()
 
@@ -359,6 +360,8 @@ func Compactar() {
 	}
 	ioutils.ActualizarBloques()
 	ioutils.ActualizarBitmap()
+
+	time.Sleep(time.Duration(globals.ConfigIO.Dialfs_compaction_delay))
 }
 
 func IO_DIALFS_READ(pid int ,direccionesFisicas []globals.DireccionTamanio, contenido string) {

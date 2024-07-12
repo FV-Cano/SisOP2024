@@ -74,16 +74,16 @@ func SolicitarEscritura(direccionesTamanios []globals.DireccionTamanio, valorAEs
 	escribirEnMemoria.Header.Set("Content-Type", "application/json")
 	respuesta, err := cliente.Do(escribirEnMemoria)
 	if err != nil {
-		fmt.Println("error")
+		log.Println("error")
 	}
 
 	if respuesta.StatusCode != http.StatusOK {
-		fmt.Println("Error al realizar la escritura")
+		log.Println("Error al realizar la escritura")
 	}
 
 	bodyBytes, err := io.ReadAll(respuesta.Body)
 	if err != nil {
-		fmt.Println("error")
+		log.Println("error")
 	}
 
 	// La respuesta puede ser un "Ok" o u "Error: dirección o tamanio fuera de rango"
@@ -92,17 +92,17 @@ func SolicitarEscritura(direccionesTamanios []globals.DireccionTamanio, valorAEs
 
 	respuestaSinComillas := strings.Trim(respuestaEnString, `"`)
 
-	fmt.Println("Respuesta de memoria: ", respuestaSinComillas)
-	fmt.Println("Valor a escribir: ", valorAEscribir)
+	log.Println("Respuesta de memoria: ", respuestaSinComillas)
+	log.Println("Valor a escribir: ", valorAEscribir)
 	valorAEscribirEnBytes := []byte(valorAEscribir)
-	fmt.Println("Valor a escribir en bytes: ", valorAEscribirEnBytes)
-	
+	log.Println("Valor a escribir en bytes: ", valorAEscribirEnBytes)
+
 	if respuestaSinComillas != "OK" {
-		fmt.Println("Se produjo un error al escribir", respuestaSinComillas)
+		log.Println("Se produjo un error al escribir", respuestaSinComillas)
 	} else {
 		for _, df := range direccionesTamanios {
 			cantEscrita := 0
-			log.Printf("PID: %d - Acción: ESCRIBIR - Dirección Física: %d - Valor: %b", pid, df.DireccionFisica, valorAEscribirEnBytes[cantEscrita: df.Tamanio]) 
+			log.Printf("PID: %d - Acción: ESCRIBIR - Dirección Física: %d - Valor: %b", pid, df.DireccionFisica, valorAEscribirEnBytes[cantEscrita:df.Tamanio])
 			cantEscrita += df.Tamanio
 		}
 	}
@@ -116,6 +116,7 @@ type BodyRequestLeer struct {
 type BodyADevolver struct {
 	Contenido [][]byte `json:"contenido"`
 }
+
 // LE SOLICITO A MEMORIA LEER Y DEVOLVER LO QUE ESTÉ EN LA DIREC FISICA INDICADA
 func SolicitarLectura(direccionesFisicas []globals.DireccionTamanio, pid int) []byte {
 	var bodyResponseLeer BodyADevolver
@@ -139,7 +140,7 @@ func SolicitarLectura(direccionesFisicas []globals.DireccionTamanio, pid int) []
 		return []byte("error")
 	}
 
-	fmt.Println("Solicito lectura de memoria", jsonDirecYTamanio)
+	log.Println("Solicito lectura de memoria", jsonDirecYTamanio)
 
 	leerMemoria.Header.Set("Content-Type", "application/json")
 	respuesta, err := cliente.Do(leerMemoria)
@@ -147,34 +148,33 @@ func SolicitarLectura(direccionesFisicas []globals.DireccionTamanio, pid int) []
 		return []byte("error")
 	}
 
-
 	if respuesta.StatusCode != http.StatusOK {
 		return []byte("Error al realizar la lectura")
 	}
 
-	fmt.Println("A VER QUE ONDA")
+	log.Println("A VER QUE ONDA")
 
 	/*bodyBytes, err := io.ReadAll(respuesta.Body)
 	if err != nil {
 		return []byte("error")
 	}*/
-	//fmt.Println("Recibí respuesta de memoria: ", string(bodyBytes))
-	
-	err = json.NewDecoder(respuesta.Body).Decode(&bodyResponseLeer) 
+	//log.Println("Recibí respuesta de memoria: ", string(bodyBytes))
+
+	err = json.NewDecoder(respuesta.Body).Decode(&bodyResponseLeer)
 	if err != nil {
 		return []byte("error al deserializar la respuesta")
 	}
-	fmt.Println("DIRECCCIONES FISICAS: ", direccionesFisicas)
+	log.Println("DIRECCCIONES FISICAS: ", direccionesFisicas)
 
 	for i, df := range direccionesFisicas {
 		contenido := bodyResponseLeer.Contenido[i]
-		fmt.Println("Contenido: ", contenido)
-		log.Printf("PID: %d - Acción: LEER - Dirección Física: %d - Valor: %b", pid, df.DireccionFisica, contenido) 
+		log.Println("Contenido: ", contenido)
+		log.Printf("PID: %d - Acción: LEER - Dirección Física: %d - Valor: %b", pid, df.DireccionFisica, contenido)
 	}
 
 	var bytesConcatenados []byte
-    for _, sliceBytes := range bodyResponseLeer.Contenido {
-        bytesConcatenados = append(bytesConcatenados, sliceBytes...)
-    }
+	for _, sliceBytes := range bodyResponseLeer.Contenido {
+		bytesConcatenados = append(bytesConcatenados, sliceBytes...)
+	}
 	return bytesConcatenados
 }

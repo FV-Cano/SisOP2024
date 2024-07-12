@@ -1,7 +1,7 @@
 {
     "ip": "127.0.0.1",
     "port": 8008,
-    "type": "DialFS",
+    "type": "DIALFS",
     "unit_work_time": 250,
     "ip_kernel": "127.0.0.1",
     "port_kernel": 8001,

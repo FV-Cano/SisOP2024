@@ -66,7 +66,6 @@ func ServerStart(port int, moduleRoutes ...http.Handler) {
 
 	mux.HandleFunc("/paquetes", RecibirPaquetes)
 	mux.HandleFunc("/mensaje", RecibirMensaje)
-	mux.HandleFunc("GET /helloworld", HelloWorld)
 	//mux.HandleFunc("GET /process/{pid}", kernel_api.ProcessState)
 
 	for _, route := range moduleRoutes {
@@ -92,16 +91,4 @@ func (m *ModuleHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.DefaultServeMux.ServeHTTP(w, r)
-}
-
-func HelloWorld(w http.ResponseWriter, r *http.Request) {
-
-	respuesta, err := json.Marshal("Hola! Como andas?")
-	if err != nil {
-		http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-	w.Write(respuesta)
 }

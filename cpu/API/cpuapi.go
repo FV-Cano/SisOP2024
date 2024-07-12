@@ -2,7 +2,7 @@ package cpu_api
 
 import (
 	"encoding/json"
-	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/sisoputnfrba/tp-golang/cpu/cicloInstruccion"
@@ -30,12 +30,12 @@ func PCB_recv(w http.ResponseWriter, r *http.Request) {
 	for !pcb.EvictionFlag {
 		cicloInstruccion.DecodeAndExecute(globals.CurrentJob)
 
-		fmt.Println("Los registros de la cpu son", globals.CurrentJob.CPU_reg)
+		log.Println("Los registros de la cpu son", globals.CurrentJob.CPU_reg)
 	}
 
-	//fmt.Println("ABER MOSTRAMELON: ", pcb.EvictionFlag) // * Se recordará su contribución a la ciencia
+	//log.Println("ABER MOSTRAMELON: ", pcb.EvictionFlag) // * Se recordará su contribución a la ciencia
 	pcb.EvictionFlag = false
-	//fmt.Println("C PUSO FOLS ", pcb.EvictionFlag)
+	//log.Println("C PUSO FOLS ", pcb.EvictionFlag)
 
 	jsonResp, err := json.Marshal(globals.CurrentJob)
 	if err != nil {
@@ -65,16 +65,20 @@ func HandleInterruption(w http.ResponseWriter, r *http.Request) {
 	}
 
 	evictionReasons := map[string]struct{}{
-		"EXIT":       {},
-		"BLOCKED_IO": {},
+		"EXIT":          {},
+		"BLOCKED_IO":    {},
 		"OUT_OF_MEMORY": {},
 	}
 
 	if _, ok := evictionReasons[globals.CurrentJob.EvictionReason]; !ok && request.Pid == globals.CurrentJob.PID {
+		pcb.EvictionFlag = true
+
 		switch request.InterruptionReason {
 		case "QUANTUM":
-			pcb.EvictionFlag = true
 			globals.CurrentJob.EvictionReason = "TIMEOUT"
+
+		case "DELETE":
+			globals.CurrentJob.EvictionReason = "INTERRUPTED_BY_USER"
 		}
 	}
 

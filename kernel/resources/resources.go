@@ -70,6 +70,7 @@ func RequestConsumption(resource string) {
 		// * No debería ocurrir un problema de sincronización con esto pero por las dudas dejo el comentario
 		globals.ChangeState(&globals.CurrentJob, "BLOCKED")
 		globals.CurrentJob.PC--	// Se decrementa el PC para que no avance en la próxima ejecución
+		log.Print("PID: ", globals.CurrentJob.PID, " - Bloqueado por: ", resource, "\n")
 		log.Print("Entra el proceso PID: ", globals.CurrentJob.PID, " a la cola de bloqueo del recurso ", resource,  "\n")
 		QueueProcess(resource, globals.CurrentJob)
 	}

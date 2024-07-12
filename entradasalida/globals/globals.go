@@ -23,6 +23,7 @@ type T_ConfigIO struct {
 	Dialfs_path        		string `json:"dialfs_path"`
 	Dialfs_block_size  		int    `json:"dialfs_block_size"`
 	Dialfs_block_count 		int    `json:"dialfs_block_count"`
+	Dialfs_compaction_delay int    `json:"dialfs_compaction_delay"`
 }
 
 // ----------------- Body types -----------------

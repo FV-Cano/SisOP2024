@@ -85,6 +85,18 @@ func InterfaceQueuePCB(w http.ResponseWriter, r *http.Request) {
 
 		log.Print("Nueva PCB ID: ", decodedStruct.Pcb.PID, " para usar Interfaz")
 		globals.Stdout_QueueChannel <- decodedStruct
+	
+	case "DialFS":
+		var decodedStruct globals.DialFSRequest
+
+		err := json.NewDecoder(r.Body).Decode(&decodedStruct)
+		if err != nil {
+			http.Error(w, "Bad request", http.StatusBadRequest)
+			return
+		}
+
+		log.Print("Nueva PCB ID: ", decodedStruct.Pcb.PID, " para usar Interfaz")
+		globals.DialFS_QueueChannel <- decodedStruct
 	}
 }
 
@@ -114,6 +126,16 @@ func IOWork() {
 			interfaceToWork = <- globals.Stdout_QueueChannel
 
 			IO_STDOUT_WRITE(interfaceToWork.Pcb, interfaceToWork.DireccionesFisicas)
+			log.Println("Fin de bloqueo")
+			returnPCB(interfaceToWork.Pcb)
+		}
+
+	case "DialFS":
+		var interfaceToWork globals.DialFSRequest
+		for {
+			interfaceToWork = <- globals.DialFS_QueueChannel
+			
+			IO_DIALFS(interfaceToWork)
 			log.Println("Fin de bloqueo")
 			returnPCB(interfaceToWork.Pcb)
 		}
@@ -231,3 +253,29 @@ func IO_STDOUT_WRITE(pcb pcb.T_PCB, direccionesFisicas []globals.DireccionTamani
 	writer.Flush()
 	fmt.Print("*\n")
 }
+
+// ------------------------- DIALFS -------------------------
+
+func IO_DIALFS(interfaceToWork globals.DialFSRequest) {
+	pid := int(interfaceToWork.Pcb.PID)
+	nombreArchivo := interfaceToWork.NombreArchivo
+
+	switch interfaceToWork.Operacion {
+	case "CREATE":
+		CreateFile(pid, nombreArchivo)
+		
+	case "DELETE":
+		DeleteFile(pid, nombreArchivo)
+		
+	case "READ":
+		ReadFile(pid, nombreArchivo, interfaceToWork.Direccion, interfaceToWork.Tamanio, interfaceToWork.Puntero)
+
+	case "WRITE":
+		WriteFile(pid, nombreArchivo, interfaceToWork.Direccion, interfaceToWork.Tamanio, interfaceToWork.Puntero)
+	
+	case "TRUNCATE":	
+		TruncateFile(pid, nombreArchivo, interfaceToWork.Tamanio)	
+	}
+}
+
+	

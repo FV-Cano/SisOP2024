@@ -92,7 +92,7 @@ func InstruccionActual(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("La instruccion buscada para el PID: %s fue: %s", pid, BuscarInstruccionMap(PasarAInt(pc), PasarAInt(pid)))
 
-	time.Sleep(time.Duration(globals.Configmemory.Delay_response))
+	time.Sleep(time.Duration(globals.Configmemory.Delay_response) * time.Millisecond)
 
 	w.WriteHeader(http.StatusOK)
 	w.Write(respuesta)

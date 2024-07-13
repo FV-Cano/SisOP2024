@@ -72,10 +72,7 @@ func STS_Plan() {
 				<- globals.STSPlanBinary
 				continue
 			}
-			log.Println("RR Preparados")
-			log.Println("RR Listos")
 			<-globals.STSCounter
-			log.Println("RR Planificandoooo")
 			RR_Plan(quantum)
 			//<- globals.JobExecBinary
 		}
@@ -151,18 +148,17 @@ func RR_Plan(quantum uint32) {
 
 func RR_Plan(quantum uint32) {
 	globals.EnganiaPichangaMutex.Lock() // Paso 1: Bloquear el mutex para asegurar la exclusión mutua
-	if len(globals.STS) == 0 {          // Verificar si hay procesos listos
-		globals.EnganiaPichangaMutex.Unlock()
-		return // Si no hay procesos, desbloquear y retornar
-	}
+	
 	globals.CurrentJob = slice.Shift(&globals.STS)   // Paso 2: Tomar el primer proceso
 	globals.ChangeState(&globals.CurrentJob, "EXEC") // Cambiar estado a EXEC
 	globals.EnganiaPichangaMutex.Unlock()            // Desbloquear el mutex después de modificar las variables compartidas
 
+	go startTimer(quantum)
 	kernel_api.PCB_Send()                                             // Paso 3: Enviar el PCB al CPU
-	timer := time.NewTimer(time.Duration(quantum) * time.Millisecond) // Paso 4: Iniciar el temporizador
+	//timer := time.NewTimer(time.Duration(quantum)) // Paso 4: Iniciar el temporizador
 
-	select {
+	<-globals.PcbReceived
+	/* select {
 	case <-globals.PcbReceived: // Paso 5: Esperar a que el proceso termine
 		// El proceso ha terminado, manejar la finalización
 	case <-timer.C: // El temporizador ha expirado antes de que el proceso termine
@@ -170,7 +166,7 @@ func RR_Plan(quantum uint32) {
 		globals.STS = append(globals.STS, globals.CurrentJob) // Paso 6: Agregar el proceso al final de la lista TODO:
 		globals.ChangeState(&globals.CurrentJob, "READY")     // Cambiar el estado a READY
 		globals.EnganiaPichangaMutex.Unlock()
-	}
+	} */
 
 	EvictionManagement() // Paso 7: Manejar el desalojo
 }
@@ -180,12 +176,8 @@ func VRR_Plan() {
     // Determinar el trabajo actual basado en la prioridad o la cola estándar
     if len(globals.STS_Priority) > 0 {
         globals.CurrentJob = slice.Shift(&globals.STS_Priority)
-    } else if len(globals.STS) > 0 {
-        globals.CurrentJob = slice.Shift(&globals.STS)
     } else {
-        // Si no hay trabajos, desbloquear y retornar
-        globals.EnganiaPichangaMutex.Unlock()
-        return
+        globals.CurrentJob = slice.Shift(&globals.STS)
     }
 
     // Cambiar el estado del trabajo actual a EXEC
@@ -204,20 +196,18 @@ func VRR_Plan() {
 
     // Calcular el tiempo que tomó la ejecución
     timeAfter := time.Now()
-    diffTime := uint32(timeAfter.Sub(timeBefore) / time.Millisecond)
+    diffTime := uint32(timeAfter.Sub(timeBefore))
 
-    globals.EnganiaPichangaMutex.Lock()
     if diffTime < globals.CurrentJob.Quantum {
         // Si el trabajo terminó antes de consumir su quantum, ajustar el quantum restante
-        globals.CurrentJob.Quantum -= diffTime
+        globals.CurrentJob.Quantum -= diffTime * uint32(time.Millisecond)
     } else {
         // Si el trabajo consumió todo su quantum, restablecer el quantum según la configuración del kernel
-        globals.CurrentJob.Quantum = uint32(globals.Configkernel.Quantum)
+        globals.CurrentJob.Quantum = uint32(globals.Configkernel.Quantum * int(time.Millisecond))
     }
 
     // Manejar la gestión de expulsión después de la ejecución del trabajo
     EvictionManagement()
-    globals.EnganiaPichangaMutex.Unlock()
 }
 
 /*

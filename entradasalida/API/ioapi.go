@@ -154,11 +154,13 @@ func returnPCB(pcb pcb.T_PCB) {
 // ------------------------- OPERACIONES -------------------------
 
 func IO_GEN_SLEEP(sleepTime int, pcb pcb.T_PCB) {
-	sleepTimeTotal := sleepTime * globals.ConfigIO.Unit_work_time
+	//sleepTimeTotal := sleepTime * globals.ConfigIO.Unit_work_time
+	//sleepTimeTotal := sleepTime * (globals.ConfigIO.Unit_work_time * int(time.Millisecond))
+	sleepTimeTotal := time.Duration(sleepTime * globals.ConfigIO.Unit_work_time) * time.Millisecond
 	log.Printf("PID: %d - Operacion: IO_GEN_SLEEP", pcb.PID)
-	log.Printf("Bloqueado por %d segundos\n", sleepTimeTotal)
-
-	time.Sleep(time.Duration(sleepTimeTotal) * time.Second)
+	//log.Printf("Bloqueado por %d segundos\n", (sleepTimeTotal / 1000))
+	time.Sleep(time.Duration(sleepTimeTotal))
+	//time.Sleep(time.Duration(sleepTimeTotal) * time.Second)
 }
 
 func IO_STDIN_READ(pcb pcb.T_PCB, direccionesFisicas []globals.DireccionTamanio) {
@@ -249,7 +251,7 @@ func IO_STDOUT_WRITE(pcb pcb.T_PCB, direccionesFisicas []globals.DireccionTamani
 	responseString := string(bytesConcatenados)
 
 	// Consumo una unidad de trabajo
-	time.Sleep(time.Duration(globals.ConfigIO.Unit_work_time) * time.Millisecond)
+	time.Sleep(time.Duration(globals.ConfigIO.Unit_work_time) * time.Millisecond) // TODO
 
 	fmt.Print("Datos leidos: *")
 	// Escribo los datos en la salida (los muestro por pantalla)

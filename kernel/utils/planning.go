@@ -14,20 +14,28 @@ import (
 
 func LTS_Plan() {
 	for {
-		globals.LTSPlanBinary <- true
+
+		if globals.PlanningState == "STOPPED" {
+			// fmt.Print("ESTOY PARADO MI REY\n")
+			// Si funciona es la engaña pichanga máxima
+			globals.LTSPlanBinary <- true
+			<- globals.LTSPlanBinary
+			continue
+		}
 
 		// Si la lista de jobs está vacía, esperar a que tenga al menos uno
 		if len(globals.LTS) == 0 {
 			globals.EmptiedList <- true
-			<-globals.LTSPlanBinary
-			continue // * Es necesario
+			continue
 		}
 
 		log.Println("Comienza el LTS")
 		log.Println("La lista es: ", globals.LTS)
 		log.Println("La lista tiene longitud: ", len(globals.LTS))
 
+		globals.LTSMutex.Lock()
 		auxJob := slice.Shift(&globals.LTS)
+		globals.LTSMutex.Unlock()
 		if auxJob.PID != 0 {
 			// Los procesos en READY, EXEC y BLOCKED afectan al grado de multiprogramación
 			globals.MultiprogrammingCounter <- int(auxJob.PID)
@@ -35,8 +43,6 @@ func LTS_Plan() {
 			slice.Push(&globals.STS, auxJob)
 			globals.STSCounter <- int(auxJob.PID)
 		}
-
-		<-globals.LTSPlanBinary
 	}
 }
 
@@ -45,38 +51,45 @@ func STS_Plan() {
 	case "FIFO":
 		log.Println("FIFO algorithm")
 		for {
-			globals.STSPlanBinary <- true
+			if globals.PlanningState == "STOPPED" {
+				globals.STSPlanBinary <- true
+				<- globals.STSPlanBinary
+				continue
+			}
+
 			<-globals.STSCounter
 			//log.Println("FIFO Planificandoooo")
 			FIFO_Plan()
 			//<- globals.JobExecBinary
-			<-globals.STSPlanBinary
 		}
 
 	case "RR":
 		log.Println("ROUND ROBIN algorithm")
 		quantum := uint32(globals.Configkernel.Quantum * int(time.Millisecond))
-		//quantum := uint32(globals.Configkernel.Quantum)
 		for {
-			log.Println("RR Preparados")
-			globals.STSPlanBinary <- true
-			log.Println("RR Listos")
+			if globals.PlanningState == "STOPPED" {
+				globals.STSPlanBinary <- true
+				<- globals.STSPlanBinary
+				continue
+			}
 			<-globals.STSCounter
-			log.Println("RR Planificandoooo")
 			RR_Plan(quantum)
 			//<- globals.JobExecBinary
-			<-globals.STSPlanBinary
 		}
 
 	case "VRR":
 		log.Println("VIRTUAL ROUND ROBIN algorithm")
 		for {
-			globals.STSPlanBinary <- true
+			if globals.PlanningState == "STOPPED" {
+				globals.STSPlanBinary <- true
+				<- globals.STSPlanBinary
+				continue
+			}
+
 			<-globals.STSCounter
 			//log.Println("VRR Planificandoooo")
 			VRR_Plan()
 			//<- globals.JobExecBinary
-			<-globals.STSPlanBinary
 		}
 
 	default:
@@ -135,18 +148,17 @@ func RR_Plan(quantum uint32) {
 
 func RR_Plan(quantum uint32) {
 	globals.EnganiaPichangaMutex.Lock() // Paso 1: Bloquear el mutex para asegurar la exclusión mutua
-	if len(globals.STS) == 0 {          // Verificar si hay procesos listos
-		globals.EnganiaPichangaMutex.Unlock()
-		return // Si no hay procesos, desbloquear y retornar
-	}
+	
 	globals.CurrentJob = slice.Shift(&globals.STS)   // Paso 2: Tomar el primer proceso
 	globals.ChangeState(&globals.CurrentJob, "EXEC") // Cambiar estado a EXEC
 	globals.EnganiaPichangaMutex.Unlock()            // Desbloquear el mutex después de modificar las variables compartidas
 
+	go startTimer(quantum)
 	kernel_api.PCB_Send()                                             // Paso 3: Enviar el PCB al CPU
-	timer := time.NewTimer(time.Duration(quantum) * time.Millisecond) // Paso 4: Iniciar el temporizador
+	//timer := time.NewTimer(time.Duration(quantum)) // Paso 4: Iniciar el temporizador
 
-	select {
+	<-globals.PcbReceived
+	/* select {
 	case <-globals.PcbReceived: // Paso 5: Esperar a que el proceso termine
 		// El proceso ha terminado, manejar la finalización
 	case <-timer.C: // El temporizador ha expirado antes de que el proceso termine
@@ -154,7 +166,7 @@ func RR_Plan(quantum uint32) {
 		globals.STS = append(globals.STS, globals.CurrentJob) // Paso 6: Agregar el proceso al final de la lista TODO:
 		globals.ChangeState(&globals.CurrentJob, "READY")     // Cambiar el estado a READY
 		globals.EnganiaPichangaMutex.Unlock()
-	}
+	} */
 
 	EvictionManagement() // Paso 7: Manejar el desalojo
 }
@@ -164,12 +176,8 @@ func VRR_Plan() {
     // Determinar el trabajo actual basado en la prioridad o la cola estándar
     if len(globals.STS_Priority) > 0 {
         globals.CurrentJob = slice.Shift(&globals.STS_Priority)
-    } else if len(globals.STS) > 0 {
-        globals.CurrentJob = slice.Shift(&globals.STS)
     } else {
-        // Si no hay trabajos, desbloquear y retornar
-        globals.EnganiaPichangaMutex.Unlock()
-        return
+        globals.CurrentJob = slice.Shift(&globals.STS)
     }
 
     // Cambiar el estado del trabajo actual a EXEC
@@ -188,20 +196,18 @@ func VRR_Plan() {
 
     // Calcular el tiempo que tomó la ejecución
     timeAfter := time.Now()
-    diffTime := uint32(timeAfter.Sub(timeBefore) / time.Millisecond)
+    diffTime := uint32(timeAfter.Sub(timeBefore))
 
-    globals.EnganiaPichangaMutex.Lock()
     if diffTime < globals.CurrentJob.Quantum {
         // Si el trabajo terminó antes de consumir su quantum, ajustar el quantum restante
-        globals.CurrentJob.Quantum -= diffTime
+        globals.CurrentJob.Quantum -= diffTime * uint32(time.Millisecond)
     } else {
         // Si el trabajo consumió todo su quantum, restablecer el quantum según la configuración del kernel
-        globals.CurrentJob.Quantum = uint32(globals.Configkernel.Quantum)
+        globals.CurrentJob.Quantum = uint32(globals.Configkernel.Quantum * int(time.Millisecond))
     }
 
     // Manejar la gestión de expulsión después de la ejecución del trabajo
     EvictionManagement()
-    globals.EnganiaPichangaMutex.Unlock()
 }
 
 /*
@@ -304,6 +310,7 @@ func EvictionManagement() {
 		//globals.JobExecBinary <- true
 
 	case "TIMEOUT":
+		// TODO: Doble inserción en STS
 		globals.ChangeState(&globals.CurrentJob, "READY")
 		globals.STS = append(globals.STS, globals.CurrentJob)
 		log.Printf("PID: %d - Desalojado por fin de quantum\n", globals.CurrentJob.PID)
@@ -311,10 +318,8 @@ func EvictionManagement() {
 		globals.STSCounter <- int(globals.CurrentJob.PID)
 
 	case "EXIT":
-		if resource.HasResources(globals.CurrentJob) {
-			globals.CurrentJob = resource.ReleaseAllResources(globals.CurrentJob)
-		}
 		globals.ChangeState(&globals.CurrentJob, "TERMINATED")
+		kernel_api.KillJob(globals.CurrentJob)
 		//globals.JobExecBinary <- true
 		<-globals.MultiprogrammingCounter
 		log.Printf("Finaliza el proceso %d - Motivo: %s\n", globals.CurrentJob.PID, evictionReason)
@@ -339,17 +344,16 @@ func EvictionManagement() {
 			EvictionManagement()
 		}
 
-	case "OUT_OF_MEMORY":
+	case "OUT_OF_MEMORY":	// ? En qué caso llega acá?
 		globals.ChangeState(&globals.CurrentJob, "TERMINATED")
+		kernel_api.KillJob(globals.CurrentJob)
 		//globals.JobExecBinary <- true
 		<-globals.MultiprogrammingCounter
 		log.Printf("Finaliza el proceso %d - Motivo: %s\n", globals.CurrentJob.PID, evictionReason)
 
 	case "INTERRUPTED_BY_USER":
-		if resource.HasResources(globals.CurrentJob) {
-			globals.CurrentJob = resource.ReleaseAllResources(globals.CurrentJob)
-		}
 		globals.ChangeState(&globals.CurrentJob, "TERMINATED")
+		kernel_api.KillJob(globals.CurrentJob)
 		//globals.JobExecBinary <- true
 		<-globals.MultiprogrammingCounter
 		log.Printf("Finaliza el proceso %d - Motivo: %s\n", globals.CurrentJob.PID, evictionReason)

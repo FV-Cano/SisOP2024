@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/sisoputnfrba/tp-golang/kernel/globals"
+	resource "github.com/sisoputnfrba/tp-golang/kernel/resources"
 	"github.com/sisoputnfrba/tp-golang/utils/pcb"
 	"github.com/sisoputnfrba/tp-golang/utils/slice"
 )
@@ -121,6 +122,7 @@ func ProcessInit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("Se crea el proceso %d en %s\n", newPcb.PID, newPcb.State)
+	
 
 	w.WriteHeader(http.StatusOK)
 	w.Write(response)
@@ -150,37 +152,12 @@ func ProcessDelete(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
-	// Elimino el proceso de la lista de procesos
-	RemoveByID(pid)
-
-	// Le solicito a memoria que elimine el proceso
-	cliente := &http.Client{}
-	url := fmt.Sprintf("http://%s:%d/finalizarProceso", globals.Configkernel.IP_memory, globals.Configkernel.Port_memory)
-
-	req, err := http.NewRequest("PATCH", url, nil)
-	if err != nil {
-		return
+	// Si el proceso está en ejecución, se envía una interrupción para desalojarlo con INTERRUPTED_BY_USER, de lo contrario se elimina directamente y se saca de la cola en la que se encuentre 
+	if pid == globals.CurrentJob.PID {
+		SendInterrupt("DELETE", pid)
+	} else {
+		DeleteByID(pid)
 	}
-
-	q := req.URL.Query()
-	q.Add("pid", strconv.Itoa(int(pid)))
-	req.URL.RawQuery = q.Encode()
-
-	req.Header.Set("Content-Type", "application/json")
-	respuesta, err := cliente.Do(req)
-	if err != nil {
-		return
-	}
-
-	// Verificar el código de estado de la respuesta
-	if respuesta.StatusCode != http.StatusOK {
-		return
-	}
-
-	// TODO: Falta liberar recursos
-
-	SendInterrupt("DELETE", pid)
 
 	w.WriteHeader(http.StatusOK)
 	// w.Write([]byte("Job deleted")) // ! No tiene que devolver nada
@@ -231,9 +208,11 @@ func ProcessState(w http.ResponseWriter, r *http.Request) {
  * PlanificationStart: Retoma el STS y LTS en caso de que la planificación se encuentre pausada. Si no, ignora la petición.
  */
 func PlanificationStart(w http.ResponseWriter, r *http.Request) {
+	globals.PlanningState = "RUNNING"
+	<- globals.LTSPlanBinary
+	<- globals.STSPlanBinary
+	fmt.Println("Planification Started")
 	w.WriteHeader(http.StatusOK)
-	<-globals.LTSPlanBinary
-	<-globals.STSPlanBinary
 }
 
 /*
@@ -243,9 +222,11 @@ func PlanificationStart(w http.ResponseWriter, r *http.Request) {
     El resto de procesos bloqueados van a pausar su transición a la cola de Ready
 */
 func PlanificationStop(w http.ResponseWriter, r *http.Request) {
+	globals.PlanningState = "STOPPED"
+	globals.LTSPlanBinary <- true
+	globals.STSPlanBinary <- true
+	fmt.Println("Planification Stopped")
 	w.WriteHeader(http.StatusOK)
-	globals.LTSPlanBinary <- false
-	globals.STSPlanBinary <- false
 }
 
 type ProcessList_BRS struct {
@@ -288,10 +269,19 @@ func getProcessList() []pcb.T_PCB {
 	allProcesses = append(allProcesses, globals.STS...)
 	allProcesses = append(allProcesses, globals.STS_Priority...)
 	allProcesses = append(allProcesses, globals.Blocked...)
-	if globals.CurrentJob.PID != 0 {
+	if globals.CurrentJob.PID != 0 && pidIsNotOnList(globals.CurrentJob.PID, allProcesses){
 		allProcesses = append(allProcesses, globals.CurrentJob)
 	}
 	return allProcesses
+}
+
+func pidIsNotOnList(pid uint32, list []pcb.T_PCB) bool {
+	for _, process := range list {
+		if process.PID == pid {
+			return false
+		}
+	}
+	return true
 }
 
 /*
@@ -349,47 +339,112 @@ func PCB_Send() error {
   - @return *pcb.T_PCB: Proceso encontrado
 */
 func SearchByID(pid uint32, processList []pcb.T_PCB) (*pcb.T_PCB, int) {
-	for i, process := range processList {
-		if process.PID == pid {
-			return &process, i
+	if len(processList) == 0 {
+		return nil, -1
+	} else {
+		for i, process := range processList {
+			if process.PID == pid {
+				return &process, i
+			}
 		}
 	}
 	return nil, -1
 }
 
 /*
-*
-
 	// TODO: Mover a utils/slice
-	* RemoveByID: Remueve un proceso de la lista de procesos en base a su PID
-
+	* DeleteByID: Remueve un proceso de la lista de procesos en base a su PID
 	* @param pid: PID del proceso a remover
 */
-func RemoveByID(pid uint32) error {
-	_, ltsIndex := SearchByID(pid, globals.LTS)
-	_, stsIndex := SearchByID(pid, globals.STS)
-	_, blockedIndex := SearchByID(pid, globals.Blocked)
+func DeleteByID(pid uint32) error {
+	pcbToDelete := RemoveByID(pid)
 
-	if ltsIndex != -1 {
-		globals.LTSMutex.Lock()
-		defer globals.LTSMutex.Unlock()
-		slice.RemoveAtIndex(&globals.LTS, ltsIndex)
-	} else if stsIndex != -1 {
-		globals.STSMutex.Lock()
-		defer globals.STSMutex.Unlock()
-		slice.RemoveAtIndex(&globals.STS, stsIndex)
-	} else if blockedIndex != -1 {
-		globals.BlockedMutex.Lock()
-		defer globals.BlockedMutex.Unlock()
-		slice.RemoveAtIndex(&globals.Blocked, blockedIndex)
+	fmt.Println("\n\nPID: ", pid)
+	fmt.Println("LTS: ", globals.LTS)
+	fmt.Println("STS: ", globals.STS)
+	fmt.Println("PCB: ", pcbToDelete)
+
+	if pcbToDelete.PID == 0 {
+		return fmt.Errorf("process with PID %d not found", pid)
+	} else {
+		KillJob(pcbToDelete)
 	}
 
 	return nil
 }
 
+func RemoveByID(pid uint32) pcb.T_PCB {
+	_, ltsIndex := SearchByID(pid, globals.LTS)
+	_, stsIndex := SearchByID(pid, globals.STS)
+	_, blockedIndex := SearchByID(pid, globals.Blocked)
+
+	var removedPCB pcb.T_PCB
+
+	if ltsIndex != -1 {
+		globals.LTSMutex.Lock()
+		defer globals.LTSMutex.Unlock()
+		removedPCB = slice.RemoveAtIndex(&globals.LTS, ltsIndex)
+		// Evita bloqueo de lista vacía
+		if (len(globals.LTS) == 0) {
+			globals.EmptiedList <- true
+		}
+	} else if stsIndex != -1 {
+		globals.STSMutex.Lock()
+		defer globals.STSMutex.Unlock()
+		removedPCB = slice.RemoveAtIndex(&globals.STS, stsIndex)
+		<- globals.MultiprogrammingCounter
+		<- globals.STSCounter
+	} else if blockedIndex != -1 {
+		globals.BlockedMutex.Lock()
+		defer globals.BlockedMutex.Unlock()
+		removedPCB = slice.RemoveAtIndex(&globals.Blocked, blockedIndex)
+	} else {
+		return pcb.T_PCB{PID: 0} 
+	}
+
+	return removedPCB
+}
+
+func KillJob(pcb pcb.T_PCB) {
+	if (resource.HasResources(pcb)) {
+		advancedDeleting(pcb)
+	}
+
+	RequestMemoryRelease(pcb.PID)
+	fmt.Print("Se eliminó el proceso ", pcb.PID, " satisfactoriamente\n")
+}
+
+func advancedDeleting(pcb pcb.T_PCB) {
+	for _ , res := range globals.Configkernel.Resources {
+		if count, ok := pcb.Resources[res]; ok && count > 0 {
+			pcb.Resources[res] = 0
+			for range count {
+				globals.Resource_instances[res]++
+				resource.ReleaseJobIfBlocked(res)
+			}
+		}
+
+		getIndex := func() int {
+			for i, pcbResource := range globals.ResourceMap[res] {
+				if pcbResource.PID == pcb.PID {
+					return i
+				}
+			}
+			return -1
+		}
+
+		index := getIndex()
+
+		if index != -1 {
+			globals.MapMutex.Lock()
+			globals.ResourceMap[res] = append(globals.ResourceMap[res][:index], globals.ResourceMap[res][index+1:]...)
+			globals.MapMutex.Unlock()
+		}
+	}
+}
+
 /*
 *
-
   - GetPIDFromQueryPath: Convierte un PID en formato string a uint32
 
   - @param pidString: PID en formato string
@@ -435,5 +490,30 @@ func SendInterrupt(reason string, pid uint32) {
 	recibirRta, err := cliente.Do(enviarInterrupcion)
 	if err != nil || recibirRta.StatusCode != http.StatusOK {
 		log.Fatal("Error al interrupir proceso", err)
+	}
+}
+
+func RequestMemoryRelease(pid uint32) {
+	cliente := &http.Client{}
+	url := fmt.Sprintf("http://%s:%d/finalizarProceso", globals.Configkernel.IP_memory, globals.Configkernel.Port_memory)
+
+	req, err := http.NewRequest("PATCH", url, nil)
+	if err != nil {
+		fmt.Printf("Error al crear request para finalizar proceso: %v", err)
+	}
+
+	q := req.URL.Query()
+	q.Add("pid", strconv.Itoa(int(pid)))
+	req.URL.RawQuery = q.Encode()
+
+	req.Header.Set("Content-Type", "application/json")
+	respuesta, err := cliente.Do(req)
+	if err != nil {
+		fmt.Printf("Error al finalizar proceso en memoria: %v", err)
+	}
+
+	// Verificar el código de estado de la respuesta
+	if respuesta.StatusCode != http.StatusOK {
+		fmt.Printf("Error al finalizar proceso en memoria: %v", err)
 	}
 }

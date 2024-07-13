@@ -51,7 +51,7 @@ func HandshakeKernel(nombre string) error {
 // * Hay que declarar los tipos de body que se van a recibir desde kernel porque por alguna razón no se puede crear un struct type dentro de una función con un tipo creado por uno mismo, están todos en globals
 
 func InterfaceQueuePCB(w http.ResponseWriter, r *http.Request) {
-	log.Println("InterfaceQueuePCB")
+	//log.Println("InterfaceQueuePCB")
 	switch globals.ConfigIO.Type {
 	case "GENERICA":
 		var decodedStruct globals.GenSleep
@@ -113,7 +113,7 @@ func IOWork() {
 			interfaceToWork = <-globals.Generic_QueueChannel
 
 			IO_GEN_SLEEP(interfaceToWork.TimeToSleep, interfaceToWork.Pcb)
-			log.Println("Fin de bloqueo")
+			log.Println("Fin de bloqueo para el PID: ", interfaceToWork.Pcb.PID)
 			returnPCB(interfaceToWork.Pcb)
 		}
 	case "STDIN":
@@ -122,7 +122,7 @@ func IOWork() {
 			interfaceToWork = <-globals.Stdin_QueueChannel
 
 			IO_STDIN_READ(interfaceToWork.Pcb, interfaceToWork.DireccionesFisicas)
-			log.Println("Fin de bloqueo")
+			log.Println("Fin de bloqueo para el PID: ", interfaceToWork.Pcb.PID)
 			returnPCB(interfaceToWork.Pcb)
 		}
 	case "STDOUT":
@@ -131,7 +131,7 @@ func IOWork() {
 			interfaceToWork = <-globals.Stdout_QueueChannel
 
 			IO_STDOUT_WRITE(interfaceToWork.Pcb, interfaceToWork.DireccionesFisicas)
-			log.Println("Fin de bloqueo")
+			log.Println("Fin de bloqueo para el PID: ", interfaceToWork.Pcb.PID)
 			returnPCB(interfaceToWork.Pcb)
 		}
 
@@ -141,7 +141,7 @@ func IOWork() {
 			interfaceToWork = <-globals.DialFS_QueueChannel
 
 			IO_DIALFS(interfaceToWork)
-			log.Println("Fin de bloqueo")
+			log.Println("Fin de bloqueo para el PID: ", interfaceToWork.Pcb.PID)
 			returnPCB(interfaceToWork.Pcb)
 		}
 	}
@@ -282,6 +282,7 @@ func IO_DIALFS(interfaceToWork globals.DialFSRequest) {
 		TruncateFile(pid, nombreArchivo, interfaceToWork.Tamanio)
 	}
 
+	fmt.Println("Operación ", interfaceToWork.Operacion, " finalizada - Archivo: ", nombreArchivo)
 	fmt.Println("El archivo de bloques.dat es: " , globals.Blocks)
 	fmt.Println("El archivo de bitmap.dat es: " , globals.CurrentBitMap)
 }

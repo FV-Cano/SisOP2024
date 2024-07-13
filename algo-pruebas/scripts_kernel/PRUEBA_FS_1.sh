@@ -16,26 +16,14 @@ curl --location --request PUT "http://$KERNEL_HOST:$KERNEL_PORT/process" \
 --header "Content-Type: application/json" \
 --data "{
     \"pid\": 1,
-    \"path\": \"/scripts_memoria/LOCK_A\"
+    \"path\": \"/scripts_memoria/FS_1\"
 }"
 
 curl --location --request PUT "http://$KERNEL_HOST:$KERNEL_PORT/process" \
 --header "Content-Type: application/json" \
 --data "{
     \"pid\": 2,
-    \"path\": \"/scripts_memoria/LOCK_B\"
+    \"path\": \"/scripts_memoria/FS_2\"
 }"
 
-curl --location --request PUT "http://$KERNEL_HOST:$KERNEL_PORT/process" \
---header "Content-Type: application/json" \
---data "{
-    \"pid\": 3,
-    \"path\": \"/scripts_memoria/LOCK_C\"
-}"
-
-curl --location --request PUT "http://$KERNEL_HOST:$KERNEL_PORT/process" \
---header "Content-Type: application/json" \
---data "{
-    \"pid\": 4,
-    \"path\": \"/scripts_memoria/LOCK_D\"
-}"
+curl --location --request PUT "http://$KERNEL_HOST:$KERNEL_PORT/plani" \

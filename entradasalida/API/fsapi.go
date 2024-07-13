@@ -171,17 +171,17 @@ func DeleteFile(pid int, nombreArchivo string) error {
 	rutaArchivo := "dialfs/" + nombreArchivo
 
 	// Paso 1: Verificar si el archivo existe
-	if _, err := os.Stat(nombreArchivo); os.IsNotExist(err) {
+	if _, err := os.Stat(rutaArchivo); os.IsNotExist(err) {
 		// El archivo no existe
 		return errors.New("el archivo no existe")
 	}
 
 	// Leer la información del archivo antes de eliminarlo
-	archivo := ioutils.LeerArchivoEnStruct(nombreArchivo)
+	archivo := ioutils.LeerArchivoEnStruct(rutaArchivo)
 
 	sizeArchivo := archivo.Size
 	sizeArchivoEnBloques := int(math.Max(1, math.Ceil(float64(sizeArchivo)/float64(globals.ConfigIO.Dialfs_block_size))))
-
+	fmt.Println("EL SIZE DEL ARCHIVO A ELIMINAR ES " , sizeArchivoEnBloques)
 	posBloqueInicial := archivo.InitialBlock - 1
 
 	// Paso 2: Eliminar el archivo del sistema de archivos
@@ -191,8 +191,14 @@ func DeleteFile(pid int, nombreArchivo string) error {
 		return err
 	}
 
+	fmt.Println("TE PRENDO FUEGO EL ARCHIVO " , rutaArchivo)
+
+
 	// Paso 3: Eliminar el FCB asociado y liberar los bloques de datos
-	delete(globals.Fcbs, nombreArchivo)
+	delete(globals.Fcbs,nombreArchivo)
+
+	fmt.Println("TE BORRO EL FCB UWU " , nombreArchivo)
+
 
 	for i := 0; i < sizeArchivoEnBloques; i++ {
 		ioutils.Clear(posBloqueInicial + i)

@@ -168,7 +168,7 @@ func CreateFile(pid int, nombreArchivo string) {
  * DeleteFile: elimina un archivo del sistema de archivos y su FCB asociado (incluye liberar los bloques de datos)
  */
 func DeleteFile(pid int, nombreArchivo string) error {
-	nombreArchivo = "dialfs/" + nombreArchivo
+	rutaArchivo := "dialfs/" + nombreArchivo
 
 	// Paso 1: Verificar si el archivo existe
 	if _, err := os.Stat(nombreArchivo); os.IsNotExist(err) {
@@ -185,7 +185,7 @@ func DeleteFile(pid int, nombreArchivo string) error {
 	posBloqueInicial := archivo.InitialBlock - 1
 
 	// Paso 2: Eliminar el archivo del sistema de archivos
-	err := os.Remove(nombreArchivo)
+	err := os.Remove(rutaArchivo)
 	if err != nil {
 		// Error al intentar eliminar el archivo
 		return err
@@ -444,14 +444,18 @@ func Compactar() {
         tamArchivoEnBloques := int(math.Max(1, math.Ceil(float64(metadata.Size)/float64(tamBloqueEnBytes))))
         bloqueInicial := metadata.InitialBlock
 
+		fmt.Println("COMPACTANDO")
+		fmt.Println("Nombre: ", nombreArchivo, "Bloque Inicial: ", bloqueInicial, " Tamaño en bloques: ", tamArchivoEnBloques)
+
         for i := 0; i < tamArchivoEnBloques; i++ {
             primerByteACopiar := (bloqueInicial - 1 + i) * tamBloqueEnBytes // !
             ultimoByteACopiar := primerByteACopiar + tamBloqueEnBytes - 1 // !
-			/*if ultimoByteACopiar > len(globals.Blocks) {
-                ultimoByteACopiar = len(globals.Blocks)
+			
+			/*if ultimoByteACopiar >= len(globals.Blocks) { // !
+                ultimoByteACopiar = len(globals.Blocks) -1 // !
             } */
 
-            n := copy(bloquesDeArchivos[offset:], globals.Blocks[primerByteACopiar:ultimoByteACopiar])
+            n := copy(bloquesDeArchivos[offset:], globals.Blocks[primerByteACopiar:ultimoByteACopiar + 1])
             offset += n // Actualiza el offset con el número de bytes copiados
         }
 

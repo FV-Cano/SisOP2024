@@ -157,7 +157,10 @@ func RR_Plan(quantum uint32) {
 	kernel_api.PCB_Send()                                             // Paso 3: Enviar el PCB al CPU
 	//timer := time.NewTimer(time.Duration(quantum)) // Paso 4: Iniciar el temporizador
 
-	<-globals.PcbReceived
+	select {
+	case <-globals.PcbReceived:
+
+	}
 	/* select {
 	case <-globals.PcbReceived: // Paso 5: Esperar a que el proceso termine
 		// El proceso ha terminado, manejar la finalización

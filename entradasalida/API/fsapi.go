@@ -230,6 +230,10 @@ func ReadFile(pid int, nombreArchivo string, direccionesFisicas []globals.Direcc
 	limiteLeer := tamanioLeer + posicionPuntero
 
 	limiteArchivo := primerByteArchivo + globals.Fcbs[nombreArchivo].Size
+	
+	fmt.Println("EL PUNTERO ES ", posicionPuntero)
+	fmt.Println("EL LIMITE A LEER ES ", limiteLeer)
+	fmt.Println("EL LIMITE DEL ARCHIVO ES ", limiteArchivo)
 
 	// Verificar tamaño del archivo a leer valido
 	if limiteLeer > limiteArchivo {
@@ -240,6 +244,7 @@ func ReadFile(pid int, nombreArchivo string, direccionesFisicas []globals.Direcc
 	}
 
 	log.Printf("PID: %d - Leer Archivo: %s - Tamaño a Leer: %d - Puntero Archivo: %d", pid, nombreArchivo, tamanioLeer, puntero)
+	fmt.Println("CONTENIDO LEIDO DE FS (", nombreArchivo,"): ", string(contenidoALeer))
 }
 
 /*

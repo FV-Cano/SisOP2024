@@ -11,6 +11,14 @@ var (
 	Fcbs map[string]Metadata
 )
 
+type T_Bitmap struct {
+	BitMap []int `json:"bitmap"`
+}
+
+type T_Blocks struct {
+	Blocks []byte `json:"blocks"`
+}
+
 type T_ConfigIO struct {
 	Ip                 		string `json:"ip"`
 	Port               		int    `json:"port"`

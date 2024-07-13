@@ -100,7 +100,7 @@ type DialFSRequest struct {
 	NombreArchivo string
 	Tamanio       int
 	Puntero       int
-	Direccion     int
+	Direccion     []globals.DireccionTamanio
 	Operacion     string
 }
 
@@ -224,7 +224,7 @@ func SolicitarDialFS(pcb pcb.T_PCB) {
 		FileName      string
 		Size          int
 		Pointer       int
-		Address       int
+		Address       []globals.DireccionTamanio
 		Operation     string
 	})
 
@@ -293,7 +293,7 @@ func RecvData_gensleep(w http.ResponseWriter, r *http.Request) {
 }
 
 /*
- RecvData_stdin: Recibe desde CPU la información necesaria para solicitar un STDIN_READ.
+	 RecvData_stdin: Recibe desde CPU la información necesaria para solicitar un STDIN_READ.
 
  Opera con estructura:
 	- Direcciones físicas

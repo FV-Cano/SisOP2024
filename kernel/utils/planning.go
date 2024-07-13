@@ -167,7 +167,7 @@ func RR_Plan(quantum uint32) {
 		// El proceso ha terminado, manejar la finalización
 	case <-timer.C: // El temporizador ha expirado antes de que el proceso termine
 		globals.EnganiaPichangaMutex.Lock()
-		globals.STS = append(globals.STS, globals.CurrentJob) // Paso 6: Agregar el proceso al final de la lista
+		globals.STS = append(globals.STS, globals.CurrentJob) // Paso 6: Agregar el proceso al final de la lista TODO:
 		globals.ChangeState(&globals.CurrentJob, "READY")     // Cambiar el estado a READY
 		globals.EnganiaPichangaMutex.Unlock()
 	}
@@ -175,6 +175,52 @@ func RR_Plan(quantum uint32) {
 	EvictionManagement() // Paso 7: Manejar el desalojo
 }
 
+func VRR_Plan() {
+    globals.EnganiaPichangaMutex.Lock()
+    // Determinar el trabajo actual basado en la prioridad o la cola estándar
+    if len(globals.STS_Priority) > 0 {
+        globals.CurrentJob = slice.Shift(&globals.STS_Priority)
+    } else if len(globals.STS) > 0 {
+        globals.CurrentJob = slice.Shift(&globals.STS)
+    } else {
+        // Si no hay trabajos, desbloquear y retornar
+        globals.EnganiaPichangaMutex.Unlock()
+        return
+    }
+
+    // Cambiar el estado del trabajo actual a EXEC
+    globals.ChangeState(&globals.CurrentJob, "EXEC")
+    globals.EnganiaPichangaMutex.Unlock()
+
+    // Iniciar el temporizador para el quantum del trabajo actual
+    timeBefore := time.Now()
+    go startTimer(globals.CurrentJob.Quantum)
+
+    // Enviar el PCB al kernel
+    kernel_api.PCB_Send()
+
+    // Esperar a recibir la señal de que el PCB ha sido procesado
+    <-globals.PcbReceived
+
+    // Calcular el tiempo que tomó la ejecución
+    timeAfter := time.Now()
+    diffTime := uint32(timeAfter.Sub(timeBefore) / time.Millisecond)
+
+    globals.EnganiaPichangaMutex.Lock()
+    if diffTime < globals.CurrentJob.Quantum {
+        // Si el trabajo terminó antes de consumir su quantum, ajustar el quantum restante
+        globals.CurrentJob.Quantum -= diffTime
+    } else {
+        // Si el trabajo consumió todo su quantum, restablecer el quantum según la configuración del kernel
+        globals.CurrentJob.Quantum = uint32(globals.Configkernel.Quantum)
+    }
+
+    // Manejar la gestión de expulsión después de la ejecución del trabajo
+    EvictionManagement()
+    globals.EnganiaPichangaMutex.Unlock()
+}
+
+/*
 func VRR_Plan() {
 	globals.EnganiaPichangaMutex.Lock()
 	if len(globals.STS_Priority) == 0 {
@@ -202,7 +248,7 @@ func VRR_Plan() {
 
 	EvictionManagement()
 }
-
+*/
 func startTimer(quantum uint32) {
 	quantumTime := time.Duration(quantum)
 	auxPcb := globals.CurrentJob

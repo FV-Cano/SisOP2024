@@ -117,9 +117,11 @@ func ReadFs(nombreArchivo string, desplazamiento int, tamanio int) []byte {
 	return contenido
 }
 
-func WriteFs(contenido []byte, byteInicial int) {
-	bloqueInicial := int(math.Max(1, math.Ceil(float64(byteInicial)/float64(globals.ConfigIO.Dialfs_block_size))))
+func WriteFs(contenido []byte, byteInicial int, nombreArchivo string) {
+	//bloqueInicial := int(math.Max(1, math.Ceil(float64(byteInicial)/float64(globals.ConfigIO.Dialfs_block_size))))
 
+	bloqueInicial := globals.Fcbs[nombreArchivo].InitialBlock
+	
 	fmt.Println("WRITE - Byte inicial: ", byteInicial, "Bloque inicial: ", bloqueInicial)
 
 	tamanioContenido := len(contenido)

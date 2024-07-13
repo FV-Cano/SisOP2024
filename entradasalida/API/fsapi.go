@@ -378,7 +378,7 @@ func TruncateFile(pid int, nombreArchivo string, tamanioDeseado int) { //revisar
 				//Si no entra en ningún lugar, compactar
 
 				Compactar()
-
+				fmt.Println("FS - ", nombreArchivo, " Compactado | Bitmap: ", globals.CurrentBitMap)
 				primerBloqueLibre := ioutils.CalcularBloqueLibre()
 				fmt.Println("FS - ", nombreArchivo, " Primer bloque libre: ", primerBloqueLibre)
 
@@ -396,8 +396,7 @@ func TruncateFile(pid int, nombreArchivo string, tamanioDeseado int) { //revisar
 				globals.Fcbs[nombreArchivo] = archivo
 
 				ioutils.WriteFs(contenidoArchivo, posPrimerBloqueLibre * globals.ConfigIO.Dialfs_block_size, nombreArchivo)
-
-				ioutils.OcuparBloquesDesde(primerBloqueLibre, tamFinalEnBloques)
+				ioutils.OcuparBloquesDesde(primerBloqueLibre, tamFinalEnBloques) // !
 
 				// Bloque 1 - Posicion 0
 				// 1 * 16 - 1 = 15
@@ -446,8 +445,8 @@ func Compactar() {
         bloqueInicial := metadata.InitialBlock
 
         for i := 0; i < tamArchivoEnBloques; i++ {
-            primerByteACopiar := (bloqueInicial + i - 1) * tamBloqueEnBytes
-            ultimoByteACopiar := primerByteACopiar + tamBloqueEnBytes //- 1
+            primerByteACopiar := (bloqueInicial - 1 + i) * tamBloqueEnBytes // !
+            ultimoByteACopiar := primerByteACopiar + tamBloqueEnBytes - 1 // !
 			/*if ultimoByteACopiar > len(globals.Blocks) {
                 ultimoByteACopiar = len(globals.Blocks)
             } */
@@ -468,6 +467,8 @@ func Compactar() {
     }
 
 	copy(globals.Blocks, bloquesDeArchivos[:len(globals.Blocks)])
+
+	fmt.Println("El offset fue: ", offset, " el tamaño bloques de archivos es: ", len(bloquesDeArchivos))
 
 	bloquesOcupadosEnTotal := int(math.Ceil(float64(offset) / float64(tamBloqueEnBytes)))
 

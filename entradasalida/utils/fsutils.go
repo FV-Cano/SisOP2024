@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"math"
 	"os"
 
 	"github.com/sisoputnfrba/tp-golang/entradasalida/globals"
@@ -108,7 +107,7 @@ func ReadFs(nombreArchivo string, desplazamiento int, tamanio int) []byte {
 	contenido := make([]byte, tamanioALeer)
 
 	posBloqueInicial := archivo.InitialBlock - 1
-	primerByteArchivo := posBloqueInicial*globals.ConfigIO.Dialfs_block_size + desplazamiento
+	primerByteArchivo := posBloqueInicial * globals.ConfigIO.Dialfs_block_size + desplazamiento
 
 	for i := 0; i < tamanioALeer; i++ {
 		contenido[i] = globals.Blocks[primerByteArchivo+i]
@@ -130,8 +129,8 @@ func WriteFs(contenido []byte, byteInicial int, nombreArchivo string) {
 		fmt.Println("Byte: ", byteInicial+i, "Contenido: ", contenido[i])
 	}
 
-	tamanioFinalEnBloques := int(math.Ceil(float64(len(contenido)) / float64(globals.ConfigIO.Dialfs_block_size)))
-	OcuparBloquesDesde(bloqueInicial, tamanioFinalEnBloques)
+	//tamanioFinalEnBloques := int(math.Ceil(float64(len(contenido)) / float64(globals.ConfigIO.Dialfs_block_size))) //!
+	//OcuparBloquesDesde(bloqueInicial, tamanioFinalEnBloques)														//!
 	ActualizarBloques()
 }
 
@@ -272,7 +271,7 @@ func LiberarBloquesDesde(numBloque int, tamanioABorrar int) {
 func LiberarBloque(bloque int, tamanioABorrar int) {
 	for i := 0; i < tamanioABorrar; i++ {
 		Clear(bloque - i)
-	}
+	} 
 	ActualizarBitmap()
 }
 

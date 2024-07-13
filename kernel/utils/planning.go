@@ -59,8 +59,8 @@ func STS_Plan() {
 
 			<-globals.STSCounter
 			//log.Println("FIFO Planificandoooo")
+			globals.JobExecBinary <- true
 			FIFO_Plan()
-			//<- globals.JobExecBinary
 		}
 
 	case "RR":
@@ -73,8 +73,8 @@ func STS_Plan() {
 				continue
 			}
 			<-globals.STSCounter
+			globals.JobExecBinary <- true
 			RR_Plan(quantum)
-			//<- globals.JobExecBinary
 		}
 
 	case "VRR":
@@ -88,8 +88,8 @@ func STS_Plan() {
 
 			<-globals.STSCounter
 			//log.Println("VRR Planificandoooo")
+			globals.JobExecBinary <- true
 			VRR_Plan()
-			//<- globals.JobExecBinary
 		}
 
 	default:
@@ -276,7 +276,7 @@ func EvictionManagement() {
 		go func() {
 			kernel_api.SolicitarGenSleep(pcbAux)
 		}()
-		//globals.JobExecBinary <- true
+		<-globals.JobExecBinary
 
 	case "BLOCKED_IO_STDIN":
 		globals.EnganiaPichangaMutex.Lock()
@@ -288,7 +288,7 @@ func EvictionManagement() {
 		go func() {
 			kernel_api.SolicitarStdinRead(pcbAux)
 		}()
-		//globals.JobExecBinary <- true
+		<-globals.JobExecBinary
 
 	case "BLOCKED_IO_STDOUT":
 		globals.EnganiaPichangaMutex.Lock()
@@ -299,7 +299,7 @@ func EvictionManagement() {
 		go func() {
 			kernel_api.SolicitarStdoutWrite(pcbAux)
 		}()
-		//globals.JobExecBinary <- true
+		<-globals.JobExecBinary
 
 	case "BLOCKED_IO_DIALFS":
 		globals.EnganiaPichangaMutex.Lock()
@@ -310,27 +310,27 @@ func EvictionManagement() {
 		go func() {
 			kernel_api.SolicitarDialFS(pcbAux)
 		}()
-		//globals.JobExecBinary <- true
+		<-globals.JobExecBinary
 
 	case "TIMEOUT":
 		// TODO: Doble inserción en STS
 		globals.ChangeState(&globals.CurrentJob, "READY")
 		globals.STS = append(globals.STS, globals.CurrentJob)
 		log.Printf("PID: %d - Desalojado por fin de quantum\n", globals.CurrentJob.PID)
-		//globals.JobExecBinary <- true
+		<-globals.JobExecBinary
 		globals.STSCounter <- int(globals.CurrentJob.PID)
 
 	case "EXIT":
 		globals.ChangeState(&globals.CurrentJob, "TERMINATED")
 		kernel_api.KillJob(globals.CurrentJob)
-		//globals.JobExecBinary <- true
+		<-globals.JobExecBinary
 		<-globals.MultiprogrammingCounter
 		log.Printf("Finaliza el proceso %d - Motivo: %s\n", globals.CurrentJob.PID, evictionReason)
 
 	case "WAIT":
 		if resource.Exists(globals.CurrentJob.RequestedResource) {
 			resource.RequestConsumption(globals.CurrentJob.RequestedResource)
-			//globals.JobExecBinary <- true
+			<-globals.JobExecBinary
 		} else {
 			fmt.Print("El recurso no existe\n")
 			globals.CurrentJob.EvictionReason = "EXIT"
@@ -340,7 +340,7 @@ func EvictionManagement() {
 	case "SIGNAL":
 		if resource.Exists(globals.CurrentJob.RequestedResource) {
 			resource.ReleaseConsumption(globals.CurrentJob.RequestedResource)
-			//globals.JobExecBinary <- true
+			<-globals.JobExecBinary
 		} else {
 			fmt.Print("El recurso no existe\n")
 			globals.CurrentJob.EvictionReason = "EXIT"
@@ -350,14 +350,14 @@ func EvictionManagement() {
 	case "OUT_OF_MEMORY":	// ? En qué caso llega acá?
 		globals.ChangeState(&globals.CurrentJob, "TERMINATED")
 		kernel_api.KillJob(globals.CurrentJob)
-		//globals.JobExecBinary <- true
+		<-globals.JobExecBinary
 		<-globals.MultiprogrammingCounter
 		log.Printf("Finaliza el proceso %d - Motivo: %s\n", globals.CurrentJob.PID, evictionReason)
 
 	case "INTERRUPTED_BY_USER":
 		globals.ChangeState(&globals.CurrentJob, "TERMINATED")
 		kernel_api.KillJob(globals.CurrentJob)
-		//globals.JobExecBinary <- true
+		<-globals.JobExecBinary
 		<-globals.MultiprogrammingCounter
 		log.Printf("Finaliza el proceso %d - Motivo: %s\n", globals.CurrentJob.PID, evictionReason)
 

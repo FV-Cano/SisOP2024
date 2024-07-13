@@ -62,3 +62,7 @@ func Shift[T any](slice *[]T) T {
 func Push[T any](slice *[]T, elem T) {
 	*slice = append(*slice, elem)
 }
+
+func IsEmpty[T any](slice []T) bool {
+	return len(slice) == 0
+}

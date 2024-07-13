@@ -152,8 +152,6 @@ func ProcessDelete(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
-
 	// Si el proceso está en ejecución, se envía una interrupción para desalojarlo con INTERRUPTED_BY_USER, de lo contrario se elimina directamente y se saca de la cola en la que se encuentre 
 	if pid == globals.CurrentJob.PID {
 		SendInterrupt("DELETE", pid)
@@ -271,10 +269,19 @@ func getProcessList() []pcb.T_PCB {
 	allProcesses = append(allProcesses, globals.STS...)
 	allProcesses = append(allProcesses, globals.STS_Priority...)
 	allProcesses = append(allProcesses, globals.Blocked...)
-	if globals.CurrentJob.PID != 0 {
+	if globals.CurrentJob.PID != 0 && pidIsNotOnList(globals.CurrentJob.PID, allProcesses){
 		allProcesses = append(allProcesses, globals.CurrentJob)
 	}
 	return allProcesses
+}
+
+func pidIsNotOnList(pid uint32, list []pcb.T_PCB) bool {
+	for _, process := range list {
+		if process.PID == pid {
+			return false
+		}
+	}
+	return true
 }
 
 /*
@@ -351,6 +358,12 @@ func SearchByID(pid uint32, processList []pcb.T_PCB) (*pcb.T_PCB, int) {
 */
 func DeleteByID(pid uint32) error {
 	pcbToDelete := RemoveByID(pid)
+
+	fmt.Println("\n\nPID: ", pid)
+	fmt.Println("LTS: ", globals.LTS)
+	fmt.Println("STS: ", globals.STS)
+	fmt.Println("PCB: ", pcbToDelete)
+
 	if pcbToDelete.PID == 0 {
 		return fmt.Errorf("process with PID %d not found", pid)
 	} else {
@@ -394,15 +407,44 @@ func RemoveByID(pid uint32) pcb.T_PCB {
 
 func KillJob(pcb pcb.T_PCB) {
 	if (resource.HasResources(pcb)) {
-		resource.ReleaseAllResources(pcb)
+		advancedDeleting(pcb)
 	}
+
 	RequestMemoryRelease(pcb.PID)
 	fmt.Print("Se eliminó el proceso ", pcb.PID, " satisfactoriamente\n")
 }
 
+func advancedDeleting(pcb pcb.T_PCB) {
+	for _ , res := range globals.Configkernel.Resources {
+		if count, ok := pcb.Resources[res]; ok && count > 0 {
+			pcb.Resources[res] = 0
+			for range count {
+				globals.Resource_instances[res]++
+				resource.ReleaseJobIfBlocked(res)
+			}
+		}
+
+		getIndex := func() int {
+			for i, pcbResource := range globals.ResourceMap[res] {
+				if pcbResource.PID == pcb.PID {
+					return i
+				}
+			}
+			return -1
+		}
+
+		index := getIndex()
+
+		if index != -1 {
+			globals.MapMutex.Lock()
+			globals.ResourceMap[res] = append(globals.ResourceMap[res][:index], globals.ResourceMap[res][index+1:]...)
+			globals.MapMutex.Unlock()
+		}
+	}
+}
+
 /*
 *
-
   - GetPIDFromQueryPath: Convierte un PID en formato string a uint32
 
   - @param pidString: PID en formato string

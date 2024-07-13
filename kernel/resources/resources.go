@@ -57,7 +57,7 @@ func RemoveFromBlocked(pid uint32) {
 }
 
 /**
- * Solicita la consumisión una instancia de un recurso // TODO: consume un recurso, PERO no se lo asigna a nadie
+ * Solicita la consumisión una instancia de un recurso
 
  * @param resource: recurso a consumir
 */
@@ -102,7 +102,7 @@ func ReleaseConsumption(resource string) {
 	log.Print("Se libero una instancia del recurso: ", resource, "\n")
 	slice.InsertAtIndex(&globals.STS, 0, globals.CurrentJob)
 	ReleaseJobIfBlocked(resource)
-	globals.STSCounter <- 1
+	globals.STSCounter <- 1	// TODO: dudas
 }
 
 /**

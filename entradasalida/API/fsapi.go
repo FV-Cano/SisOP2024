@@ -376,10 +376,15 @@ func TruncateFile(pid int, nombreArchivo string, tamanioDeseado int) { //revisar
 				fmt.Println("FS - ", nombreArchivo, " No entra el archivo pero alcanza la cantidad de bloques libres")
 				//Si no entra en ningún lugar, compactar
 
+				delete(globals.Fcbs, nombreArchivo)
+
 				Compactar()
 
 				primerBloqueLibre := ioutils.CalcularBloqueLibre()
 				fmt.Println("FS - ", nombreArchivo, " Primer bloque libre: ", primerBloqueLibre)
+
+				archivo.InitialBlock = primerBloqueLibre
+				archivo.Size = tamanioDeseado
 
 				posPrimerBloqueLibre := primerBloqueLibre - 1
 				
@@ -390,9 +395,6 @@ func TruncateFile(pid int, nombreArchivo string, tamanioDeseado int) { //revisar
 				// Bloque 1 - Posicion 0
 				// 1 * 16 - 1 = 15
 				// 0 * 16 = 0
-
-				archivo.InitialBlock = primerBloqueLibre
-				archivo.Size = tamanioDeseado
 
 				archivoMarshallado, err := json.Marshal(archivo)
 				if err != nil {
@@ -481,15 +483,23 @@ func Compactar() {
         tamArchivoEnBloques := int(math.Max(1, math.Ceil(float64(metadata.Size)/float64(tamBloqueEnBytes))))
         bloqueInicial := metadata.InitialBlock
 
+		fmt.Println("Moviendo archivo: ", nombreArchivo)
+		fmt.Println("Bloque inicial: ", bloqueInicial)
+
         for i := 0; i < tamArchivoEnBloques; i++ {
             primerByteACopiar := (bloqueInicial + i - 1) * tamBloqueEnBytes
-            ultimoByteACopiar := primerByteACopiar + tamBloqueEnBytes - 1
+            ultimoByteACopiar := primerByteACopiar + tamBloqueEnBytes //- 1
 			/*if ultimoByteACopiar > len(globals.Blocks) {
                 ultimoByteACopiar = len(globals.Blocks)
             } */
 
             n := copy(bloquesDeArchivos[offset:], globals.Blocks[primerByteACopiar:ultimoByteACopiar])
-            offset += n // Actualiza el offset con el número de bytes copiados
+			
+			fmt.Println("N vale: ", n)
+			fmt.Println("Primer byte a copiar: ", primerByteACopiar)
+			fmt.Println("Ultimo byte a copiar: ", ultimoByteACopiar)
+         	offset += n  // Actualiza el offset con el número de bytes copiados
+			fmt.Println("Offset vespues vale: ", offset)
         }
 
         metadata.InitialBlock = ioutils.CalcularBloqueLibre()

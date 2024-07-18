@@ -124,6 +124,7 @@ func IOWork() {
 			if(!slice.IsEmpty(globals.GenericQueue)) {
 				aux := slice.Shift(&globals.GenericQueue)
 				IO_GEN_SLEEP(aux.TimeToSleep, aux.Pcb)
+				log.Println("Fin de bloqueo para el PID: ", interfaceToWork.Pcb.PID)
 				returnPCB(aux.Pcb)
 			}
 		}
@@ -137,6 +138,7 @@ func IOWork() {
 			if(!slice.IsEmpty(globals.StdinQueue)) {
 				aux := slice.Shift(&globals.StdinQueue)
 				IO_STDIN_READ(aux.Pcb, aux.DireccionesFisicas)
+				log.Println("Fin de bloqueo para el PID: ", interfaceToWork.Pcb.PID)
 				returnPCB(aux.Pcb)
 			}
 		}
@@ -150,6 +152,7 @@ func IOWork() {
 			if(!slice.IsEmpty(globals.StdoutQueue)) {
 				aux := slice.Shift(&globals.StdoutQueue)
 				IO_STDOUT_WRITE(aux.Pcb, aux.DireccionesFisicas)
+				log.Println("Fin de bloqueo para el PID: ", interfaceToWork.Pcb.PID)
 				returnPCB(aux.Pcb)
 			}
 		}
@@ -182,7 +185,7 @@ func IO_GEN_SLEEP(sleepTime int, pcb pcb.T_PCB) {
 	//sleepTimeTotal := sleepTime * (globals.ConfigIO.Unit_work_time * int(time.Millisecond))
 	sleepTimeTotal := time.Duration(sleepTime * globals.ConfigIO.Unit_work_time) * time.Millisecond
 	log.Printf("PID: %d - Operacion: IO_GEN_SLEEP", pcb.PID)
-	//log.Printf("Bloqueado por %d segundos\n", (sleepTimeTotal / 1000))
+	log.Printf("Bloqueado por %d milisegundos\n", (sleepTimeTotal / 1000))
 	time.Sleep(sleepTimeTotal)
 	//time.Sleep(time.Duration(sleepTimeTotal) * time.Second)
 }

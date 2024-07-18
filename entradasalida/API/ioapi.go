@@ -14,7 +14,6 @@ import (
 	"github.com/sisoputnfrba/tp-golang/utils/device"
 	"github.com/sisoputnfrba/tp-golang/utils/generics"
 	"github.com/sisoputnfrba/tp-golang/utils/pcb"
-	"github.com/sisoputnfrba/tp-golang/utils/slice"
 )
 
 type CantUnidadesTrabajo struct {
@@ -64,7 +63,6 @@ func InterfaceQueuePCB(w http.ResponseWriter, r *http.Request) {
 		}
 
 		log.Print("Nueva PCB ID: ", decodedStruct.Pcb.PID, " para usar Interfaz")
-		globals.InterfaceBinary <- true
 		globals.Generic_QueueChannel <- decodedStruct
 
 	case "STDIN":
@@ -77,7 +75,6 @@ func InterfaceQueuePCB(w http.ResponseWriter, r *http.Request) {
 		}
 
 		log.Print("Nueva PCB ID: ", decodedStruct.Pcb.PID, " para usar Interfaz")
-		globals.InterfaceBinary <- true
 		globals.Stdin_QueueChannel <- decodedStruct
 
 	case "STDOUT":
@@ -90,7 +87,6 @@ func InterfaceQueuePCB(w http.ResponseWriter, r *http.Request) {
 		}
 
 		log.Print("Nueva PCB ID: ", decodedStruct.Pcb.PID, " para usar Interfaz")
-		globals.InterfaceBinary <- true
 		globals.Stdout_QueueChannel <- decodedStruct
 
 	case "DIALFS":
@@ -103,7 +99,6 @@ func InterfaceQueuePCB(w http.ResponseWriter, r *http.Request) {
 		}
 
 		log.Print("Nueva PCB ID: ", decodedStruct.Pcb.PID, " para usar Interfaz")
-		globals.InterfaceBinary <- true
 		globals.DialFS_QueueChannel <- decodedStruct
 	}
 
@@ -116,60 +111,38 @@ func IOWork() {
 		var interfaceToWork globals.GenSleep
 		for {
 			interfaceToWork = <-globals.Generic_QueueChannel
-			slice.Push(&globals.GenericQueue, interfaceToWork)
-			<- globals.InterfaceBinary
 
-			fmt.Println("Lista de interfaces: ", globals.GenericQueue)
-
-			if(!slice.IsEmpty(globals.GenericQueue)) {
-				aux := slice.Shift(&globals.GenericQueue)
-				IO_GEN_SLEEP(aux.TimeToSleep, aux.Pcb)
-				log.Println("Fin de bloqueo para el PID: ", interfaceToWork.Pcb.PID)
-				returnPCB(aux.Pcb)
-			}
+			IO_GEN_SLEEP(interfaceToWork.TimeToSleep, interfaceToWork.Pcb)
+			log.Println("Fin de bloqueo para el PID: ", interfaceToWork.Pcb.PID)
+			returnPCB(interfaceToWork.Pcb)
 		}
 	case "STDIN":
 		var interfaceToWork globals.StdinRead
 		for {
 			interfaceToWork = <-globals.Stdin_QueueChannel
-			slice.Push(&globals.StdinQueue, interfaceToWork)
-			<- globals.InterfaceBinary
 			
-			if(!slice.IsEmpty(globals.StdinQueue)) {
-				aux := slice.Shift(&globals.StdinQueue)
-				IO_STDIN_READ(aux.Pcb, aux.DireccionesFisicas)
-				log.Println("Fin de bloqueo para el PID: ", interfaceToWork.Pcb.PID)
-				returnPCB(aux.Pcb)
-			}
+			IO_STDIN_READ(interfaceToWork.Pcb, interfaceToWork.DireccionesFisicas)
+			log.Println("Fin de bloqueo para el PID: ", interfaceToWork.Pcb.PID)
+			returnPCB(interfaceToWork.Pcb)
 		}
 	case "STDOUT":
 		var interfaceToWork globals.StdoutWrite
 		for {
 			interfaceToWork = <-globals.Stdout_QueueChannel
-			slice.Push(&globals.StdoutQueue, interfaceToWork)
-			<- globals.InterfaceBinary
-
-			if(!slice.IsEmpty(globals.StdoutQueue)) {
-				aux := slice.Shift(&globals.StdoutQueue)
-				IO_STDOUT_WRITE(aux.Pcb, aux.DireccionesFisicas)
-				log.Println("Fin de bloqueo para el PID: ", interfaceToWork.Pcb.PID)
-				returnPCB(aux.Pcb)
-			}
+			
+			IO_STDOUT_WRITE(interfaceToWork.Pcb, interfaceToWork.DireccionesFisicas)
+			log.Println("Fin de bloqueo para el PID: ", interfaceToWork.Pcb.PID)
+			returnPCB(interfaceToWork.Pcb)
 		}
 
 	case "DIALFS":
 		var interfaceToWork globals.DialFSRequest
 		for {
-			interfaceToWork = <-globals.DialFS_QueueChannel
-			slice.Push(&globals.DialFSQueue, interfaceToWork)
-			<- globals.InterfaceBinary
-			
-			if(!slice.IsEmpty(globals.DialFSQueue)) {
-				aux := slice.Shift(&globals.DialFSQueue)
-				IO_DIALFS(aux)
-				log.Println("Fin de bloqueo para el PID: ", interfaceToWork.Pcb.PID)
-				returnPCB(aux.Pcb)
-			}
+		interfaceToWork = <-globals.DialFS_QueueChannel
+		
+		IO_DIALFS(interfaceToWork)
+		log.Println("Fin de bloqueo para el PID: ", interfaceToWork.Pcb.PID)
+		returnPCB(interfaceToWork.Pcb)
 		}
 	}
 }
@@ -181,13 +154,10 @@ func returnPCB(pcb pcb.T_PCB) {
 // ------------------------- OPERACIONES -------------------------
 
 func IO_GEN_SLEEP(sleepTime int, pcb pcb.T_PCB) {
-	//sleepTimeTotal := sleepTime * globals.ConfigIO.Unit_work_time
-	//sleepTimeTotal := sleepTime * (globals.ConfigIO.Unit_work_time * int(time.Millisecond))
 	sleepTimeTotal := time.Duration(sleepTime * globals.ConfigIO.Unit_work_time) * time.Millisecond
 	log.Printf("PID: %d - Operacion: IO_GEN_SLEEP", pcb.PID)
 	log.Printf("Bloqueado por %d milisegundos\n", (sleepTimeTotal / 1000))
 	time.Sleep(sleepTimeTotal)
-	//time.Sleep(time.Duration(sleepTimeTotal) * time.Second)
 }
 
 func IO_STDIN_READ(pcb pcb.T_PCB, direccionesFisicas []globals.DireccionTamanio) {

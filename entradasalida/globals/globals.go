@@ -70,12 +70,6 @@ var Stdin_QueueChannel 		chan StdinRead
 var Stdout_QueueChannel 	chan StdoutWrite
 var DialFS_QueueChannel 	chan DialFSRequest
 
-var InterfaceBinary  		= make (chan bool, 1)
-var GenericQueue 			[]GenSleep
-var StdinQueue 				[]StdinRead
-var StdoutQueue 			[]StdoutWrite
-var DialFSQueue 			[]DialFSRequest
-
 type DireccionTamanio struct {
 	DireccionFisica 		int
 	Tamanio         		int

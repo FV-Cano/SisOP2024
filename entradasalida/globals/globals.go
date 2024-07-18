@@ -11,6 +11,14 @@ var (
 	Fcbs map[string]Metadata
 )
 
+type T_Bitmap struct {
+	BitMap []int `json:"bitmap"`
+}
+
+type T_Blocks struct {
+	Blocks []byte `json:"blocks"`
+}
+
 type T_ConfigIO struct {
 	Ip                 		string `json:"ip"`
 	Port               		int    `json:"port"`
@@ -61,6 +69,12 @@ var Generic_QueueChannel 	chan GenSleep
 var Stdin_QueueChannel 		chan StdinRead
 var Stdout_QueueChannel 	chan StdoutWrite
 var DialFS_QueueChannel 	chan DialFSRequest
+
+var InterfaceBinary  		= make (chan bool, 1)
+var GenericQueue 			[]GenSleep
+var StdinQueue 				[]StdinRead
+var StdoutQueue 			[]StdoutWrite
+var DialFSQueue 			[]DialFSRequest
 
 type DireccionTamanio struct {
 	DireccionFisica 		int

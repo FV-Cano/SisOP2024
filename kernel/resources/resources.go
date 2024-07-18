@@ -5,7 +5,6 @@ import (
 	"log"
 	"net/http"
 
-	kernel_api "github.com/sisoputnfrba/tp-golang/kernel/API"
 	"github.com/sisoputnfrba/tp-golang/kernel/globals"
 	"github.com/sisoputnfrba/tp-golang/utils/pcb"
 	"github.com/sisoputnfrba/tp-golang/utils/slice"
@@ -45,12 +44,20 @@ func DequeueProcess(resource string) pcb.T_PCB {
 	pcb := globals.ResourceMap[resource][0]
 	globals.ResourceMap[resource] = globals.ResourceMap[resource][1:]
 
-	kernel_api.RemoveFromBlocked(uint32(pcb.PID))
+	RemoveFromBlocked(uint32(pcb.PID))
 	return pcb
 }
 
+func RemoveFromBlocked(pid uint32) {
+	for i, pcb := range globals.Blocked {
+		if pcb.PID == pid {
+			slice.RemoveAtIndex(&globals.Blocked, i)
+		}
+	}
+}
+
 /**
- * Solicita la consumisión una instancia de un recurso // TODO: consume un recurso, PERO no se lo asigna a nadie
+ * Solicita la consumisión una instancia de un recurso
 
  * @param resource: recurso a consumir
 */
@@ -95,7 +102,7 @@ func ReleaseConsumption(resource string) {
 	log.Print("Se libero una instancia del recurso: ", resource, "\n")
 	slice.InsertAtIndex(&globals.STS, 0, globals.CurrentJob)
 	ReleaseJobIfBlocked(resource)
-	globals.STSCounter <- 1
+	globals.STSCounter <- 1	// TODO: dudas
 }
 
 /**

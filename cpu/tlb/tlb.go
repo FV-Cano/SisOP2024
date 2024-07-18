@@ -2,6 +2,7 @@ package tlb
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/sisoputnfrba/tp-golang/cpu/globals"
 )
@@ -17,25 +18,25 @@ var CurrentTLB TLB
 var OrderedKeys []int //mantiene el orden de las claves en la TLB
 
 func BuscarEnTLB(pid, pagina int) bool {
-	if (globals.Configcpu.Number_felling_tlb > 0){
-	for _, entradaTLB := range CurrentTLB {
-		if entry, exists := entradaTLB[pid]; exists && entry.Pagina == pagina {
-			return true
+	if globals.Configcpu.Number_felling_tlb > 0 {
+		for _, entradaTLB := range CurrentTLB {
+			if entry, exists := entradaTLB[pid]; exists && entry.Pagina == pagina {
+				return true
+			}
 		}
 	}
-}
 	return false
 }
 
 func FrameEnTLB(pid int, pagina int) int {
-	if (globals.Configcpu.Number_felling_tlb > 0){
-	for _, entradaTLB := range CurrentTLB {
-		if entry, exists := entradaTLB[pid]; exists && entry.Pagina == pagina {
-			ActualizarTLB(pid, pagina, entry.Marco)
-			return entry.Marco
+	if globals.Configcpu.Number_felling_tlb > 0 {
+		for _, entradaTLB := range CurrentTLB {
+			if entry, exists := entradaTLB[pid]; exists && entry.Pagina == pagina {
+				ActualizarTLB(pid, pagina, entry.Marco)
+				return entry.Marco
+			}
 		}
 	}
-}
 	return -1
 }
 
@@ -75,8 +76,8 @@ func CalcularDireccionFisica(frame int, offset int, tamanio int) int {
 }*/
 
 func ActualizarTLB(pid, pagina, marco int) {
-	
-	if(globals.Configcpu.Number_felling_tlb > 0) {
+
+	if globals.Configcpu.Number_felling_tlb > 0 {
 		switch globals.Configcpu.Algorithm_tlb {
 		case "FIFO":
 			if !BuscarEnTLB(pid, pagina) { //Si la página no está en la tlb
@@ -86,9 +87,9 @@ func ActualizarTLB(pid, pagina, marco int) {
 					}
 					CurrentTLB = append(CurrentTLB, nuevoElemento)
 					fmt.Printf("Se agregó la entrada %d a la TLB", CurrentTLB)
-					fmt.Println("LA TLB QUEDO ASI: ")
+					log.Println("LA TLB QUEDO ASI: ")
 					for i := range CurrentTLB {
-						fmt.Println(CurrentTLB[i])
+						log.Println(CurrentTLB[i])
 					}
 				} else {
 					// Remover el primer elemento (FIFO) y agregar el nuevo
@@ -96,13 +97,12 @@ func ActualizarTLB(pid, pagina, marco int) {
 						pid: {Pagina: pagina, Marco: marco},
 					})
 					fmt.Printf("Se agregó la entrada %d a la TLB", CurrentTLB)
-					fmt.Println("LA TLB QUEDO ASI: ")
+					log.Println("LA TLB QUEDO ASI: ")
 					for i := range CurrentTLB {
-						fmt.Println(CurrentTLB[i])
+						log.Println(CurrentTLB[i])
 					}
 				}
 			}
-		
 
 		case "LRU":
 			/**Lista “jenga” con números de págs -> con cada referencia se coloca (o se mueve, si ya existe) la pág al final de la lista.
@@ -124,11 +124,11 @@ func ActualizarTLB(pid, pagina, marco int) {
 				CurrentTLB = append(CurrentTLB[:indice], CurrentTLB[indice+1:]...)
 				CurrentTLB = append(CurrentTLB, map[int]Pagina_marco{pid: {Pagina: pagina, Marco: marco}})
 			}
-		
+
 			// Imprimir la TLB
-			fmt.Println("LA TLB QUEDO ASI: ")
+			log.Println("LA TLB QUEDO ASI: ")
 			for i := range CurrentTLB {
-				fmt.Println(CurrentTLB[i])
+				log.Println(CurrentTLB[i])
 			}
 		}
 	}
@@ -159,9 +159,9 @@ func ActualizarOrdenDeAcceso(pid, pagina, marco int) {
 		}
 		CurrentTLB = append(CurrentTLB, nuevoElemento)
 		fmt.Printf("Se agregó la entrada %d a la TLB\n", pid)
-		fmt.Println("LA TLB QUEDO ASI: ")
+		log.Println("LA TLB QUEDO ASI: ")
 		for i := range CurrentTLB {
-			fmt.Println(CurrentTLB[i])
+			log.Println(CurrentTLB[i])
 		}
 	}
 }

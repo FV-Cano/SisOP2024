@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"math"
+	//"math"
 	"net/http"
 	"strconv"
 
@@ -70,11 +70,11 @@ func PedirTamTablaPaginas(pid int) int {
 		log.Fatal("Error al leer el cuerpo de la respuesta")
 	}
 
-	//fmt.Println("QUE RECIBISTE VERSION TABLA: ", globals.BytesToInt(tamTabla))
-	
+	//log.Println("QUE RECIBISTE VERSION TABLA: ", globals.BytesToInt(tamTabla))
+
 	tamTablaString := string(tamTabla)
 	tamTablaInt := globals.PasarAInt(tamTablaString)
-	fmt.Println("QUE RECIBISTE VERSION INT: ", tamTablaInt)
+	log.Println("QUE RECIBISTE VERSION INT: ", tamTablaInt)
 
 	return tamTablaInt
 
@@ -123,77 +123,86 @@ func ObtenerDireccionesFisicas(direccionLogica int, tamanio int, pid int) []glob
 	var direccion_y_tamanio []globals.DireccionTamanio
 	tamPagina := SolicitarTamPagina()
 	numeroPagina := direccionLogica / tamPagina
-	desplazamiento := direccionLogica - numeroPagina * tamPagina 
-	cantidadPaginas := int(math.Ceil(float64(tamanio) / float64(tamPagina)))
+	desplazamiento := direccionLogica - numeroPagina*tamPagina
+	//cantidadPaginas := int(math.Ceil(float64(tamanio) / float64(tamPagina)))
+	cantidadPaginas := (desplazamiento + tamanio) / tamPagina
+	log.Println("Cantidad de páginas: ", cantidadPaginas)
+
 	var frame int
 	var tamanioTotal int
-	if desplazamiento + tamanio > tamPagina {
-		cantidadPaginas++
+	if (desplazamiento + tamanio)%tamPagina != 0 {
+		cantidadPaginas++ // Agregar una página adicional solo si es necesario
 	}
-	if (PedirTamTablaPaginas(pid) == 0){
+
+	if PedirTamTablaPaginas(pid) == 0 {
 		tamanioTotal = desplazamiento + tamanio
-		fmt.Println("ME METI X PRIM VEZ A LA TABLA, TAMANIO", tamanioTotal)
+		log.Println("ME METI X PRIM VEZ A LA TABLA, TAMANIO", tamanioTotal)
 	} else {
-		if(tlb.BuscarEnTLB(pid, numeroPagina)){
+		if tlb.BuscarEnTLB(pid, numeroPagina) {
 			log.Printf("PID: %d - TLB HIT - Pagina: %d", pid, numeroPagina)
 			frame = tlb.FrameEnTLB(pid, numeroPagina)
-		} else { 
+		} else {
 			log.Printf("PID: %d - TLB MISS - Pagina: %d", pid, numeroPagina)
 			frame = Frame_rcv(globals.CurrentJob, numeroPagina)
 			tlb.ActualizarTLB(pid, numeroPagina, frame)
-			}		
-			tamanioTotal = frame * tamPagina + desplazamiento + tamanio
 		}
-	
-	if (tamanioTotal > PedirTamTablaPaginas(pid) * tamPagina) {	
-		fmt.Println("VOY A SOLICITAR RESIZE")
+		tamanioTotal = frame*tamPagina + desplazamiento + tamanio
+	}
+
+	if tamanioTotal > PedirTamTablaPaginas(pid)*tamPagina {
+		log.Println("VOY A SOLICITAR RESIZE")
 		solicitudesmemoria.Resize(tamanioTotal)
 	}
-	
+
 	//Primer pagina teniendo en cuenta el desplazamiento
-	if(tamanio < tamPagina - desplazamiento){
+	if tamanio < tamPagina-desplazamiento {
 		slice.Push(&direccion_y_tamanio, globals.DireccionTamanio{DireccionFisica: frame*tamPagina + desplazamiento, Tamanio: tamanio})
 	} else {
 		slice.Push(&direccion_y_tamanio, globals.DireccionTamanio{DireccionFisica: frame*tamPagina + desplazamiento, Tamanio: tamPagina - desplazamiento})
 		tamanioRestante := tamanio - (tamPagina - desplazamiento)
-		
-		fmt.Println("AGREGUE DIREC FISICA A LA LISTA")
-	
+
+		log.Println("AGREGUE DIREC FISICA A LA LISTA")
+
 		for i := 1; i < cantidadPaginas; i++ {
-			if i == cantidadPaginas-1 {
+			log.Println("Tamaño restante: ", tamanioRestante)
+			log.Println("Desplazamiento: ", desplazamiento)
+			log.Println("Numero de página: ", numeroPagina)
+			log.Println("El valor de i: ", i)
+			log.Println("Cantidad de páginas: ", cantidadPaginas)
+			if i == cantidadPaginas - 1 {
 				//Ultima pagina teniendo en cuenta el tamanio
 				numeroPagina++
-				if(tlb.BuscarEnTLB(pid, numeroPagina)){ 
+				if tlb.BuscarEnTLB(pid, numeroPagina) {
 					log.Printf("PID: %d - TLB HIT - Pagina: %d", pid, numeroPagina)
 					frame = tlb.FrameEnTLB(pid, numeroPagina)
 					fmt.Printf("BUSQUE EN TLB PARA EL PID %d LA PAG %d EL FRAME %d ", pid, numeroPagina, frame)
-	
-				} else { 
+
+				} else {
 					log.Printf("PID: %d - TLB MISS - Pagina: %d", pid, numeroPagina)
 					frame = Frame_rcv(globals.CurrentJob, numeroPagina)
 					tlb.ActualizarTLB(pid, numeroPagina, frame)
-					fmt.Printf("Busco FRAME MEMORIA para el PID %d Y EL FRAME ES %d ",pid,frame)
+					fmt.Printf("Busco FRAME MEMORIA para el PID %d Y EL FRAME ES %d ", pid, frame)
 				}
 				slice.Push(&direccion_y_tamanio, globals.DireccionTamanio{DireccionFisica: frame * tamPagina, Tamanio: tamanioRestante})
+
 			} else { //Paginas del medio sin tener en cuenta el desplazamiento
 				numeroPagina++
-				if(tlb.BuscarEnTLB(pid, numeroPagina)){
+				if tlb.BuscarEnTLB(pid, numeroPagina) {
 					log.Printf("PID: %d - TLB HIT - Pagina: %d", pid, numeroPagina)
 					frame = tlb.FrameEnTLB(pid, numeroPagina)
 					fmt.Printf("BUSQUE EN TLB PARA EL PID %d LA PAG %d EL FRAME %d ", pid, numeroPagina, frame)
-	
-				} else { 
+
+				} else {
 					log.Printf("PID: %d - TLB MISS - Pagina: %d", pid, numeroPagina)
 					frame = Frame_rcv(globals.CurrentJob, numeroPagina)
-					fmt.Printf("Busco FRAME MEMORIA para el PID %d Y EL FRAME ES %d ",pid,frame)
+					fmt.Printf("Busco FRAME MEMORIA para el PID %d Y EL FRAME ES %d ", pid, frame)
 					tlb.ActualizarTLB(pid, numeroPagina, frame)
-					}		
+				}
 				slice.Push(&direccion_y_tamanio, globals.DireccionTamanio{DireccionFisica: frame * tamPagina, Tamanio: tamPagina})
 				tamanioRestante -= tamPagina
 			}
 		}
 	}
-	
+
 	return direccion_y_tamanio
 }
-

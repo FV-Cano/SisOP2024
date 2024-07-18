@@ -65,9 +65,12 @@ func HandleInterruption(w http.ResponseWriter, r *http.Request) {
 	}
 
 	evictionReasons := map[string]struct{}{
-		"EXIT":          {},
-		"BLOCKED_IO":    {},
-		"OUT_OF_MEMORY": {},
+		"EXIT":          		{},
+		"BLOCKED_IO_GEN": 		{},
+		"BLOCKED_IO_STDIN":		{},
+		"BLOCKED_IO_STDOUT":	{},
+		"BLOCKED_IO_DIALFS":    {},
+		"OUT_OF_MEMORY": 		{},
 	}
 
 	if _, ok := evictionReasons[globals.CurrentJob.EvictionReason]; !ok && request.Pid == globals.CurrentJob.PID {

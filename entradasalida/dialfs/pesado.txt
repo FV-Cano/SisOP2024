@@ -1,1 +1,1 @@
-{"initial_block":1,"size":250}}
+{"initial_block":1,"size":250}

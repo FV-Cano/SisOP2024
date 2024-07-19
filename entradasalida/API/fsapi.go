@@ -168,16 +168,16 @@ func CreateFile(pid int, nombreArchivo string) {
  * DeleteFile: elimina un archivo del sistema de archivos y su FCB asociado (incluye liberar los bloques de datos)
  */
 func DeleteFile(pid int, nombreArchivo string) error {
-	nombreArchivo = "dialfs/" + nombreArchivo
+	rutaArchivo := "dialfs/" + nombreArchivo
 
 	// Paso 1: Verificar si el archivo existe
-	if _, err := os.Stat(nombreArchivo); os.IsNotExist(err) {
+	if _, err := os.Stat(rutaArchivo); os.IsNotExist(err) {
 		// El archivo no existe
 		return errors.New("el archivo no existe")
 	}
 
 	// Leer la información del archivo antes de eliminarlo
-	archivo := ioutils.LeerArchivoEnStruct(nombreArchivo)
+	archivo := ioutils.LeerArchivoEnStruct(rutaArchivo)
 
 	sizeArchivo := archivo.Size
 	sizeArchivoEnBloques := int(math.Max(1, math.Ceil(float64(sizeArchivo)/float64(globals.ConfigIO.Dialfs_block_size))))
@@ -185,7 +185,7 @@ func DeleteFile(pid int, nombreArchivo string) error {
 	posBloqueInicial := archivo.InitialBlock - 1
 
 	// Paso 2: Eliminar el archivo del sistema de archivos
-	err := os.Remove(nombreArchivo)
+	err := os.Remove(rutaArchivo)
 	if err != nil {
 		// Error al intentar eliminar el archivo
 		return err

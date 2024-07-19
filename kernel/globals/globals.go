@@ -16,6 +16,7 @@ var (
 	STS 						[]pcb.T_PCB
 	Blocked 					[]pcb.T_PCB
 	STS_Priority 				[]pcb.T_PCB
+	Terminated 					[]pcb.T_PCB
 	Interfaces 					[]device.T_IOInterface
 	ResourceMap					map[string][]pcb.T_PCB
 	Resource_instances  		map[string]int

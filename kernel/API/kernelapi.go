@@ -153,7 +153,7 @@ func ProcessDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Si el proceso está en ejecución, se envía una interrupción para desalojarlo con INTERRUPTED_BY_USER, de lo contrario se elimina directamente y se saca de la cola en la que se encuentre 
-	if pid == globals.CurrentJob.PID {
+	if (pid == globals.CurrentJob.PID && globals.CurrentJob.State == "EXEC") {
 		SendInterrupt("DELETE", pid)
 	} else {
 		DeleteByID(pid)
@@ -269,6 +269,7 @@ func getProcessList() []pcb.T_PCB {
 	allProcesses = append(allProcesses, globals.STS...)
 	allProcesses = append(allProcesses, globals.STS_Priority...)
 	allProcesses = append(allProcesses, globals.Blocked...)
+	allProcesses = append(allProcesses, globals.Terminated...)
 	if globals.CurrentJob.PID != 0 && pidIsNotOnList(globals.CurrentJob.PID, allProcesses){
 		allProcesses = append(allProcesses, globals.CurrentJob)
 	}
@@ -406,10 +407,11 @@ func RemoveByID(pid uint32) pcb.T_PCB {
 }
 
 func KillJob(pcb pcb.T_PCB) {
+	globals.ChangeState(&globals.CurrentJob, "TERMINATED")
 	if (resource.HasResources(pcb)) {
 		advancedDeleting(pcb)
 	}
-
+	slice.Push(&globals.Terminated, pcb)
 	RequestMemoryRelease(pcb.PID)
 	fmt.Print("Se eliminó el proceso ", pcb.PID, " satisfactoriamente\n")
 }

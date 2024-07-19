@@ -187,7 +187,7 @@ func ReducirProceso(diferenciaEnPaginas int, pid int) string {
 
 	for diferenciaPositiva > 0 {
 		//obtener el marco que le corresponde a la página
-		marco := BuscarMarco(pid, diferenciaPositiva)
+		marco := BuscarMarco(pid, diferenciaPositiva-1)
 		//marcar marco como desocupado
 		globals.Tablas_de_paginas[pid] = globals.Tablas_de_paginas[pid][:len(globals.Tablas_de_paginas[pid])-1]
 		Clear(marco)

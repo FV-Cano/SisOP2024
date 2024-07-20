@@ -156,7 +156,7 @@ func returnPCB(pcb pcb.T_PCB) {
 func IO_GEN_SLEEP(sleepTime int, pcb pcb.T_PCB) {
 	sleepTimeTotal := time.Duration(sleepTime * globals.ConfigIO.Unit_work_time) * time.Millisecond
 	log.Printf("PID: %d - Operacion: IO_GEN_SLEEP", pcb.PID)
-	//log.Printf("Bloqueado por %d segundos\n", (sleepTimeTotal / 1000))
+	log.Printf("Bloqueado por %d milisegundos\n", (sleepTimeTotal / 1000))
 	time.Sleep(sleepTimeTotal)
 }
 

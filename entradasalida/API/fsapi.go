@@ -168,16 +168,16 @@ func CreateFile(pid int, nombreArchivo string) {
  * DeleteFile: elimina un archivo del sistema de archivos y su FCB asociado (incluye liberar los bloques de datos)
  */
 func DeleteFile(pid int, nombreArchivo string) error {
-	nombreArchivo = "dialfs/" + nombreArchivo
+	rutaArchivo := "dialfs/" + nombreArchivo
 
 	// Paso 1: Verificar si el archivo existe
-	if _, err := os.Stat(nombreArchivo); os.IsNotExist(err) {
+	if _, err := os.Stat(rutaArchivo); os.IsNotExist(err) {
 		// El archivo no existe
 		return errors.New("el archivo no existe")
 	}
 
 	// Leer la información del archivo antes de eliminarlo
-	archivo := ioutils.LeerArchivoEnStruct(nombreArchivo)
+	archivo := ioutils.LeerArchivoEnStruct(rutaArchivo)
 
 	sizeArchivo := archivo.Size
 	sizeArchivoEnBloques := int(math.Max(1, math.Ceil(float64(sizeArchivo)/float64(globals.ConfigIO.Dialfs_block_size))))
@@ -185,7 +185,7 @@ func DeleteFile(pid int, nombreArchivo string) error {
 	posBloqueInicial := archivo.InitialBlock - 1
 
 	// Paso 2: Eliminar el archivo del sistema de archivos
-	err := os.Remove(nombreArchivo)
+	err := os.Remove(rutaArchivo)
 	if err != nil {
 		// Error al intentar eliminar el archivo
 		return err
@@ -376,10 +376,15 @@ func TruncateFile(pid int, nombreArchivo string, tamanioDeseado int) { //revisar
 				fmt.Println("FS - ", nombreArchivo, " No entra el archivo pero alcanza la cantidad de bloques libres")
 				//Si no entra en ningún lugar, compactar
 
+				delete(globals.Fcbs, nombreArchivo)
+
 				Compactar()
 
 				primerBloqueLibre := ioutils.CalcularBloqueLibre()
 				fmt.Println("FS - ", nombreArchivo, " Primer bloque libre: ", primerBloqueLibre)
+
+				archivo.InitialBlock = primerBloqueLibre
+				archivo.Size = tamanioDeseado
 
 				posPrimerBloqueLibre := primerBloqueLibre - 1
 				
@@ -390,9 +395,6 @@ func TruncateFile(pid int, nombreArchivo string, tamanioDeseado int) { //revisar
 				// Bloque 1 - Posicion 0
 				// 1 * 16 - 1 = 15
 				// 0 * 16 = 0
-
-				archivo.InitialBlock = primerBloqueLibre
-				archivo.Size = tamanioDeseado
 
 				archivoMarshallado, err := json.Marshal(archivo)
 				if err != nil {
@@ -481,15 +483,23 @@ func Compactar() {
         tamArchivoEnBloques := int(math.Max(1, math.Ceil(float64(metadata.Size)/float64(tamBloqueEnBytes))))
         bloqueInicial := metadata.InitialBlock
 
+		fmt.Println("Moviendo archivo: ", nombreArchivo)
+		fmt.Println("Bloque inicial: ", bloqueInicial)
+
         for i := 0; i < tamArchivoEnBloques; i++ {
             primerByteACopiar := (bloqueInicial + i - 1) * tamBloqueEnBytes
-            ultimoByteACopiar := primerByteACopiar + tamBloqueEnBytes - 1
+            ultimoByteACopiar := primerByteACopiar + tamBloqueEnBytes //- 1
 			/*if ultimoByteACopiar > len(globals.Blocks) {
                 ultimoByteACopiar = len(globals.Blocks)
             } */
 
             n := copy(bloquesDeArchivos[offset:], globals.Blocks[primerByteACopiar:ultimoByteACopiar])
-            offset += n // Actualiza el offset con el número de bytes copiados
+			
+			fmt.Println("N vale: ", n)
+			fmt.Println("Primer byte a copiar: ", primerByteACopiar)
+			fmt.Println("Ultimo byte a copiar: ", ultimoByteACopiar)
+         	offset += n  // Actualiza el offset con el número de bytes copiados
+			fmt.Println("Offset vespues vale: ", offset)
         }
 
         metadata.InitialBlock = ioutils.CalcularBloqueLibre()

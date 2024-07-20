@@ -11,13 +11,9 @@ import (
 	"github.com/sisoputnfrba/tp-golang/entradasalida/globals"
 )
 
-/*
-*
-
+/**
   - CrearModificarArchivo: carga un archivo en el sistema de archivos
-
   - @param nombreArchivo: nombre del archivo a cargar
-
   - @param contenido: contenido del archivo a cargar (en bytes)
 */
 func CrearModificarArchivo(nombreArchivo string, contenido []byte) {
@@ -36,7 +32,7 @@ func CrearModificarArchivo(nombreArchivo string, contenido []byte) {
 			log.Fatalf("Failed creating file: %s", err)
 		}
 	} else {
-		file, err = os.OpenFile(nombreArchivo, os.O_WRONLY|os.O_CREATE, 0644)
+		file, err = os.OpenFile(nombreArchivo, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 		if err != nil {
 			log.Fatalf("Failed opening file: %s", err)
 		}

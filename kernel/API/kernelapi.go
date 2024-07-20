@@ -15,6 +15,8 @@ import (
 	"github.com/sisoputnfrba/tp-golang/utils/slice"
 )
 
+// ! Verificar que no se genere ningún problema de dependencias con resources
+
 /* Glossary:
 - BRQ: Body Request
 - BRS: Body Response
@@ -160,7 +162,6 @@ func ProcessDelete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	// w.Write([]byte("Job deleted")) // ! No tiene que devolver nada
 }
 
 type ProcessStatus_BRS struct {

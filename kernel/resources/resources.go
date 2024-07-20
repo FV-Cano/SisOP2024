@@ -48,6 +48,7 @@ func DequeueProcess(resource string) pcb.T_PCB {
 	return pcb
 }
 
+// No es la implementación más linda pero es la solución inmediata para evitar dependencias circulares
 func RemoveFromBlocked(pid uint32) {
 	for i, pcb := range globals.Blocked {
 		if pcb.PID == pid {

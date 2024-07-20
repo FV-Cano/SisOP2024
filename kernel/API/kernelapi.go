@@ -15,6 +15,8 @@ import (
 	"github.com/sisoputnfrba/tp-golang/utils/slice"
 )
 
+// ! Verificar que no se genere ningún problema de dependencias con resources
+
 /* Glossary:
 - BRQ: Body Request
 - BRS: Body Response

@@ -7,6 +7,6 @@
     "planning_algorithm": "VRR", 
     "quantum": 500,
     "resources": ["RA", "RB", "RC", "RD"],
-    "resource_instances": [1,1,1,1],
+    "resource_instances": [1, 1, 1, 1],
     "multiprogramming": 100
 }

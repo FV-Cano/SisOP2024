@@ -189,6 +189,7 @@ func VRR_Plan() {
 
     // Iniciar el temporizador para el quantum del trabajo actual
     timeBefore := time.Now()
+	log.Printf("Quantum PRE-EXEC: %d\n", globals.CurrentJob.Quantum)
     go startTimer(globals.CurrentJob.Quantum)
 
     // Enviar el PCB al kernel
@@ -201,9 +202,13 @@ func VRR_Plan() {
     timeAfter := time.Now()
     diffTime := uint32(timeAfter.Sub(timeBefore))
 
+	log.Printf("Difftime: %d\n", diffTime)
+	log.Printf("Quantum: %d\n", globals.CurrentJob.Quantum)
+
     if diffTime < globals.CurrentJob.Quantum {
         // Si el trabajo terminó antes de consumir su quantum, ajustar el quantum restante
-        globals.CurrentJob.Quantum -= uint32(time.Duration(diffTime) * time.Millisecond)
+        globals.CurrentJob.Quantum -= uint32(time.Duration(diffTime))
+		log.Print("Quantum restante: ", globals.CurrentJob.Quantum)
     } else {
         // Si el trabajo consumió todo su quantum, restablecer el quantum según la configuración del kernel
         globals.CurrentJob.Quantum = uint32(time.Duration(globals.Configkernel.Quantum) * time.Millisecond)
@@ -313,7 +318,6 @@ func EvictionManagement() {
 		//<-globals.JobExecBinary
 
 	case "TIMEOUT":
-		// TODO: Doble inserción en STS
 		globals.ChangeState(&globals.CurrentJob, "READY")
 		globals.STS = append(globals.STS, globals.CurrentJob)
 		log.Printf("PID: %d - Desalojado por fin de quantum\n", globals.CurrentJob.PID)

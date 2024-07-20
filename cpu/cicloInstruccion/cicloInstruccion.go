@@ -567,6 +567,7 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 
 		log.Println("EL STRING ES", valor2EnString)
 
+		// TODO: Hacer que reciba bytes
 		solicitudesmemoria.SolicitarEscritura(direcsFisicas, valor2EnString, int(currentPCB.PID)) //([direccion fisica y tamanio], valorAEscribir, pid
 
 		//----------------------------------------------------------------------------
@@ -607,7 +608,7 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		//Obtenemos el valor guardado en las direcciones fisicas
 		datos := solicitudesmemoria.SolicitarLectura(direcsFisicas, int(currentPCB.PID))
 		log.Println("Los datos MOSTRAMELLON son: ", datos)
-
+		
 		// Almacenamos lo leido en el registro destino
 		log.Println("ACA ENTRO? EL TIPOREG1 ME LO DIO?: ", tipoReg1)
 		var datosAAlmacenar uint64

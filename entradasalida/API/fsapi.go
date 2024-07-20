@@ -230,7 +230,7 @@ func ReadFile(pid int, nombreArchivo string, direccionesFisicas []globals.Direcc
 		log.Println("El tamaño a leer es superior a el correspondiente del archivo")
 	} else {
 		contenidoALeer = ioutils.ReadFs(nombreArchivo, puntero, tamanioLeer)
-		IO_DIALFS_READ(pid, direccionesFisicas, string(contenidoALeer))
+		IO_DIALFS_READ(pid, direccionesFisicas, contenidoALeer)
 	}
 
 	log.Printf("PID: %d - Leer Archivo: %s - Tamaño a Leer: %d - Puntero Archivo: %d", pid, nombreArchivo, tamanioLeer, puntero)

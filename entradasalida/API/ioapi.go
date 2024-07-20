@@ -166,15 +166,15 @@ func IO_STDIN_READ(pcb pcb.T_PCB, direccionesFisicas []globals.DireccionTamanio)
 	fmt.Print("Ingrese datos: ")
 	reader := bufio.NewReader(os.Stdin)
 	data, _ := reader.ReadString('\n')
-
+	
 	// Le pido a memoria que me guarde los datos
 	url := fmt.Sprintf("http://%s:%d/write", globals.ConfigIO.Ip_memory, globals.ConfigIO.Port_memory)
 
 	bodyWrite, err := json.Marshal(struct {
 		DireccionesTamanios []globals.DireccionTamanio `json:"direcciones_tamanios"`
-		Valor_a_escribir    string                     `json:"valor_a_escribir"`
+		Valor_a_escribir    []byte                     `json:"valor_a_escribir"`
 		Pid                 int                        `json:"pid"`
-	}{direccionesFisicas, data, int(pcb.PID)})
+	}{direccionesFisicas, []byte(data), int(pcb.PID)})
 	if err != nil {
 		log.Printf("Failed to encode data: %v", err)
 	}
@@ -208,14 +208,6 @@ func IO_STDOUT_WRITE(pcb pcb.T_PCB, direccionesFisicas []globals.DireccionTamani
 	if err != nil {
 		return
 	}
-	/*
-		bodyRead, err := json.Marshal(struct {
-			DireccionesTamanios 			[]globals.DireccionTamanio `json:"direcciones_tamanios"`
-			Pid 							int  					   `json:"pid"`
-		} {direccionesFisicas, int(pcb.PID)})
-		if err != nil {
-			log.Printf("Failed to encode data: %v", err)
-		}*/
 
 	datosLeidos, err := http.Post(url, "application/json", bytes.NewBuffer(bodyRead))
 	if err != nil {
@@ -237,12 +229,6 @@ func IO_STDOUT_WRITE(pcb pcb.T_PCB, direccionesFisicas []globals.DireccionTamani
 	for _, sliceBytes := range response.Contenido {
 		bytesConcatenados = append(bytesConcatenados, sliceBytes...)
 	}
-
-	// Lee los datos de la respuesta
-	/* response, err := io.ReadAll(datosLeidos.Body)
-	if err != nil {
-		log.Printf("Failed to read response body: %v", err)
-	} */
 
 	// Convierto los datos a string
 	responseString := string(bytesConcatenados)
@@ -286,14 +272,14 @@ func IO_DIALFS(interfaceToWork globals.DialFSRequest) {
 	fmt.Println("El archivo de bitmap.dat es: " , globals.CurrentBitMap)
 }
 
-func IO_DIALFS_READ(pid int, direccionesFisicas []globals.DireccionTamanio, contenido string) {
+func IO_DIALFS_READ(pid int, direccionesFisicas []globals.DireccionTamanio, contenido []byte) {
 
 	// Le pido a memoria que me guarde los datos
 	url := fmt.Sprintf("http://%s:%d/write", globals.ConfigIO.Ip_memory, globals.ConfigIO.Port_memory)
 
 	bodyWrite, err := json.Marshal(struct {
 		DireccionesTamanios []globals.DireccionTamanio `json:"direcciones_tamanios"`
-		Valor_a_escribir    string                     `json:"valor_a_escribir"`
+		Valor_a_escribir    []byte                     `json:"valor_a_escribir"`
 		Pid                 int                        `json:"pid"`
 	}{direccionesFisicas, contenido, pid})
 	if err != nil {

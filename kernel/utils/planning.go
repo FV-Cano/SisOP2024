@@ -65,7 +65,7 @@ func STS_Plan() {
 
 	case "RR":
 		log.Println("ROUND ROBIN algorithm")
-		quantum := uint32(globals.Configkernel.Quantum * int(time.Millisecond))
+		quantum := uint32(time.Duration(globals.Configkernel.Quantum) * time.Millisecond)	// TODO change
 		for {
 			if globals.PlanningState == "STOPPED" {
 				globals.STSPlanBinary <- true
@@ -203,10 +203,10 @@ func VRR_Plan() {
 
     if diffTime < globals.CurrentJob.Quantum {
         // Si el trabajo terminó antes de consumir su quantum, ajustar el quantum restante
-        globals.CurrentJob.Quantum -= diffTime * uint32(time.Millisecond)
+        globals.CurrentJob.Quantum -= uint32(time.Duration(diffTime) * time.Millisecond)
     } else {
         // Si el trabajo consumió todo su quantum, restablecer el quantum según la configuración del kernel
-        globals.CurrentJob.Quantum = uint32(globals.Configkernel.Quantum * int(time.Millisecond))
+        globals.CurrentJob.Quantum = uint32(time.Duration(globals.Configkernel.Quantum) * time.Millisecond)
     }
 
     // Manejar la gestión de expulsión después de la ejecución del trabajo

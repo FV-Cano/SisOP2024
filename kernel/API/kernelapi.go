@@ -60,7 +60,7 @@ func ProcessInit(w http.ResponseWriter, r *http.Request) {
 	newPcb := &pcb.T_PCB{
 		PID:     request.PID, // ! ESTO NO ESTABA >:v
 		PC:      0,
-		Quantum: uint32(globals.Configkernel.Quantum * int(time.Millisecond)),
+		Quantum: uint32(time.Duration(globals.Configkernel.Quantum) * time.Millisecond),
 		CPU_reg: map[string]interface{}{
 			"AX":  uint8(0),
 			"BX":  uint8(0),
@@ -361,11 +361,6 @@ func SearchByID(pid uint32, processList []pcb.T_PCB) (*pcb.T_PCB, int) {
 func DeleteByID(pid uint32) error {
 	pcbToDelete := RemoveByID(pid)
 
-	fmt.Println("\n\nPID: ", pid)
-	fmt.Println("LTS: ", globals.LTS)
-	fmt.Println("STS: ", globals.STS)
-	fmt.Println("PCB: ", pcbToDelete)
-
 	if pcbToDelete.PID == 0 {
 		return fmt.Errorf("process with PID %d not found", pid)
 	} else {
@@ -408,7 +403,7 @@ func RemoveByID(pid uint32) pcb.T_PCB {
 }
 
 func KillJob(pcb pcb.T_PCB) {
-	globals.ChangeState(&globals.CurrentJob, "TERMINATED")
+	globals.ChangeState(&pcb, "TERMINATED")
 	if (resource.HasResources(pcb)) {
 		advancedDeleting(pcb)
 	}

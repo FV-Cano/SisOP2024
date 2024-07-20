@@ -269,9 +269,9 @@ func EvictionManagement() {
 	case "BLOCKED_IO_GEN":
 		globals.EnganiaPichangaMutex.Lock()
 		globals.ChangeState(&globals.CurrentJob, "BLOCKED")
-		slice.Push(&globals.Blocked, globals.CurrentJob)
-
+		
 		pcbAux := globals.CurrentJob
+		slice.Push(&globals.Blocked, globals.CurrentJob)
 		log.Printf("PID: %d - Bloqueado por I/O genérico\n", globals.CurrentJob.PID)
 		go func() {
 			kernel_api.SolicitarGenSleep(pcbAux)
@@ -281,9 +281,9 @@ func EvictionManagement() {
 	case "BLOCKED_IO_STDIN":
 		globals.EnganiaPichangaMutex.Lock()
 		globals.ChangeState(&globals.CurrentJob, "BLOCKED")
-		slice.Push(&globals.Blocked, globals.CurrentJob)
-
+		
 		pcbAux := globals.CurrentJob
+		slice.Push(&globals.Blocked, globals.CurrentJob)
 		log.Printf("PID: %d - Bloqueado por I/O de entrada\n", globals.CurrentJob.PID)
 		go func() {
 			kernel_api.SolicitarStdinRead(pcbAux)
@@ -293,9 +293,9 @@ func EvictionManagement() {
 	case "BLOCKED_IO_STDOUT":
 		globals.EnganiaPichangaMutex.Lock()
 		globals.ChangeState(&globals.CurrentJob, "BLOCKED")
-		slice.Push(&globals.Blocked, globals.CurrentJob)
-
+		
 		pcbAux := globals.CurrentJob
+		slice.Push(&globals.Blocked, globals.CurrentJob)
 		go func() {
 			kernel_api.SolicitarStdoutWrite(pcbAux)
 		}()
@@ -321,6 +321,7 @@ func EvictionManagement() {
 		globals.STSCounter <- int(globals.CurrentJob.PID)
 
 	case "EXIT":
+		globals.ChangeState(&globals.CurrentJob, "TERMINATED")
 		kernel_api.KillJob(globals.CurrentJob)
 		//<-globals.JobExecBinary
 		<-globals.MultiprogrammingCounter

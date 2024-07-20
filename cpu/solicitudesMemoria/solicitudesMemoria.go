@@ -50,11 +50,11 @@ func Resize(tamanio int) string {
 
 type BodyRequestEscribir struct {
 	DireccionesTamanios []globals.DireccionTamanio `json:"direcciones_tamanios"`
-	Valor_a_escribir    string                     `json:"valor_a_escribir"`
+	Valor_a_escribir    []byte                     `json:"valor_a_escribir"`
 	Pid                 int                        `json:"pid"`
 }
 
-func SolicitarEscritura(direccionesTamanios []globals.DireccionTamanio, valorAEscribir string, pid int) {
+func SolicitarEscritura(direccionesTamanios []globals.DireccionTamanio, valorAEscribir []byte, pid int) {
 	body, err := json.Marshal(BodyRequestEscribir{
 		DireccionesTamanios: direccionesTamanios,
 		Valor_a_escribir:    valorAEscribir,
@@ -87,22 +87,22 @@ func SolicitarEscritura(direccionesTamanios []globals.DireccionTamanio, valorAEs
 	}
 
 	// La respuesta puede ser un "Ok" o u "Error: dirección o tamanio fuera de rango"
-
 	respuestaEnString := string(bodyBytes)
 
 	respuestaSinComillas := strings.Trim(respuestaEnString, `"`)
 
 	log.Println("Respuesta de memoria: ", respuestaSinComillas)
-	log.Println("Valor a escribir: ", valorAEscribir)
-	valorAEscribirEnBytes := []byte(valorAEscribir)
-	log.Println("Valor a escribir en bytes: ", valorAEscribirEnBytes)
+	log.Println("Valor a escribir bytes: ", valorAEscribir)
+	valorAEscribirEnString := string(valorAEscribir)
+	log.Println("Valor a escribir en string: ", valorAEscribirEnString)
 
 	if respuestaSinComillas != "OK" {
 		log.Println("Se produjo un error al escribir", respuestaSinComillas)
 	} else {
 		for _, df := range direccionesTamanios {
 			cantEscrita := 0
-			log.Printf("PID: %d - Acción: ESCRIBIR - Dirección Física: %d - Valor: %b", pid, df.DireccionFisica, valorAEscribirEnBytes[cantEscrita:df.Tamanio])
+			log.Println("Valor a escribir: ", valorAEscribir)
+			log.Printf("PID: %d - Acción: ESCRIBIR - Dirección Física: %d - Valor: %b", pid, df.DireccionFisica, valorAEscribir[cantEscrita:df.Tamanio])
 			cantEscrita += df.Tamanio
 		}
 	}

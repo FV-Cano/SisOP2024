@@ -1,8 +1,8 @@
 {
     "port": 8002,
-    "memory_size": 16384,
+    "memory_size": 1024,
     "page_size": 32,
-    "instructions_path": "E:/Facultad/Sistemas Operativos/tp-2024-1c-GO-DieGO-GO-/algo-pruebas",
-    "delay_response": 10
+    "instructions_path": "/Users/milagrosluciarulio/Documents/GitHub/tp-2024-1c-GO-DieGO-GO-/algo-pruebas",
+    "delay_response": 1000
 }
 

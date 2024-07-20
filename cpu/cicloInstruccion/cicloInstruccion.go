@@ -557,18 +557,23 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		valorReg2 := currentPCB.CPU_reg[instruccionDecodificada[2]]
 		tipoActualReg2 := reflect.TypeOf(valorReg2).String()
 
-		var valor2EnString string
+		var valorEnBytes []byte
 
 		if tipoReg2 == "uint32" {
-			valor2EnString = fmt.Sprint(Convertir[uint32](tipoActualReg2, valorReg2))
+			valor2EnUint := Convertir[uint32](tipoActualReg2, valorReg2)
+			valorEnBytes = []byte{byte(valor2EnUint)} 
+
 		} else {
-			valor2EnString = string(Convertir[uint8](tipoActualReg2, valorReg2))
+			valor2EnUint := Convertir[uint8](tipoActualReg2, valorReg2) //le saque el string
+			valorEnBytes = []byte{valor2EnUint}
 		}
+		valorEnBytesRelleno := make([]byte, tamanio2)
+		inicio := len(valorEnBytesRelleno) - len(valorEnBytes)
+		// Realizar la copia en la posición calculada
+		copy(valorEnBytesRelleno[inicio:], valorEnBytes)
+		log.Println("LOS BYTES SON", valorEnBytes)
 
-		log.Println("EL STRING ES", valor2EnString)
-
-		// TODO: Hacer que reciba bytes
-		solicitudesmemoria.SolicitarEscritura(direcsFisicas, valor2EnString, int(currentPCB.PID)) //([direccion fisica y tamanio], valorAEscribir, pid
+		solicitudesmemoria.SolicitarEscritura(direcsFisicas, valorEnBytesRelleno, int(currentPCB.PID)) //([direccion fisica y tamanio], valorAEscribir, pid
 
 		//----------------------------------------------------------------------------
 
@@ -670,9 +675,12 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 
 		// Obtiene la direccion Fisica asociada
 		direcsFisicasDI := mmu.ObtenerDireccionesFisicas(direc_logicaDI, tamanio, int(currentPCB.PID))
-
-		// Carga en esa direccion fisica lo que leiste antes
-		solicitudesmemoria.SolicitarEscritura(direcsFisicasDI, string(datos), int(currentPCB.PID)) //([direccion fisica y tamanio], valorAEscribir, pid)
+		
+		valorEnBytesRelleno := make([]byte, tamanio)
+		inicio := len(valorEnBytesRelleno) - len(datos)
+		// Realizar la copia en la posición calculada
+		copy(valorEnBytesRelleno[inicio:], datos)		// Carga en esa direccion fisica lo que leiste antes
+		solicitudesmemoria.SolicitarEscritura(direcsFisicasDI, valorEnBytesRelleno, int(currentPCB.PID)) //([direccion fisica y tamanio], valorAEscribir, pid)
 
 	//RESIZE (Tamaño)
 	case "RESIZE":

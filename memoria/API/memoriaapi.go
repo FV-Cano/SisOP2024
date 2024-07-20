@@ -326,7 +326,7 @@ func LeerDeMemoria(direccionesTamanios []globals.DireccionTamanio, pid int) Body
 
 type BodyRequestEscribir struct {
 	DireccionesTamanios []globals.DireccionTamanio `json:"direcciones_tamanios"`
-	Valor_a_escribir    string                     `json:"valor_a_escribir"`
+	Valor_a_escribir    []byte                     `json:"valor_a_escribir"`
 	Pid                 int                        `json:"pid"`
 }
 
@@ -356,17 +356,16 @@ func EscribirMemoria(w http.ResponseWriter, r *http.Request) {
 }
 
 // por cada struct va a ESCRIBIR la memoria en el tamaño que le pide
-func EscribirEnMemoria(direccionesTamanios []globals.DireccionTamanio, valor_a_escribir string, pid int) string { //TODO: tenemos que validar que al proceso le corresponda escribir ahí o ya la validación la hizo cpu al traducir la dirección?
+func EscribirEnMemoria(direccionesTamanios []globals.DireccionTamanio, valor_a_escribir []byte, pid int) string { //TODO: tenemos que validar que al proceso le corresponda escribir ahí o ya la validación la hizo cpu al traducir la dirección?
 	/*Ante un pedido de escritura, escribir lo indicado a partir de la dirección física pedida.
 	En caso satisfactorio se responderá un mensaje de ‘OK’.*/
 
-	bytesValor := []byte(valor_a_escribir)
-	log.Println("VALOR EN BYTES: ", bytesValor)
+	log.Println("VALOR EN BYTES: ", valor_a_escribir)
 
 	for _, dt := range direccionesTamanios {
 		cantEscrita := 0
 		for cantEscrita < dt.Tamanio {
-			valorAEscribir := takeAndRemove(dt.Tamanio, &bytesValor)
+			valorAEscribir := takeAndRemove(dt.Tamanio, &valor_a_escribir)
 			log.Println("VALOR TRUNCADO: ", valorAEscribir)
 
 			copy(globals.User_Memory[dt.DireccionFisica:], valorAEscribir)

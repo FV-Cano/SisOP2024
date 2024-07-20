@@ -321,7 +321,6 @@ func EvictionManagement() {
 		globals.STSCounter <- int(globals.CurrentJob.PID)
 
 	case "EXIT":
-		globals.ChangeState(&globals.CurrentJob, "TERMINATED")
 		kernel_api.KillJob(globals.CurrentJob)
 		//<-globals.JobExecBinary
 		<-globals.MultiprogrammingCounter

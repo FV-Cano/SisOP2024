@@ -7,9 +7,9 @@ package slice
  * @param index: Índice del elemento a remover.
  */
 func RemoveAtIndex[T any](slice *[]T, index int) T {
-	elem := (*slice)[index]
+	element := (*slice)[index]
 	*slice = append((*slice)[:index], (*slice)[index+1:]...)
-	return elem
+	return element
 }
 
 /**

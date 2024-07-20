@@ -19,6 +19,7 @@ var (
 	Interfaces 					[]device.T_IOInterface
 	ResourceMap					map[string][]pcb.T_PCB
 	Resource_instances  		map[string]int
+	PlanningState				string	
 )
 
 // Global semaphores
@@ -29,8 +30,9 @@ var (
 		STSMutex 				sync.Mutex //!chequear
 		//ControlMutex 			sync.Mutex		// Creería que no es necesario
 		LTSMutex 				sync.Mutex
+		BlockedMutex			sync.Mutex
 		MapMutex 				sync.Mutex
-		EmptiedListMutex		sync.Mutex
+		//EmptiedListMutex		sync.Mutex
 		EnganiaPichangaMutex	sync.Mutex
 	// * Binarios
 		LTSPlanBinary  			= make (chan bool, 1)
@@ -38,6 +40,7 @@ var (
 		JobExecBinary			= make (chan bool, 1)
 		PcbReceived				= make (chan bool, 1)
 		AvailablePcb			= make (chan bool, 1)
+		EmptiedList				= make (chan bool, 1)
 	// * Contadores
 		// Chequea si hay procesos en la cola de listos, lo usamos en EvictionManagement y en ProcessInit
 		MultiprogrammingCounter chan int

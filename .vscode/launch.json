@@ -26,11 +26,36 @@
             "program": "/home/utnso/Desktop/tp-2024-1c-GO-DieGO-GO-/memoria/memoria.go"
         },
         {
-            "name": "Launch I/O",
+            "name": "Launch I/O TECLADO",
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "/home/utnso/Desktop/tp-2024-1c-GO-DieGO-GO-/entradasalida/entradasalida.go"
+            "program": "/home/utnso/Desktop/tp-2024-1c-GO-DieGO-GO-/entradasalida/entradasalida.go",
+            "args": ["config/TECLADO.config"]
+        },
+        {
+            "name": "Launch I/O MONITOR",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "/home/utnso/Desktop/tp-2024-1c-GO-DieGO-GO-/entradasalida/entradasalida.go",
+            "args": ["config/MONITOR.config"]
+        },
+        {
+            "name": "Launch I/O GENERICA",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "/home/utnso/Desktop/tp-2024-1c-GO-DieGO-GO-/entradasalida/entradasalida.go",
+            "args": ["config/GENERICA.config"]
+        },
+        {
+            "name": "Launch I/O FS",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "/home/utnso/Desktop/tp-2024-1c-GO-DieGO-GO-/entradasalida/entradasalida.go",
+            "args": ["config/FS.config"]
         }
     ]
 }

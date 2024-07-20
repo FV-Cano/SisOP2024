@@ -1,22 +1,29 @@
 package ioutils
 
 import (
-	"log"
-	"github.com/sisoputnfrba/tp-golang/entradasalida/globals"
-	"os"
-	"math"
 	"encoding/json"
+	"fmt"
 	"io"
+	"log"
+	"math"
+	"os"
+
+	"github.com/sisoputnfrba/tp-golang/entradasalida/globals"
 )
 
 /**
-  * CrearModificarArchivo: carga un archivo en el sistema de archivos
-
+  - CrearModificarArchivo: carga un archivo en el sistema de archivos
   - @param nombreArchivo: nombre del archivo a cargar
   - @param contenido: contenido del archivo a cargar (en bytes)
 */
 func CrearModificarArchivo(nombreArchivo string, contenido []byte) {
 	var file *os.File
+	var err error
+
+	// TODO REVISAR
+	if nombreArchivo != "dialfs/bitmap.dat" && nombreArchivo != "dialfs/bloques.dat" {
+		nombreArchivo = "dialfs/" + nombreArchivo
+	}
 
 	// Crea un nuevo archivo si no existe
 	if _, err := os.Stat(nombreArchivo); os.IsNotExist(err) {
@@ -25,17 +32,21 @@ func CrearModificarArchivo(nombreArchivo string, contenido []byte) {
 			log.Fatalf("Failed creating file: %s", err)
 		}
 	} else {
-		file, err = os.Open(nombreArchivo)
+		file, err = os.OpenFile(nombreArchivo, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 		if err != nil {
 			log.Fatalf("Failed opening file: %s", err)
 		}
 	}
 
 	// Cierra el archivo al final de la función
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			log.Fatalf("Failed closing file: %s", err)
+		}
+	}()
 
 	// Escribe el contenido en el archivo
-	_, err := file.Write(contenido)
+	_, err = file.Write(contenido)
 	if err != nil {
 		log.Fatalf("Failed writing to file: %s", err)
 	}
@@ -74,14 +85,14 @@ func LeerArchivoEnStruct(nombreArchivo string) *globals.Metadata {
 }
 
 /**
- * ReadFs: Lee un archivo del sistema de archivos
+  * ReadFs: Lee un archivo del sistema de archivos
 
-	* @param nombreArchivo: nombre del archivo a leer
-	* @param desplazamiento: desplazamiento en bytes desde el inicio del archivo
-	* @param tamanio: cantidad de bytes a leer (si es -1, se lee todo el archivo)
-	* @return contenido: contenido del archivo leído
- */
- func ReadFs(nombreArchivo string, desplazamiento int, tamanio int) []byte {
+  - @param nombreArchivo: nombre del archivo a leer
+  - @param desplazamiento: desplazamiento en bytes desde el inicio del archivo
+  - @param tamanio: cantidad de bytes a leer (si es -1, se lee todo el archivo)
+  - @return contenido: contenido del archivo leído
+*/
+func ReadFs(nombreArchivo string, desplazamiento int, tamanio int) []byte {
 	archivo := globals.Fcbs[nombreArchivo]
 	var tamanioALeer int
 	if tamanio == -1 {
@@ -91,20 +102,26 @@ func LeerArchivoEnStruct(nombreArchivo string) *globals.Metadata {
 	}
 
 	contenido := make([]byte, tamanioALeer)
-	byteInicial := (archivo.InitialBlock * globals.ConfigIO.Dialfs_block_size) + desplazamiento
+
+	posBloqueInicial := archivo.InitialBlock - 1
+	primerByteArchivo := posBloqueInicial*globals.ConfigIO.Dialfs_block_size + desplazamiento
 
 	for i := 0; i < tamanioALeer; i++ {
-		contenido[i] = globals.Blocks[byteInicial + i]
+		contenido[i] = globals.Blocks[primerByteArchivo+i]
 	}
 
 	return contenido
 }
 
 func WriteFs(contenido []byte, byteInicial int) {
-	bloqueInicial := int(math.Ceil(float64(byteInicial) / float64(globals.ConfigIO.Dialfs_block_size)))
+	bloqueInicial := int(math.Max(1, math.Ceil(float64(byteInicial)/float64(globals.ConfigIO.Dialfs_block_size))))
 
-	for i := 0; i < len(contenido); i++ {
-		globals.Blocks[byteInicial + i] = contenido[i]
+	fmt.Println("WRITE - Byte inicial: ", byteInicial, "Bloque inicial: ", bloqueInicial)
+
+	tamanioContenido := len(contenido)
+	for i := 0; i < tamanioContenido; i++ {
+		globals.Blocks[byteInicial+i] = contenido[i]
+		fmt.Println("Byte: ", byteInicial+i, "Contenido: ", contenido[i])
 	}
 
 	tamanioFinalEnBloques := int(math.Ceil(float64(len(contenido)) / float64(globals.ConfigIO.Dialfs_block_size)))
@@ -119,13 +136,25 @@ func EntraEnDisco(tamanioTotalEnBloques int) int {
 		if espacioActual >= tamanioTotalEnBloques {
 			return i
 		} else {
-
 			i += espacioActual
-
 		}
 	}
 	return (-1)
 }
+/*
+func EntraEnDisco(tamanioTotalEnBloques int) int {
+
+	var i int
+
+	espacio, posicion := CalcularBloquesLibreAPartirDe(i, tamanioTotalEnBloques)
+
+	if espacio <= tamanioTotalEnBloques {
+		return (-1)
+	} else {
+		return posicion
+	}
+}
+*/
 
 
 // * Manejo de BLOQUES
@@ -143,11 +172,13 @@ func ContadorDeEspaciosLibres() int {
 }
 
 /**
- * CalcularBloquesLibreAPartirDe: calcula la cantidad de bloques libres a partir de un bloque inicial hasta encontrar uno seteado
+ * CalcularBloquesLibreAPartirDe: calcula la cantidad de bloques libres a partir de la posición de un bloque inicial hasta encontrar uno seteado
  */
-func CalcularBloquesLibreAPartirDe(bloqueInicial int) int {
-	var i = bloqueInicial
+func CalcularBloquesLibreAPartirDe(posBloqueInicial int) int {
+	var i = posBloqueInicial
+	
 	var contadorLibres = 0 // Inicializamos el contador de bloques libres
+
 	for i < globals.ConfigIO.Dialfs_block_count {
 		if IsNotSet(i) { // Si el bloque actual no está seteado (es 0),
 			contadorLibres++ // Incrementamos el contador de bloques libres
@@ -156,13 +187,45 @@ func CalcularBloquesLibreAPartirDe(bloqueInicial int) int {
 		}
 		i++ // Pasamos al siguiente bloque
 	}
-	return contadorLibres // Devolvemos el contador de bloques libres
 
+	return contadorLibres // Devolvemos el contador de bloques libres
 }
 
+/*
+func CalcularBloquesLibreAPartirDe(bloqueInicial int, bloquesTotales int) (int, int) {
+	if bloqueInicial < 0 || bloqueInicial >= globals.ConfigIO.Dialfs_block_count {
+		log.Fatalf("Initial block index out of range: %d", bloqueInicial)
+	}
+	var i = bloqueInicial
+	var posicion = -1
+	var contadorLibres = 0       // Inicializamos el contador de bloques libres
+	var contadorConsecutivos = 0 // Contador de bloques libres consecutivos
+
+	for i < globals.ConfigIO.Dialfs_block_count {
+		if IsNotSet(i) { // Si el bloque actual no está seteado (es 0),
+			contadorLibres++       // Incrementamos el contador de bloques libres
+			contadorConsecutivos++ // Incrementamos el contador de bloques libres consecutivos
+			if contadorConsecutivos == bloquesTotales {
+				posicion = i - (bloquesTotales - 1)
+				break // Terminamos la iteración si encontramos suficientes bloques contiguos
+			}
+		} else { // Si encontramos un bloque seteado (es 1),
+			contadorConsecutivos = 0 // Reiniciamos el contador de bloques libres consecutivos
+		}
+		i++ // Pasamos al siguiente bloque
+	}
+
+	if contadorConsecutivos < bloquesTotales {
+		posicion = -1 // No se encontraron suficientes bloques libres contiguos
+	}
+
+	fmt.Println("La cantidad de bloques libres es ", contadorLibres)
+	return contadorLibres, posicion // Devolvemos el contador de bloques libres y la posición del primer bloque libre contiguo
+}
+*/
 /**
  * CalcularBloqueLibre: calcula el primer bloque libre en el sistema de archivos
-*/
+ */
 // TODO: Tirar excepción si no hay bloques libres
 func CalcularBloqueLibre() int {
 	var i = 0
@@ -172,16 +235,20 @@ func CalcularBloqueLibre() int {
 		}
 		i++
 	}
-	return i
+	return i + 1
 }
 
 /**
  * LiberarBloquesDesde: libera bloques a partir de un bloque inicial hasta el tamaño a borrar
  */
 func LiberarBloquesDesde(numBloque int, tamanioABorrar int) {
-	var i = numBloque
+	var i = numBloque - 1
 	var contador = 0 // Inicializa el contador
 	for contador < tamanioABorrar {
+		if i >= globals.ConfigIO.Dialfs_block_count {
+			log.Fatalf("Block index out of range: %d", i)
+			break
+		}
 		if !IsNotSet(i) {
 			Clear(i)
 			contador++
@@ -197,9 +264,9 @@ func LiberarBloquesDesde(numBloque int, tamanioABorrar int) {
  * LiberarBloque: libera bloques desde el bloque final del archivo hasta el tamaño a borrar
  */
 func LiberarBloque(bloque int, tamanioABorrar int) {
-    for i := 0; i < tamanioABorrar; i++ {
-        Clear(bloque - i)
-    }
+	for i := 0; i < tamanioABorrar; i++ {
+		Clear(bloque - i)
+	}
 	ActualizarBitmap()
 }
 
@@ -207,13 +274,14 @@ func LiberarBloque(bloque int, tamanioABorrar int) {
  * OcuparBloquesDesde: ocupa bloques a partir de un bloque inicial hasta el tamaño a setear
  */
 func OcuparBloquesDesde(numBloque int, tamanioASetear int) {
-	var i = numBloque
+	var i = numBloque - 1
 	var contador = 0                // Inicializa el contador
 	for contador < tamanioASetear { // Continúa mientras el contador sea menor que tamanioASetear
 		if IsNotSet(i) { // Si el bloque actual no está seteado
-			Set(i)     // Setea el bloque
+			Set(i) // Setea el bloque
+			fmt.Println("Se setteo el bloque ", i+1)
 			contador++ // Incrementa el contador
-		} else { // Si el bloque ya está seteado
+		} else { // Si el byte ya está seteado
 			break // Rompe el bucle
 		}
 		i++ // Incrementa el índice para revisar el siguiente bloque
@@ -224,10 +292,17 @@ func OcuparBloquesDesde(numBloque int, tamanioASetear int) {
 /**
  * ActualizarBloques: actualiza el archivo de bloques en el sistema de archivos
  */
-func ActualizarBloques(){
-	CrearModificarArchivo("dialfs/bloques.dat", globals.Blocks)
-}
+func ActualizarBloques() {
+	var bloquesActualizado globals.T_Blocks
+	bloquesActualizado.Blocks = globals.Blocks
 
+	archivoMarshallado, err := json.Marshal(bloquesActualizado)
+	if err != nil {
+		log.Fatalf("Failed to marshal metadata: %s", err)
+	}
+
+	CrearModificarArchivo("dialfs/bloques.dat", archivoMarshallado)
+}
 
 // * Manejo de BITMAP
 func NewBitMap(size int) []int {
@@ -251,7 +326,10 @@ func IsNotSet(i int) bool {
 }
 
 func ActualizarBitmap() {
-	archivoMarshallado, err := json.Marshal(globals.CurrentBitMap)
+	var bitmapActualizado globals.T_Bitmap
+	bitmapActualizado.BitMap = globals.CurrentBitMap
+
+	archivoMarshallado, err := json.Marshal(bitmapActualizado)
 	if err != nil {
 		log.Fatalf("Failed to marshal metadata: %s", err)
 	}

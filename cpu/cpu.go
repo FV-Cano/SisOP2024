@@ -21,6 +21,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error al cargar la configuracion %v", err)
 	}
+
+	cfg.VEnvCpu(nil, &globals.Configcpu.Port)
+	cfg.VEnvKernel(&globals.Configcpu.IP_kernel, &globals.Configcpu.Port_kernel)
+	cfg.VEnvMemoria(&globals.Configcpu.IP_memory, &globals.Configcpu.Port_memory)
+	
 	log.Println("Configuracion CPU cargada")
 
 	// Handlers

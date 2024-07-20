@@ -11,6 +11,14 @@ var (
 	Fcbs map[string]Metadata
 )
 
+type T_Bitmap struct {
+	BitMap []int `json:"bitmap"`
+}
+
+type T_Blocks struct {
+	Blocks []byte `json:"blocks"`
+}
+
 type T_ConfigIO struct {
 	Ip                 		string `json:"ip"`
 	Port               		int    `json:"port"`
@@ -23,6 +31,7 @@ type T_ConfigIO struct {
 	Dialfs_path        		string `json:"dialfs_path"`
 	Dialfs_block_size  		int    `json:"dialfs_block_size"`
 	Dialfs_block_count 		int    `json:"dialfs_block_count"`
+	Dialfs_compaction_delay int    `json:"dialfs_compaction_delay"`
 }
 
 // ----------------- Body types -----------------

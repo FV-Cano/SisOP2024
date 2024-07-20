@@ -24,6 +24,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error al cargar la configuracion %v", err)
 	}
+
+	cfg.VEnvKernel(nil, &globals.Configkernel.Port)
+	cfg.VEnvCpu(&globals.Configkernel.IP_cpu, &globals.Configkernel.Port_cpu)
+	cfg.VEnvMemoria(&globals.Configkernel.IP_memory, &globals.Configkernel.Port_memory)
+
 	log.Println("Configuracion KERNEL cargada")
 
 	// Handlers
@@ -35,9 +40,11 @@ func main() {
 	resources.InitResourceMap()
 
 	// ! globals.ControlMutex.Lock()
-	globals.EmptiedListMutex.Lock() // Bloqueamos la lista de jobs vacía
+	// globals.EmptiedListMutex.Lock() // Bloqueamos la lista de jobs vacía
+	globals.EmptiedList <- false
 	globals.LTSPlanBinary <- false
 	globals.STSPlanBinary <- false
+	globals.PlanningState = "STOPPED"
 
 	// Iniciar servidor
 	// go server.ServerStart(globals.Configkernel.Port, kernelRoutes)

@@ -120,7 +120,7 @@ func IOWork() {
 		var interfaceToWork globals.StdinRead
 		for {
 			interfaceToWork = <-globals.Stdin_QueueChannel
-			
+
 			IO_STDIN_READ(interfaceToWork.Pcb, interfaceToWork.DireccionesFisicas)
 			log.Println("Fin de bloqueo para el PID: ", interfaceToWork.Pcb.PID)
 			returnPCB(interfaceToWork.Pcb)
@@ -129,7 +129,7 @@ func IOWork() {
 		var interfaceToWork globals.StdoutWrite
 		for {
 			interfaceToWork = <-globals.Stdout_QueueChannel
-			
+
 			IO_STDOUT_WRITE(interfaceToWork.Pcb, interfaceToWork.DireccionesFisicas)
 			log.Println("Fin de bloqueo para el PID: ", interfaceToWork.Pcb.PID)
 			returnPCB(interfaceToWork.Pcb)
@@ -138,11 +138,12 @@ func IOWork() {
 	case "DIALFS":
 		var interfaceToWork globals.DialFSRequest
 		for {
-		interfaceToWork = <-globals.DialFS_QueueChannel
-		
-		IO_DIALFS(interfaceToWork)
-		log.Println("Fin de bloqueo para el PID: ", interfaceToWork.Pcb.PID)
-		returnPCB(interfaceToWork.Pcb)
+			interfaceToWork = <-globals.DialFS_QueueChannel
+			time.Sleep(time.Duration(globals.ConfigIO.Unit_work_time) * time.Millisecond) //! agrego esto
+			IO_DIALFS(interfaceToWork)
+			log.Println("Fin de bloqueo para el PID: ", interfaceToWork.Pcb.PID)
+			returnPCB(interfaceToWork.Pcb)
+
 		}
 	}
 }
@@ -154,7 +155,7 @@ func returnPCB(pcb pcb.T_PCB) {
 // ------------------------- OPERACIONES -------------------------
 
 func IO_GEN_SLEEP(sleepTime int, pcb pcb.T_PCB) {
-	sleepTimeTotal := time.Duration(sleepTime * globals.ConfigIO.Unit_work_time) * time.Millisecond
+	sleepTimeTotal := time.Duration(sleepTime*globals.ConfigIO.Unit_work_time) * time.Millisecond
 	log.Printf("PID: %d - Operacion: IO_GEN_SLEEP", pcb.PID)
 	log.Printf("Bloqueado por %d milisegundos\n", (sleepTimeTotal / 1000))
 	time.Sleep(sleepTimeTotal)
@@ -166,7 +167,7 @@ func IO_STDIN_READ(pcb pcb.T_PCB, direccionesFisicas []globals.DireccionTamanio)
 	fmt.Print("Ingrese datos: ")
 	reader := bufio.NewReader(os.Stdin)
 	data, _ := reader.ReadString('\n')
-	
+
 	// Le pido a memoria que me guarde los datos
 	url := fmt.Sprintf("http://%s:%d/write", globals.ConfigIO.Ip_memory, globals.ConfigIO.Port_memory)
 
@@ -268,8 +269,8 @@ func IO_DIALFS(interfaceToWork globals.DialFSRequest) {
 	}
 
 	fmt.Println("Operación ", interfaceToWork.Operacion, " finalizada - Archivo: ", nombreArchivo)
-	fmt.Println("El archivo de bloques.dat es: " , globals.Blocks)
-	fmt.Println("El archivo de bitmap.dat es: " , globals.CurrentBitMap)
+	fmt.Println("El archivo de bloques.dat es: ", globals.Blocks)
+	fmt.Println("El archivo de bitmap.dat es: ", globals.CurrentBitMap)
 }
 
 func IO_DIALFS_READ(pid int, direccionesFisicas []globals.DireccionTamanio, contenido []byte) {
@@ -294,6 +295,7 @@ func IO_DIALFS_READ(pid int, direccionesFisicas []globals.DireccionTamanio, cont
 	if response.StatusCode != http.StatusOK {
 		log.Printf("Unexpected response status: %s", response.Status)
 	}
+
 }
 
 func IO_DIALFS_WRITE(pid int, direccionesFisicas []globals.DireccionTamanio) []byte {
@@ -327,6 +329,6 @@ func IO_DIALFS_WRITE(pid int, direccionesFisicas []globals.DireccionTamanio) []b
 	for _, sliceBytes := range response.Contenido {
 		bytesConcatenados = append(bytesConcatenados, sliceBytes...)
 	}
-
+	// Consumo una unidad de trabajo
 	return bytesConcatenados
 }

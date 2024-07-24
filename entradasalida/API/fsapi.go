@@ -259,9 +259,9 @@ func WriteFile(pid int, nombreArchivo string, direcciones []globals.DireccionTam
 	cantidadBytesLeidos := len(leidoEnMemoria)
 
 	posInicialByteAEscribir := posicionPuntero + cantidadBytesLeidos
-	
+
 	// TODO: Revisar
-	cantidadBytesFinales := math.Max(float64(archivo.Size), float64(cantidadBytesLeidos + puntero))
+	cantidadBytesFinales := math.Max(float64(archivo.Size), float64(cantidadBytesLeidos+puntero))
 
 	// 1 2 3 4					archivo original 4 bytes
 	// x    					puntero en el byte 2
@@ -272,8 +272,8 @@ func WriteFile(pid int, nombreArchivo string, direcciones []globals.DireccionTam
 		TruncateFile(pid, nombreArchivo, int(cantidadBytesFinales))
 	}
 
-	fmt.Println("CONTENIDO A ESCRIBIR EN FS (", nombreArchivo,"): ", leidoEnMemoria)
-	fmt.Println("CONTENIDO EN STRING (", nombreArchivo,"): ", string(leidoEnMemoria))
+	fmt.Println("CONTENIDO A ESCRIBIR EN FS (", nombreArchivo, "): ", leidoEnMemoria)
+	fmt.Println("CONTENIDO EN STRING (", nombreArchivo, "): ", string(leidoEnMemoria))
 
 	ioutils.WriteFs(leidoEnMemoria, posicionPuntero)
 
@@ -328,20 +328,20 @@ func TruncateFile(pid int, nombreArchivo string, tamanioDeseado int) { //revisar
 
 			ioutils.OcuparBloquesDesde(bloqueFinalInicial, tamanioATruncarEnBloques)
 			archivo.Size = tamanioDeseado
-			
+
 			archivoMarshallado, err := json.Marshal(archivo)
 			if err != nil {
 				log.Fatalf("Failed to marshal metadata: %s", err)
 			}
-			
+
 			ioutils.CrearModificarArchivo(nombreArchivo, archivoMarshallado)
 			globals.Fcbs[nombreArchivo] = archivo
 
-		// No hay bloques libres al final del archivo
+			// No hay bloques libres al final del archivo
 		} else if bloquesLibresAlFinalDelArchivo < tamanioATruncarEnBloques {
 			// Buscar si entra en algún lugar el archivo completo
 			posBloqueEnElQueEntro := ioutils.EntraEnDisco(tamFinalEnBloques)
-			
+
 			// Entra en algún lugar el archivo completo todo junto
 			if posBloqueEnElQueEntro != -1 {
 				bloqueEnElQueEntro := posBloqueEnElQueEntro + 1
@@ -349,7 +349,7 @@ func TruncateFile(pid int, nombreArchivo string, tamanioDeseado int) { //revisar
 				fmt.Println("FS - ", nombreArchivo, " Entra en algún lugar el archivo completo")
 				// Limpiar el bitmap
 				ioutils.LiberarBloquesDesde(bloqueInicial, tamOriginalEnBloques)
-				archivo.InitialBlock = bloqueEnElQueEntro // ! 
+				archivo.InitialBlock = bloqueEnElQueEntro // !
 				archivo.Size = tamanioDeseado
 				// Setear en el nuevo lugar
 				ioutils.OcuparBloquesDesde(bloqueEnElQueEntro, tamFinalEnBloques)
@@ -364,14 +364,14 @@ func TruncateFile(pid int, nombreArchivo string, tamanioDeseado int) { //revisar
 
 				ioutils.CrearModificarArchivo(nombreArchivo, archivoMarshallado)
 				globals.Fcbs[nombreArchivo] = archivo
-				
+
 				archivoFinal := ioutils.LeerArchivoEnStruct("dialfs/" + nombreArchivo)
 				log.Println("ARCHIVO - ", nombreArchivo, " tiene un tamaño de ", archivoFinal.Size, " y comienza en el bloque ", archivoFinal.InitialBlock)
 				log.Println("FCB - ", nombreArchivo, " tiene un tamaño de ", globals.Fcbs[nombreArchivo].Size, " y comienza en el bloque ", globals.Fcbs[nombreArchivo].InitialBlock)
-				
+
 				time.Sleep(time.Duration(globals.ConfigIO.Dialfs_compaction_delay)) // ! AGREGAMOS ESTO
 
-			// No entra el archivo pero alcanza la cantidad de bloques libres
+				// No entra el archivo pero alcanza la cantidad de bloques libres
 			} else if ioutils.ContadorDeEspaciosLibres() >= tamFinalEnBloques {
 				fmt.Println("FS - ", nombreArchivo, " No entra el archivo pero alcanza la cantidad de bloques libres")
 				//Si no entra en ningún lugar, compactar
@@ -387,8 +387,8 @@ func TruncateFile(pid int, nombreArchivo string, tamanioDeseado int) { //revisar
 				archivo.Size = tamanioDeseado
 
 				posPrimerBloqueLibre := primerBloqueLibre - 1
-				
-				ioutils.WriteFs(contenidoArchivo, posPrimerBloqueLibre * globals.ConfigIO.Dialfs_block_size)
+
+				ioutils.WriteFs(contenidoArchivo, posPrimerBloqueLibre*globals.ConfigIO.Dialfs_block_size)
 
 				ioutils.OcuparBloquesDesde(primerBloqueLibre, tamFinalEnBloques)
 
@@ -403,13 +403,13 @@ func TruncateFile(pid int, nombreArchivo string, tamanioDeseado int) { //revisar
 
 				ioutils.CrearModificarArchivo(nombreArchivo, archivoMarshallado)
 				globals.Fcbs[nombreArchivo] = archivo
-				
+
 			} else {
 				log.Print("No hay espacio suficiente para el archivo ", nombreArchivo)
 			}
 		}
 
-	// Si el archivo se achica
+		// Si el archivo se achica
 	} else if tamanioDeseado < archivo.Size {
 		//tamanioATruncarEnBytes := archivo.Size - tamanioDeseado
 		//tamanioATruncarEnBloques := int(math.Ceil(float64(tamanioATruncarEnBytes) / float64(globals.ConfigIO.Dialfs_block_size)))
@@ -468,41 +468,43 @@ func TruncateFile(pid int, nombreArchivo string, tamanioDeseado int) { //revisar
 } */
 
 func Compactar() {
-    var bloquesDeArchivos = make([]byte, len(globals.Blocks))
+	var bloquesDeArchivos = make([]byte, len(globals.Blocks))
 
-    tamBloqueEnBytes := globals.ConfigIO.Dialfs_block_size
+	tamBloqueEnBytes := globals.ConfigIO.Dialfs_block_size
 
-    for i := range globals.CurrentBitMap {
-        ioutils.Clear(i)
-    }
+	for i := range globals.CurrentBitMap {
+		ioutils.Clear(i)
+	}
 	fmt.Println("FS - Bitmap limpio: ", globals.CurrentBitMap)
 	fmt.Println("FS - Cant. bloques: ", len(globals.Blocks))
 
-    offset := 0
-    for nombreArchivo, metadata := range globals.Fcbs {
-        tamArchivoEnBloques := int(math.Max(1, math.Ceil(float64(metadata.Size)/float64(tamBloqueEnBytes))))
-        bloqueInicial := metadata.InitialBlock
+	offset := 0
+	for nombreArchivo, metadata := range globals.Fcbs {
+		tamArchivoEnBloques := int(math.Max(1, math.Ceil(float64(metadata.Size)/float64(tamBloqueEnBytes))))
+		bloqueInicial := metadata.InitialBlock
 
 		fmt.Println("Moviendo archivo: ", nombreArchivo)
 		fmt.Println("Bloque inicial: ", bloqueInicial)
 
-        for i := 0; i < tamArchivoEnBloques; i++ {
-            primerByteACopiar := (bloqueInicial + i - 1) * tamBloqueEnBytes
-            ultimoByteACopiar := primerByteACopiar + tamBloqueEnBytes //- 1
+		for i := 0; i < tamArchivoEnBloques; i++ {
+			primerByteACopiar := (bloqueInicial + i - 1) * tamBloqueEnBytes
+			ultimoByteACopiar := primerByteACopiar + tamBloqueEnBytes //- 1
 			/*if ultimoByteACopiar > len(globals.Blocks) {
-                ultimoByteACopiar = len(globals.Blocks)
-            } */
+			    ultimoByteACopiar = len(globals.Blocks)
+			} */
 
-            n := copy(bloquesDeArchivos[offset:], globals.Blocks[primerByteACopiar:ultimoByteACopiar])
-			
+			n := copy(bloquesDeArchivos[offset:], globals.Blocks[primerByteACopiar:ultimoByteACopiar])
+
 			fmt.Println("N vale: ", n)
 			fmt.Println("Primer byte a copiar: ", primerByteACopiar)
 			fmt.Println("Ultimo byte a copiar: ", ultimoByteACopiar)
-         	offset += n  // Actualiza el offset con el número de bytes copiados
+			offset += n // Actualiza el offset con el número de bytes copiados
 			fmt.Println("Offset vespues vale: ", offset)
-        }
+		}
 
-        metadata.InitialBlock = ioutils.CalcularBloqueLibre()
+		metadata.InitialBlock = ioutils.CalcularBloqueLibre()
+
+		ioutils.OcuparBloquesDesde(metadata.InitialBlock, tamArchivoEnBloques)
 
 		archivoMarshallado, err := json.Marshal(metadata)
 		if err != nil {
@@ -511,18 +513,12 @@ func Compactar() {
 
 		ioutils.CrearModificarArchivo(nombreArchivo, archivoMarshallado)
 		globals.Fcbs[nombreArchivo] = metadata
-    }
+	}
 
 	copy(globals.Blocks, bloquesDeArchivos[:len(globals.Blocks)])
 
-	bloquesOcupadosEnTotal := int(math.Ceil(float64(offset) / float64(tamBloqueEnBytes)))
+	ioutils.ActualizarBloques()
+	ioutils.ActualizarBitmap()
 
-    for i := 0; i < bloquesOcupadosEnTotal; i++ {
-        ioutils.Set(i)
-    }
-
-    ioutils.ActualizarBloques()
-    ioutils.ActualizarBitmap()
-
-    time.Sleep(time.Duration(globals.ConfigIO.Dialfs_compaction_delay))
+	time.Sleep(time.Duration(globals.ConfigIO.Dialfs_compaction_delay))
 }

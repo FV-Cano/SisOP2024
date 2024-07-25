@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/sisoputnfrba/tp-golang/cpu/cicloInstruccion"
 	"github.com/sisoputnfrba/tp-golang/cpu/globals"
@@ -27,8 +28,14 @@ func PCB_recv(w http.ResponseWriter, r *http.Request) {
 
 	globals.CurrentJob = &received_pcb
 
-	for !pcb.EvictionFlag {
+	for {
+		globals.EvictionMutex.Lock()
+		if pcb.EvictionFlag { 
+			globals.EvictionMutex.Unlock() 
+			break }
+		globals.EvictionMutex.Unlock()
 		cicloInstruccion.DecodeAndExecute(globals.CurrentJob)
+		time.Sleep(300 * time.Millisecond)
 
 		log.Println("Los registros de la cpu son", globals.CurrentJob.CPU_reg)
 	}
@@ -64,19 +71,10 @@ func HandleInterruption(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	evictionReasons := map[string]struct{}{
-		"EXIT":          		{},
-		"BLOCKED_IO_GEN": 		{},
-		"BLOCKED_IO_STDIN":		{},
-		"BLOCKED_IO_STDOUT":	{},
-		"BLOCKED_IO_DIALFS":    {},
-		"OUT_OF_MEMORY": 		{},
-		"WAIT":		 			{},
-		"SIGNAL":		 		{},
-	}
-
-	if _, ok := evictionReasons[globals.CurrentJob.EvictionReason]; !ok && request.Pid == globals.CurrentJob.PID {
+	if _, ok := globals.EvictionReasons[globals.CurrentJob.EvictionReason]; !ok && request.Pid == globals.CurrentJob.PID {
+		globals.EvictionMutex.Lock()
 		pcb.EvictionFlag = true
+		globals.EvictionMutex.Unlock()
 
 		switch request.InterruptionReason {
 		case "QUANTUM":

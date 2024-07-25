@@ -29,10 +29,6 @@ func LTS_Plan() {
 			continue
 		}
 
-		log.Println("Comienza el LTS")
-		log.Println("La lista es: ", globals.LTS)
-		log.Println("La lista tiene longitud: ", len(globals.LTS))
-
 		globals.LTSMutex.Lock()
 		auxJob := slice.Shift(&globals.LTS)
 		globals.LTSMutex.Unlock()
@@ -189,7 +185,6 @@ func VRR_Plan() {
 
     // Iniciar el temporizador para el quantum del trabajo actual
     timeBefore := time.Now()
-	log.Printf("Quantum PRE-EXEC: %d\n", globals.CurrentJob.Quantum)
     go startTimer(globals.CurrentJob.Quantum)
 
     // Enviar el PCB al kernel
@@ -200,18 +195,18 @@ func VRR_Plan() {
 
     // Calcular el tiempo que tomó la ejecución
     timeAfter := time.Now()
-    diffTime := uint32(timeAfter.Sub(timeBefore))
+    diffTime := uint32(time.Duration(timeAfter.Sub(timeBefore)).Milliseconds())
 
+	log.Printf("\nQuantum con el que ejecutó: %d\n", globals.CurrentJob.Quantum)
 	log.Printf("Difftime: %d\n", diffTime)
-	log.Printf("Quantum: %d\n", globals.CurrentJob.Quantum)
 
     if diffTime < globals.CurrentJob.Quantum {
         // Si el trabajo terminó antes de consumir su quantum, ajustar el quantum restante
-        globals.CurrentJob.Quantum -= uint32(time.Duration(diffTime))
+        globals.CurrentJob.Quantum = globals.CurrentJob.Quantum - diffTime
 		log.Print("Quantum restante: ", globals.CurrentJob.Quantum)
     } else {
         // Si el trabajo consumió todo su quantum, restablecer el quantum según la configuración del kernel
-        globals.CurrentJob.Quantum = uint32(time.Duration(globals.Configkernel.Quantum) * time.Millisecond)
+        globals.CurrentJob.Quantum = globals.Configkernel.Quantum
     }
 
     // Manejar la gestión de expulsión después de la ejecución del trabajo
@@ -248,7 +243,7 @@ func VRR_Plan() {
 }
 */
 func startTimer(quantum uint32) {
-	quantumTime := time.Duration(quantum)
+	quantumTime := time.Duration(quantum) * time.Millisecond
 	auxPcb := globals.CurrentJob
 	time.Sleep(quantumTime)
 

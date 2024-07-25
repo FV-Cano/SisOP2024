@@ -7,7 +7,6 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/sisoputnfrba/tp-golang/kernel/globals"
 	resource "github.com/sisoputnfrba/tp-golang/kernel/resources"
@@ -60,7 +59,7 @@ func ProcessInit(w http.ResponseWriter, r *http.Request) {
 	newPcb := &pcb.T_PCB{
 		PID:     request.PID, // ! ESTO NO ESTABA >:v
 		PC:      0,
-		Quantum: uint32(time.Duration(globals.Configkernel.Quantum) * time.Millisecond),
+		Quantum: globals.Configkernel.Quantum,
 		CPU_reg: map[string]interface{}{
 			"AX":  uint8(0),
 			"BX":  uint8(0),

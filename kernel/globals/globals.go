@@ -59,7 +59,7 @@ type T_ConfigKernel struct {
 	IP_cpu 						string 		`json:"ip_cpu"`
 	Port_cpu 					int 		`json:"port_cpu"`
 	Planning_algorithm 			string 		`json:"planning_algorithm"`
-	Quantum 					int 		`json:"quantum"`
+	Quantum 					uint32 		`json:"quantum"`
 	Resources 					[]string 	`json:"resources"`
 	Resource_instances 			[]int 		`json:"resource_instances"`
 	Multiprogramming 			int 		`json:"multiprogramming"`

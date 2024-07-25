@@ -12,6 +12,17 @@ import (
 
 var Configcpu *T_CPU
 
+var EvictionReasons = map[string]struct{}{
+		"EXIT":          		{},
+		"BLOCKED_IO_GEN": 		{},
+		"BLOCKED_IO_STDIN":		{},
+		"BLOCKED_IO_STDOUT":	{},
+		"BLOCKED_IO_DIALFS":    {},
+		"OUT_OF_MEMORY": 		{},
+		"WAIT":		 			{},
+		"SIGNAL":		 		{},
+	}
+
 type T_CPU struct {
 	Port               int    `json:"port"`
 	IP_memory          string `json:"ip_memory"`

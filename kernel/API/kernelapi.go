@@ -10,7 +10,6 @@ import (
 
 	"github.com/sisoputnfrba/tp-golang/kernel/globals"
 	resource "github.com/sisoputnfrba/tp-golang/kernel/resources"
-	"github.com/sisoputnfrba/tp-golang/utils/generics"
 	"github.com/sisoputnfrba/tp-golang/utils/pcb"
 	"github.com/sisoputnfrba/tp-golang/utils/slice"
 )
@@ -514,16 +513,4 @@ func RequestMemoryRelease(pid uint32) {
 	if respuesta.StatusCode != http.StatusOK {
 		fmt.Printf("Error al finalizar proceso en memoria: %v", err)
 	}
-}
-
-func RequestMemoryDelay() {
-	url := fmt.Sprintf("http://%s:%d/delay", globals.Configkernel.IP_memory, globals.Configkernel.Port_memory)
-
-	var delayStruct struct {
-		Delay int
-	}
-
-	generics.DoRequest("GET", url, nil, &delayStruct)
-
-	globals.MemDelay = delayStruct.Delay
 }

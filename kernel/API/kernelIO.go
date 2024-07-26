@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/sisoputnfrba/tp-golang/kernel/globals"
 	"github.com/sisoputnfrba/tp-golang/utils/device"
@@ -392,7 +391,7 @@ func RecvPCB_IO(w http.ResponseWriter, r *http.Request) {
 	RemoveByID(received_pcb.PID)
 	globals.ChangeState(&received_pcb, "READY")
 
-	if (received_pcb.Quantum != uint32(time.Duration(globals.Configkernel.Quantum) * time.Millisecond)) {
+	if (received_pcb.Quantum != globals.Configkernel.Quantum) {
 		slice.Push(&globals.STS_Priority, received_pcb)
 	} else {
 		slice.Push(&globals.STS, received_pcb)

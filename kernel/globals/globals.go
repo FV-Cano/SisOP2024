@@ -21,7 +21,6 @@ var (
 	ResourceMap					map[string][]pcb.T_PCB
 	Resource_instances  		map[string]int
 	PlanningState				string
-	MemDelay					int	
 )
 
 // Global semaphores

@@ -49,7 +49,6 @@ func main() {
 	// Iniciar servidor
 	// go server.ServerStart(globals.Configkernel.Port, kernelRoutes)
 	go ServerStart(globals.Configkernel.Port)
-	kernel_api.RequestMemoryDelay()
 
 	// * Planificación
 	go kernelutils.LTS_Plan()

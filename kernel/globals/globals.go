@@ -20,7 +20,8 @@ var (
 	Interfaces 					[]device.T_IOInterface
 	ResourceMap					map[string][]pcb.T_PCB
 	Resource_instances  		map[string]int
-	PlanningState				string	
+	PlanningState				string
+	MemDelay					int	
 )
 
 // Global semaphores

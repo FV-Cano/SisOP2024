@@ -441,3 +441,21 @@ func PedirTamTablaPaginas(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write(respuesta)
 }
+
+func SendDelay(w http.ResponseWriter, r *http.Request) {
+
+	var delayStruct struct {
+		Delay int
+	}
+
+	delayStruct.Delay = globals.Configmemory.Delay_response
+
+	respuesta, err := json.Marshal(delayStruct)
+	if err != nil {
+		http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(respuesta)
+}

@@ -11,6 +11,7 @@ import (
 )
 
 var Configcpu *T_CPU
+var MemDelay int
 
 var EvictionReasons = map[string]struct{}{
 		"EXIT":          		{},

@@ -2,12 +2,13 @@ package cpu_api
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/sisoputnfrba/tp-golang/cpu/cicloInstruccion"
 	"github.com/sisoputnfrba/tp-golang/cpu/globals"
+	"github.com/sisoputnfrba/tp-golang/utils/generics"
 	"github.com/sisoputnfrba/tp-golang/utils/pcb"
 )
 
@@ -34,10 +35,16 @@ func PCB_recv(w http.ResponseWriter, r *http.Request) {
 			globals.EvictionMutex.Unlock() 
 			break }
 		globals.EvictionMutex.Unlock()
+		fmt.Printf("El quantum en int es %d\n", int(globals.CurrentJob.Quantum))
+		fmt.Printf("El delay en int es %d\n", globals.MemDelay)
+		if (globals.MemDelay > int(globals.CurrentJob.Quantum)) {
+			globals.CurrentJob.EvictionReason = "TIMEOUT"
+			pcb.EvictionFlag = true
+		}
 		cicloInstruccion.DecodeAndExecute(globals.CurrentJob)
-		time.Sleep(300 * time.Millisecond)
-
+		
 		log.Println("Los registros de la cpu son", globals.CurrentJob.CPU_reg)
+		//if (globals.MemDelay > int(globals.CurrentJob.Quantum)) {globals.CurrentJob.EvictionReason = "TIMEOUT"; break}
 	}
 
 	//log.Println("ABER MOSTRAMELON: ", pcb.EvictionFlag) // * Se recordará su contribución a la ciencia
@@ -86,4 +93,16 @@ func HandleInterruption(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
+}
+
+func RequestMemoryDelay() {
+	url := fmt.Sprintf("http://%s:%d/delay", globals.Configcpu.IP_memory, globals.Configcpu.Port_memory)
+
+	var delayStruct struct {
+		Delay int
+	}
+
+	generics.DoRequest("GET", url, nil, &delayStruct)
+
+	globals.MemDelay = delayStruct.Delay
 }

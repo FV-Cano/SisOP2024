@@ -56,6 +56,7 @@ func RegisteredModuleRoutes() http.Handler {
 			"POST /write":             memoria_api.EscribirMemoria, // implementada en cpu
 			"GET /tamPagina":          memoria_api.Page_size,
 			"GET /tamTabla":           memoria_api.PedirTamTablaPaginas,        //falta implementar desde cliente
+			"GET /delay":			   memoria_api.SendDelay,                    //falta implementar desde cliente
 		},
 	}
 	return moduleHandler

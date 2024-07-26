@@ -33,6 +33,7 @@ func main() {
 
 	// *** SERVIDOR ***
 	go server.ServerStart(globals.Configcpu.Port, cpuRoutes)
+	cpu_api.RequestMemoryDelay()
 
 	// *** CLIENTE ***
 	

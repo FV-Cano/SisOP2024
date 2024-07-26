@@ -173,6 +173,19 @@ func RR_Plan(quantum uint32) {
 func VRR_Plan() {
     globals.EnganiaPichangaMutex.Lock()
     // Determinar el trabajo actual basado en la prioridad o la cola estándar
+
+	pidsPrio := make([]uint32, len(globals.STS_Priority))
+		for i, pcb := range globals.STS_Priority {
+    	pidsPrio[i] = pcb.PID
+	}
+	pids := make([]uint32, len(globals.STS))
+		for i, pcb := range globals.STS {
+    	pids[i] = pcb.PID
+	}
+	
+	fmt.Printf("STS_Priority: %v\n", pidsPrio)
+	fmt.Printf("STS: %v\n", pids)
+
     if len(globals.STS_Priority) > 0 {
         globals.CurrentJob = slice.Shift(&globals.STS_Priority)
     } else {

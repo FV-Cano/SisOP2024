@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	//"math"
 	"net/http"
 	"strconv"
 
@@ -20,24 +19,24 @@ func SolicitarTamPagina() int {
 	url := fmt.Sprintf("http://%s:%d/tamPagina", globals.Configcpu.IP_memory, globals.Configcpu.Port_memory)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		log.Fatal("Error al hacer el request")
+		fmt.Print("Error al hacer el request")
 	}
 	req.Header.Set("Content-Type", "application/json")
 	respuesta, err := cliente.Do(req)
 	if err != nil {
-		log.Fatal("Error al hacer el request")
+		fmt.Print("Error al hacer el request")
 	}
 	if respuesta.StatusCode != http.StatusOK {
-		log.Fatal("Error en el estado de la respuesta")
+		fmt.Print("Error en el estado de la respuesta")
 	}
 	tamPagina, err := io.ReadAll(respuesta.Body)
 	if err != nil {
-		log.Fatal("Error al leer el cuerpo de la respuesta")
+		fmt.Print("Error al leer el cuerpo de la respuesta")
 	}
 
 	tamPaginaEnInt, err := strconv.Atoi(string(tamPagina))
 	if err != nil {
-		log.Fatal("Error al hacer el request")
+		fmt.Print("Error al hacer el request")
 	}
 
 	return tamPaginaEnInt
@@ -49,7 +48,7 @@ func PedirTamTablaPaginas(pid int) int {
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		log.Fatal("Error al hacer el request")
+		fmt.Print("Error al hacer el request")
 	}
 	q := req.URL.Query()
 	q.Add("pid", strconv.Itoa(int(pid)))
@@ -58,24 +57,22 @@ func PedirTamTablaPaginas(pid int) int {
 	req.Header.Set("Content-Type", "application/json")
 	respuesta, err := cliente.Do(req)
 	if err != nil {
-		log.Fatal("Error al hacer el request")
+		fmt.Print("Error al hacer el request")
 	}
 
 	if respuesta.StatusCode != http.StatusOK {
-		log.Fatal("Error en el estado de la respuesta")
+		fmt.Print("Error en el estado de la respuesta")
 	}
 
 	tamTabla, err := io.ReadAll(respuesta.Body)
 	if err != nil {
-		log.Fatal("Error al leer el cuerpo de la respuesta")
+		fmt.Print("Error al leer el cuerpo de la respuesta")
 	}
-
-	//log.Println("QUE RECIBISTE VERSION TABLA: ", globals.BytesToInt(tamTabla))
 
 	tamTablaString := string(tamTabla)
 	tamTablaInt := globals.PasarAInt(tamTablaString)
-	log.Println("QUE RECIBISTE VERSION INT: ", tamTablaInt)
 
+	fmt.Print("Dato recibido en Int ", tamTablaInt)
 	return tamTablaInt
 
 }
@@ -88,7 +85,7 @@ func Frame_rcv(currentPCB *pcb.T_PCB, pagina int) int {
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		log.Fatal("Error al hacer el request")
+		fmt.Print("Error al hacer el request")
 	}
 	q := req.URL.Query()
 	q.Add("pid", strconv.Itoa(int(pid)))
@@ -98,17 +95,17 @@ func Frame_rcv(currentPCB *pcb.T_PCB, pagina int) int {
 	req.Header.Set("Content-Type", "application/json")
 	respuesta, err := cliente.Do(req)
 	if err != nil {
-		log.Fatal("Error al hacer el request")
+		fmt.Print("Error al hacer el request")
 	}
 
 	if respuesta.StatusCode != http.StatusOK {
-		log.Fatal("Error en el estado de la respuesta")
+		fmt.Print("Error en el estado de la respuesta")
 	}
 
 	//Memoria nos devuelve un frame a partir de la data enviada
 	frame, err := io.ReadAll(respuesta.Body)
 	if err != nil {
-		log.Fatal("Error al leer el cuerpo de la respuesta")
+		fmt.Print("Error al leer el cuerpo de la respuesta")
 	}
 
 	frameEnString := string(frame)
@@ -124,9 +121,8 @@ func ObtenerDireccionesFisicas(direccionLogica int, tamanio int, pid int) []glob
 	tamPagina := SolicitarTamPagina()
 	numeroPagina := direccionLogica / tamPagina
 	desplazamiento := direccionLogica - numeroPagina*tamPagina
-	//cantidadPaginas := int(math.Ceil(float64(tamanio) / float64(tamPagina)))
 	cantidadPaginas := (desplazamiento + tamanio) / tamPagina
-	log.Println("Cantidad de páginas: ", cantidadPaginas)
+	fmt.Print("Cantidad de páginas: ", cantidadPaginas)
 
 	var frame int
 	var tamanioTotal int
@@ -136,7 +132,7 @@ func ObtenerDireccionesFisicas(direccionLogica int, tamanio int, pid int) []glob
 
 	if PedirTamTablaPaginas(pid) == 0 {
 		tamanioTotal = desplazamiento + tamanio
-		log.Println("ME METI X PRIM VEZ A LA TABLA, TAMANIO", tamanioTotal)
+		fmt.Print("Entre por primera vez a la tabla, tamaño", tamanioTotal)
 	} else {
 		if tlb.BuscarEnTLB(pid, numeroPagina) {
 			log.Printf("PID: %d - TLB HIT - Pagina: %d", pid, numeroPagina)
@@ -150,7 +146,7 @@ func ObtenerDireccionesFisicas(direccionLogica int, tamanio int, pid int) []glob
 	}
 
 	if tamanioTotal > PedirTamTablaPaginas(pid)*tamPagina {
-		log.Println("VOY A SOLICITAR RESIZE")
+		fmt.Print("Voy a Solicitar Resize")
 		solicitudesmemoria.Resize(tamanioTotal)
 	}
 
@@ -161,14 +157,12 @@ func ObtenerDireccionesFisicas(direccionLogica int, tamanio int, pid int) []glob
 		slice.Push(&direccion_y_tamanio, globals.DireccionTamanio{DireccionFisica: frame*tamPagina + desplazamiento, Tamanio: tamPagina - desplazamiento})
 		tamanioRestante := tamanio - (tamPagina - desplazamiento)
 
-		log.Println("AGREGUE DIREC FISICA A LA LISTA")
-
 		for i := 1; i < cantidadPaginas; i++ {
-			log.Println("Tamaño restante: ", tamanioRestante)
-			log.Println("Desplazamiento: ", desplazamiento)
-			log.Println("Numero de página: ", numeroPagina)
-			log.Println("El valor de i: ", i)
-			log.Println("Cantidad de páginas: ", cantidadPaginas)
+			fmt.Println("Tamaño restante: ", tamanioRestante)
+			fmt.Println("Desplazamiento: ", desplazamiento)
+			fmt.Println("Numero de página: ", numeroPagina)
+			fmt.Println("El valor de i: ", i)
+			fmt.Println("Cantidad de páginas: ", cantidadPaginas)
 			if i == cantidadPaginas - 1 {
 				//Ultima pagina teniendo en cuenta el tamanio
 				numeroPagina++

@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 )
@@ -22,38 +21,38 @@ func EnviarMensaje(ip string, puerto int, mensajeTxt string) {
 	mensaje := Mensaje{Mensaje: mensajeTxt}
 	body, err := json.Marshal(mensaje)
 	if err != nil {
-		log.Printf("error codificando mensaje: %s", err.Error())
+		fmt.Printf("error codificando mensaje: %s", err.Error())
 	}
 
 	url := fmt.Sprintf("http://%s:%d/mensaje", ip, puerto)
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(body))
 	if err != nil {
-		log.Printf("error enviando mensaje a ip:%s puerto:%d", ip, puerto)
+		fmt.Printf("error enviando mensaje a ip:%s puerto:%d", ip, puerto)
 	}
 
-	log.Printf("respuesta del servidor: %s", resp.Status)
+	fmt.Printf("respuesta del servidor: %s", resp.Status)
 }
 
 func EnviarPaquete(ip string, puerto int, paquete Paquete) {
 	body, err := json.Marshal(paquete)
 	if err != nil {
-		log.Printf("error codificando mensajes: %s", err.Error())
+		fmt.Printf("error codificando mensajes: %s", err.Error())
 	}
 
 	url := fmt.Sprintf("http://%s:%d/paquetes", ip, puerto)
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(body))
 	if err != nil {
-		log.Printf("error enviando mensajes a ip: %s puerto: %d", ip, puerto)
+		fmt.Printf("error enviando mensajes a ip: %s puerto: %d", ip, puerto)
 	}
 
-	log.Printf("respuesta del servidor: %s", resp.Status)
+	fmt.Printf("respuesta del servidor: %s", resp.Status)
 }
 
 func GenerarYEnviarPaquete(ipdestino string, puertodestino int) {
 	paquete := Paquete{}
 
 	// Leemos y cargamos el paquete
-	log.Println("Cargando Paquete. Ingrese los valores")
+	fmt.Println("Cargando Paquete. Ingrese los valores")
 	reader := bufio.NewReader(os.Stdin)
 	i := 0
 	for i < 1 {
@@ -64,6 +63,6 @@ func GenerarYEnviarPaquete(ipdestino string, puertodestino int) {
 		paquete.Valores = append(paquete.Valores, text)
 	}
 
-	log.Printf("paqute a enviar:\n %+v", paquete)
+	fmt.Printf("paqute a enviar:\n %+v", paquete)
 	EnviarPaquete(ipdestino, puertodestino, paquete)
 }

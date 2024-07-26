@@ -74,16 +74,16 @@ func SolicitarEscritura(direccionesTamanios []globals.DireccionTamanio, valorAEs
 	escribirEnMemoria.Header.Set("Content-Type", "application/json")
 	respuesta, err := cliente.Do(escribirEnMemoria)
 	if err != nil {
-		log.Println("error")
+		fmt.Println("error")
 	}
 
 	if respuesta.StatusCode != http.StatusOK {
-		log.Println("Error al realizar la escritura")
+		fmt.Println("Error al realizar la escritura")
 	}
 
 	bodyBytes, err := io.ReadAll(respuesta.Body)
 	if err != nil {
-		log.Println("error")
+		fmt.Println("error")
 	}
 
 	// La respuesta puede ser un "Ok" o u "Error: dirección o tamanio fuera de rango"
@@ -91,17 +91,17 @@ func SolicitarEscritura(direccionesTamanios []globals.DireccionTamanio, valorAEs
 
 	respuestaSinComillas := strings.Trim(respuestaEnString, `"`)
 
-	log.Println("Respuesta de memoria: ", respuestaSinComillas)
-	log.Println("Valor a escribir bytes: ", valorAEscribir)
+	fmt.Println("Respuesta de memoria: ", respuestaSinComillas)
+	fmt.Println("Valor a escribir bytes: ", valorAEscribir)
 	valorAEscribirEnString := string(valorAEscribir)
-	log.Println("Valor a escribir en string: ", valorAEscribirEnString)
+	fmt.Println("Valor a escribir en string: ", valorAEscribirEnString)
 
 	if respuestaSinComillas != "OK" {
-		log.Println("Se produjo un error al escribir", respuestaSinComillas)
+		fmt.Println("Se produjo un error al escribir", respuestaSinComillas)
 	} else {
 		for _, df := range direccionesTamanios {
 			cantEscrita := 0
-			log.Println("Valor a escribir: ", valorAEscribir)
+			fmt.Println("Valor a escribir: ", valorAEscribir)
 			log.Printf("PID: %d - Acción: ESCRIBIR - Dirección Física: %d - Valor: %b", pid, df.DireccionFisica, valorAEscribir[cantEscrita:df.Tamanio])
 			cantEscrita += df.Tamanio
 		}
@@ -128,10 +128,6 @@ func SolicitarLectura(direccionesFisicas []globals.DireccionTamanio, pid int) []
 	if err != nil {
 		return []byte("error")
 	}
-	/*jsonDirecYTamanio, err := json.Marshal(direccionesFisicas)
-	if err != nil {
-		return []byte("error")
-	}*/
 
 	cliente := &http.Client{}
 	url := fmt.Sprintf("http://%s:%d/read", globals.Configcpu.IP_memory, globals.Configcpu.Port_memory)
@@ -140,7 +136,7 @@ func SolicitarLectura(direccionesFisicas []globals.DireccionTamanio, pid int) []
 		return []byte("error")
 	}
 
-	log.Println("Solicito lectura de memoria", jsonDirecYTamanio)
+	fmt.Println("Solicito lectura de memoria", jsonDirecYTamanio)
 
 	leerMemoria.Header.Set("Content-Type", "application/json")
 	respuesta, err := cliente.Do(leerMemoria)
@@ -152,23 +148,15 @@ func SolicitarLectura(direccionesFisicas []globals.DireccionTamanio, pid int) []
 		return []byte("Error al realizar la lectura")
 	}
 
-	log.Println("A VER QUE ONDA")
-
-	/*bodyBytes, err := io.ReadAll(respuesta.Body)
-	if err != nil {
-		return []byte("error")
-	}*/
-	//log.Println("Recibí respuesta de memoria: ", string(bodyBytes))
-
 	err = json.NewDecoder(respuesta.Body).Decode(&bodyResponseLeer)
 	if err != nil {
 		return []byte("error al deserializar la respuesta")
 	}
-	log.Println("DIRECCCIONES FISICAS: ", direccionesFisicas)
+	fmt.Println("Direcciones fisicas: ", direccionesFisicas)
 
 	for i, df := range direccionesFisicas {
 		contenido := bodyResponseLeer.Contenido[i]
-		log.Println("Contenido: ", contenido)
+		fmt.Println("Contenido leido: ", contenido)
 		log.Printf("PID: %d - Acción: LEER - Dirección Física: %d - Valor: %b", pid, df.DireccionFisica, contenido)
 	}
 

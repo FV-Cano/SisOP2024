@@ -43,15 +43,14 @@ func HandshakeKernel(nombre string) error {
 		return fmt.Errorf("unexpected response status: %s", resp.Status)
 	}
 
-	log.Println("Handshake con Kernel exitoso")
+	fmt.Println("Handshake con Kernel exitoso")
 
 	return nil
 }
 
-// * Hay que declarar los tipos de body que se van a recibir desde kernel porque por alguna razón no se puede crear un struct type dentro de una función con un tipo creado por uno mismo, están todos en globals
+// Hay que declarar los tipos de body que se van a recibir desde kernel porque por alguna razón no se puede crear un struct type dentro de una función con un tipo creado por uno mismo, están todos en globals
 
 func InterfaceQueuePCB(w http.ResponseWriter, r *http.Request) {
-	log.Println("InterfaceQueuePCB")
 	switch globals.ConfigIO.Type {
 	case "GENERICA":
 		var decodedStruct globals.GenSleep
@@ -62,7 +61,7 @@ func InterfaceQueuePCB(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		log.Print("Nueva PCB ID: ", decodedStruct.Pcb.PID, " para usar Interfaz")
+		fmt.Println("Nueva PCB ID: ", decodedStruct.Pcb.PID, " para usar Interfaz")
 		globals.Generic_QueueChannel <- decodedStruct
 
 	case "STDIN":
@@ -74,7 +73,7 @@ func InterfaceQueuePCB(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		log.Print("Nueva PCB ID: ", decodedStruct.Pcb.PID, " para usar Interfaz")
+		fmt.Println("Nueva PCB ID: ", decodedStruct.Pcb.PID, " para usar Interfaz")
 		globals.Stdin_QueueChannel <- decodedStruct
 
 	case "STDOUT":
@@ -86,7 +85,7 @@ func InterfaceQueuePCB(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		log.Print("Nueva PCB ID: ", decodedStruct.Pcb.PID, " para usar Interfaz")
+		fmt.Println("Nueva PCB ID: ", decodedStruct.Pcb.PID, " para usar Interfaz")
 		globals.Stdout_QueueChannel <- decodedStruct
 
 	case "DIALFS":
@@ -98,7 +97,7 @@ func InterfaceQueuePCB(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		log.Print("Nueva PCB ID: ", decodedStruct.Pcb.PID, " para usar Interfaz")
+		fmt.Println("Nueva PCB ID: ", decodedStruct.Pcb.PID, " para usar Interfaz")
 		globals.DialFS_QueueChannel <- decodedStruct
 	}
 
@@ -113,7 +112,7 @@ func IOWork() {
 			interfaceToWork = <-globals.Generic_QueueChannel
 
 			IO_GEN_SLEEP(interfaceToWork.TimeToSleep, interfaceToWork.Pcb)
-			log.Println("Fin de bloqueo para el PID: ", interfaceToWork.Pcb.PID)
+			fmt.Println("Fin de bloqueo para el PID: ", interfaceToWork.Pcb.PID)
 			returnPCB(interfaceToWork.Pcb)
 		}
 	case "STDIN":
@@ -122,7 +121,7 @@ func IOWork() {
 			interfaceToWork = <-globals.Stdin_QueueChannel
 
 			IO_STDIN_READ(interfaceToWork.Pcb, interfaceToWork.DireccionesFisicas)
-			log.Println("Fin de bloqueo para el PID: ", interfaceToWork.Pcb.PID)
+			fmt.Println("Fin de bloqueo para el PID: ", interfaceToWork.Pcb.PID)
 			returnPCB(interfaceToWork.Pcb)
 		}
 	case "STDOUT":
@@ -131,7 +130,7 @@ func IOWork() {
 			interfaceToWork = <-globals.Stdout_QueueChannel
 
 			IO_STDOUT_WRITE(interfaceToWork.Pcb, interfaceToWork.DireccionesFisicas)
-			log.Println("Fin de bloqueo para el PID: ", interfaceToWork.Pcb.PID)
+			fmt.Println("Fin de bloqueo para el PID: ", interfaceToWork.Pcb.PID)
 			returnPCB(interfaceToWork.Pcb)
 		}
 
@@ -141,7 +140,7 @@ func IOWork() {
 			interfaceToWork = <-globals.DialFS_QueueChannel
 			time.Sleep(time.Duration(globals.ConfigIO.Unit_work_time) * time.Millisecond) //! agrego esto
 			IO_DIALFS(interfaceToWork)
-			log.Println("Fin de bloqueo para el PID: ", interfaceToWork.Pcb.PID)
+			fmt.Println("Fin de bloqueo para el PID: ", interfaceToWork.Pcb.PID)
 			returnPCB(interfaceToWork.Pcb)
 
 		}
@@ -157,7 +156,6 @@ func returnPCB(pcb pcb.T_PCB) {
 func IO_GEN_SLEEP(sleepTime int, pcb pcb.T_PCB) {
 	sleepTimeTotal := time.Duration(sleepTime*globals.ConfigIO.Unit_work_time) * time.Millisecond
 	log.Printf("PID: %d - Operacion: IO_GEN_SLEEP", pcb.PID)
-	log.Printf("Bloqueado por %d milisegundos\n", (sleepTimeTotal / 1000))
 	time.Sleep(sleepTimeTotal)
 }
 
@@ -177,16 +175,16 @@ func IO_STDIN_READ(pcb pcb.T_PCB, direccionesFisicas []globals.DireccionTamanio)
 		Pid                 int                        `json:"pid"`
 	}{direccionesFisicas, []byte(data), int(pcb.PID)})
 	if err != nil {
-		log.Printf("Failed to encode data: %v", err)
+		fmt.Println("Failed to encode data: ", err)
 	}
 
 	response, err := http.Post(url, "application/json", bytes.NewBuffer(bodyWrite))
 	if err != nil {
-		log.Printf("Failed to send data: %v", err)
+		fmt.Println("Failed to send data: ", err)
 	}
 
 	if response.StatusCode != http.StatusOK {
-		log.Printf("Unexpected response status: %s", response.Status)
+		fmt.Println("Unexpected response status: ", response.Status)
 	}
 }
 
@@ -212,11 +210,11 @@ func IO_STDOUT_WRITE(pcb pcb.T_PCB, direccionesFisicas []globals.DireccionTamani
 
 	datosLeidos, err := http.Post(url, "application/json", bytes.NewBuffer(bodyRead))
 	if err != nil {
-		log.Printf("Failed to receive data: %v", err)
+		fmt.Println("Failed to receive data: ", err)
 	}
 
 	if datosLeidos.StatusCode != http.StatusOK {
-		log.Printf("Unexpected response status: %s", datosLeidos.Status)
+		fmt.Println("Unexpected response status: ", datosLeidos.Status)
 	}
 
 	var response BodyADevolver
@@ -274,7 +272,6 @@ func IO_DIALFS(interfaceToWork globals.DialFSRequest) {
 }
 
 func IO_DIALFS_READ(pid int, direccionesFisicas []globals.DireccionTamanio, contenido []byte) {
-
 	// Le pido a memoria que me guarde los datos
 	url := fmt.Sprintf("http://%s:%d/write", globals.ConfigIO.Ip_memory, globals.ConfigIO.Port_memory)
 
@@ -284,16 +281,16 @@ func IO_DIALFS_READ(pid int, direccionesFisicas []globals.DireccionTamanio, cont
 		Pid                 int                        `json:"pid"`
 	}{direccionesFisicas, contenido, pid})
 	if err != nil {
-		log.Printf("Failed to encode data: %v", err)
+		fmt.Println("Failed to encode data: ", err)
 	}
 
 	response, err := http.Post(url, "application/json", bytes.NewBuffer(bodyWrite))
 	if err != nil {
-		log.Printf("Failed to send data: %v", err)
+		fmt.Println("Failed to send data: ", err)
 	}
 
 	if response.StatusCode != http.StatusOK {
-		log.Printf("Unexpected response status: %s", response.Status)
+		fmt.Println("Unexpected response status: ", response.Status)
 	}
 
 }
@@ -312,11 +309,11 @@ func IO_DIALFS_WRITE(pid int, direccionesFisicas []globals.DireccionTamanio) []b
 
 	datosLeidos, err := http.Post(url, "application/json", bytes.NewBuffer(bodyRead))
 	if err != nil {
-		log.Printf("Failed to receive data: %v", err)
+		fmt.Println("Failed to receive data: ", err)
 	}
 
 	if datosLeidos.StatusCode != http.StatusOK {
-		log.Printf("Unexpected response status: %s", datosLeidos.Status)
+		fmt.Println("Unexpected response status: ", datosLeidos.Status)
 	}
 
 	var response BodyADevolver

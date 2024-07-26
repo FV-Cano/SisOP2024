@@ -2,7 +2,6 @@ package tlb
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/sisoputnfrba/tp-golang/cpu/globals"
 )
@@ -61,20 +60,6 @@ func CalcularDireccionFisica(frame int, offset int, tamanio int) int {
 
 }
 
-/*func ActualizarTLB(pid, pagina, marco int) {
-	if globals.Configcpu.Algorithm_tlb == "FIFO" {
-	if len(tlb.CurrentTLB) >= globals.Configcpu.Number_felling_tlb {
-		// Si la TLB está llena, eliminar la entrada más antigua (FIFO)
-		for key := range tlb.CurrentTLB {
-			delete(tlb.CurrentTLB, key)
-			break
-		}
-	}
-	tlb.CurrentTLB[pid] = tlb.Pagina_marco{Pagina: pagina, Marco: marco}
-
-	}
-}*/
-
 func ActualizarTLB(pid, pagina, marco int) {
 
 	if globals.Configcpu.Number_felling_tlb > 0 {
@@ -87,9 +72,9 @@ func ActualizarTLB(pid, pagina, marco int) {
 					}
 					CurrentTLB = append(CurrentTLB, nuevoElemento)
 					fmt.Printf("Se agregó la entrada %d a la TLB", CurrentTLB)
-					log.Println("LA TLB QUEDO ASI: ")
+					fmt.Println("LA TLB QUEDO ASI: ")
 					for i := range CurrentTLB {
-						log.Println(CurrentTLB[i])
+						fmt.Println(CurrentTLB[i])
 					}
 				} else {
 					// Remover el primer elemento (FIFO) y agregar el nuevo
@@ -97,9 +82,9 @@ func ActualizarTLB(pid, pagina, marco int) {
 						pid: {Pagina: pagina, Marco: marco},
 					})
 					fmt.Printf("Se agregó la entrada %d a la TLB", CurrentTLB)
-					log.Println("LA TLB QUEDO ASI: ")
+					fmt.Println("LA TLB QUEDO ASI: ")
 					for i := range CurrentTLB {
-						log.Println(CurrentTLB[i])
+						fmt.Println(CurrentTLB[i])
 					}
 				}
 			}
@@ -126,9 +111,9 @@ func ActualizarTLB(pid, pagina, marco int) {
 			}
 
 			// Imprimir la TLB
-			log.Println("LA TLB QUEDO ASI: ")
+			fmt.Println("LA TLB QUEDO ASI: ")
 			for i := range CurrentTLB {
-				log.Println(CurrentTLB[i])
+				fmt.Println(CurrentTLB[i])
 			}
 		}
 	}
@@ -159,9 +144,9 @@ func ActualizarOrdenDeAcceso(pid, pagina, marco int) {
 		}
 		CurrentTLB = append(CurrentTLB, nuevoElemento)
 		fmt.Printf("Se agregó la entrada %d a la TLB\n", pid)
-		log.Println("LA TLB QUEDO ASI: ")
+		fmt.Println("LA TLB QUEDO ASI: ")
 		for i := range CurrentTLB {
-			log.Println(CurrentTLB[i])
+			fmt.Println(CurrentTLB[i])
 		}
 	}
 }

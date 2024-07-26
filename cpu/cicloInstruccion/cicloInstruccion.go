@@ -58,7 +58,7 @@ func Fetch(currentPCB *pcb.T_PCB) string {
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		log.Fatal("Error al crear el request")
+		fmt.Print("Error al crear el request")
 	}
 	q := req.URL.Query()
 	q.Add("pid", strconv.Itoa(int(pid)))
@@ -68,16 +68,16 @@ func Fetch(currentPCB *pcb.T_PCB) string {
 	req.Header.Set("Content-Type", "application/json")
 	respuesta, err := cliente.Do(req)
 	if err != nil {
-		log.Fatal("Error al hacer el request")
+		fmt.Print("Error al hacer el request")
 	}
 
 	if respuesta.StatusCode != http.StatusOK {
-		log.Fatal("Error en el estado de la respuesta")
+		fmt.Print("Error en el estado de la respuesta")
 	}
 
 	instruccion, err := io.ReadAll(respuesta.Body)
 	if err != nil {
-		log.Fatal("Error al leer el cuerpo de la respuesta")
+		fmt.Print("Error al leer el cuerpo de la respuesta")
 	}
 
 	instruccion1 := string(instruccion)
@@ -107,7 +107,7 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 	case "IO_FS_CREATE":
 		cond, err := HallarInterfaz(instruccionDecodificada[1], "DIALFS")
 		if err != nil {
-			log.Print("La interfaz no existe o no acepta operaciones de IO Genéricas")
+			fmt.Print("La interfaz no existe o no acepta operaciones de IO Genéricas")
 			currentPCB.EvictionReason = "EXIT"
 		} else {
 			nombre_archivo := instruccionDecodificada[2]
@@ -134,7 +134,7 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 	case "IO_FS_DELETE":
 		cond, err := HallarInterfaz(instruccionDecodificada[1], "DIALFS")
 		if err != nil {
-			log.Print("La interfaz no existe o no acepta operaciones de IO Genéricas")
+			fmt.Print("La interfaz no existe o no acepta operaciones de IO Genéricas")
 			currentPCB.EvictionReason = "EXIT"
 		} else {
 			nombre_archivo := instruccionDecodificada[2]
@@ -166,7 +166,7 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 	case "IO_FS_TRUNCATE":
 		cond, err := HallarInterfaz(instruccionDecodificada[1], "DIALFS")
 		if err != nil {
-			log.Print("La interfaz no existe o no acepta operaciones de IO Genéricas")
+			fmt.Print("La interfaz no existe o no acepta operaciones de IO Genéricas")
 			currentPCB.EvictionReason = "EXIT"
 		} else {
 			nombre_archivo := instruccionDecodificada[2]
@@ -174,7 +174,6 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 			var tamanioEnInt int
 
 			tipoActualReg2 := reflect.TypeOf(currentPCB.CPU_reg[instruccionDecodificada[3]]).String()
-			fmt.Println("EL tamaño a convertir del archivo es : ", tamanio_archivo)
 
 			if tipoActualReg2 == "uint32" {
 				tamanioEnInt = int(Convertir[uint32](tipoActualReg2, tamanio_archivo))
@@ -212,7 +211,7 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 	case "IO_FS_WRITE":
 		cond, err := HallarInterfaz(instruccionDecodificada[1], "DIALFS")
 		if err != nil {
-			log.Print("La interfaz no existe o no acepta operaciones de IO Genéricas")
+			fmt.Print("La interfaz no existe o no acepta operaciones de IO Genéricas")
 			currentPCB.EvictionReason = "EXIT"
 		} else {
 			nombre_archivo := instruccionDecodificada[2]
@@ -249,8 +248,6 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 				punteroEnInt = int(Convertir[uint8](tipoActualRegPuntero, puntero))
 			}
 
-			fmt.Println("la posicion donde hay que escribir en memoria es ", punteroEnInt)
-
 			direccionesFisicas := mmu.ObtenerDireccionesFisicas(direccionEnInt, tamanioEnInt, int(currentPCB.PID))
 
 			if cond {
@@ -285,7 +282,7 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 	case "IO_FS_READ":
 		cond, err := HallarInterfaz(instruccionDecodificada[1], "DIALFS")
 		if err != nil {
-			log.Print("La interfaz no existe o no acepta operaciones de IO Genéricas")
+			fmt.Print("La interfaz no existe o no acepta operaciones de IO Genéricas")
 			currentPCB.EvictionReason = "EXIT"
 		} else {
 			nombre_archivo := instruccionDecodificada[2]
@@ -354,12 +351,12 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 	case "IO_GEN_SLEEP":
 		cond, err := HallarInterfaz(instruccionDecodificada[1], "GENERICA")
 		if err != nil {
-			log.Print("La interfaz no existe o no acepta operaciones de IO Genéricas")
+			fmt.Print("La interfaz no existe o no acepta operaciones de IO Genéricas")
 			currentPCB.EvictionReason = "EXIT"
 		} else {
 			tiempo_esp, err := strconv.Atoi(instruccionDecodificada[2])
 			if err != nil {
-				log.Fatal("Error al convertir el tiempo de espera a entero")
+				fmt.Print("Error al convertir el tiempo de espera a entero")
 			}
 			if cond {
 
@@ -381,9 +378,9 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 
 	case "IO_STDIN_READ":
 		cond, err := HallarInterfaz(instruccionDecodificada[1], "STDIN")
-		// interfazEncontrada
+	
 		if err != nil {
-			log.Print("La interfaz no existe o no acepta operaciones de IO de lectura")
+			fmt.Print("La interfaz no existe o no acepta operaciones de IO de lectura")
 			currentPCB.EvictionReason = "EXIT"
 		} else {
 			if cond {
@@ -421,7 +418,7 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 	case "IO_STDOUT_WRITE":
 		cond, err := HallarInterfaz(instruccionDecodificada[1], "STDOUT")
 		if err != nil {
-			log.Print("La interfaz no existe o no acepta operaciones de IO de escritura")
+			fmt.Print("La interfaz no existe o no acepta operaciones de IO de escritura")
 			currentPCB.EvictionReason = "EXIT"
 		} else {
 			if cond {
@@ -516,19 +513,15 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		currentPCB.RequestedResource = instruccionDecodificada[1]
 		fmt.Print("Requested Resource: ", currentPCB.RequestedResource+"\n") // *Lo hace bien
 		currentPCB.EvictionReason = "WAIT"
-		//currentPCB.PC++
 		pcb.EvictionFlag = true
 
 	case "SIGNAL":
 		currentPCB.RequestedResource = instruccionDecodificada[1]
 		currentPCB.EvictionReason = "SIGNAL"
-		//currentPCB.PC++
 		pcb.EvictionFlag = true
 
 	case "MOV_OUT":
-		// MOV_OUT (Registro Dirección, Registro Origen): Mueve el contenido del Registro Origen al Registro Dirección (DL).
-
-		//(Registro Dirección, Registro Datos): Lee el valor del Registro Datos y lo escribe en la dirección física de memoria
+		//MOV_OUT(Registro Dirección, Registro Datos): Lee el valor del Registro Datos y lo escribe en la dirección física de memoria
 		//obtenida a partir de la Dirección Lógica almacenada en el Registro Dirección.
 
 		// Leer el valor y tamaño del registro de datos (2)
@@ -546,13 +539,7 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 
 		direc_log := Convertir[uint32](tipoActualReg1, valorReg1)
 
-		log.Println("LA INST DECODIFICADA 1 ES", instruccionDecodificada[1])
-		log.Println("LA INST DECODIFICADA 2 ES", instruccionDecodificada[2])
-
-		log.Println("ACA LLEGO", instruccionDecodificada[2])
-
 		direcsFisicas := mmu.ObtenerDireccionesFisicas(int(direc_log), tamanio2, int(currentPCB.PID))
-		log.Println("ACA TAMBIEN LLEGO", direcsFisicas)
 
 		valorReg2 := currentPCB.CPU_reg[instruccionDecodificada[2]]
 		tipoActualReg2 := reflect.TypeOf(valorReg2).String()
@@ -564,14 +551,13 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 			valorEnBytes = []byte{byte(valor2EnUint)} 
 
 		} else {
-			valor2EnUint := Convertir[uint8](tipoActualReg2, valorReg2) //le saque el string
+			valor2EnUint := Convertir[uint8](tipoActualReg2, valorReg2) 
 			valorEnBytes = []byte{valor2EnUint}
 		}
 		valorEnBytesRelleno := make([]byte, tamanio2)
 		inicio := len(valorEnBytesRelleno) - len(valorEnBytes)
 		// Realizar la copia en la posición calculada
 		copy(valorEnBytesRelleno[inicio:], valorEnBytes)
-		log.Println("LOS BYTES SON", valorEnBytes)
 
 		solicitudesmemoria.SolicitarEscritura(direcsFisicas, valorEnBytesRelleno, int(currentPCB.PID)) //([direccion fisica y tamanio], valorAEscribir, pid
 
@@ -581,20 +567,15 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		// de memoria correspondiente a la Dirección Lógica que se encuentra
 		// en el Registro Dirección y lo almacena en el Registro Datos.
 
-		// valorReg2 = Direccion Logica -> Direccion Fisica
-		// valorReg1 registro donde tenemos que guardar el valor que esta en la D fisica
-
 	case "MOV_IN":
 
 		var tamanio int
-		//tamanio a leer es del tipo del registro de datos?
 		tipoReg1 := pcb.TipoReg(instruccionDecodificada[1])
 		if tipoReg1 == "uint32" {
 			tamanio = 4
 		} else if tipoReg1 == "uint8" {
 			tamanio = 1
 		}
-		//agregue lo de arriba
 
 		valorReg2 := currentPCB.CPU_reg[instruccionDecodificada[2]]
 		tipoActualReg2 := reflect.TypeOf(valorReg2).String()
@@ -603,19 +584,16 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 
 		fmt.Println("El valor de la direc logica es", int(direc_log))
 
-		log.Println("El valor de la direc logica es", int(direc_log))
-
 		// Obtenemos la direcion fisica del reg direccion
 		direcsFisicas := mmu.ObtenerDireccionesFisicas(int(direc_log), tamanio, int(currentPCB.PID))
 
-		log.Println("Direcciones fisicas: ", direcsFisicas)
+		fmt.Println("Direcciones fisicas: ", direcsFisicas)
 
 		//Obtenemos el valor guardado en las direcciones fisicas
 		datos := solicitudesmemoria.SolicitarLectura(direcsFisicas, int(currentPCB.PID))
-		log.Println("Los datos MOSTRAMELLON son: ", datos)
+		fmt.Println("Los datos obtenidos de memoria son: ", datos)
 		
 		// Almacenamos lo leido en el registro destino
-		log.Println("ACA ENTRO? EL TIPOREG1 ME LO DIO?: ", tipoReg1)
 		var datosAAlmacenar uint64
 
 		if tipoReg1 == "uint32" {
@@ -625,16 +603,10 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 
 			currentPCB.CPU_reg[instruccionDecodificada[1]] = uint32(datosAAlmacenar)
 
-			log.Println("LO GUARDE EN 32: ", currentPCB.CPU_reg[instruccionDecodificada[1]])
 		} else {
-			log.Println("ACA LLEGO A ENTRAR")
-
+			
 			datosAAlmacenar = uint64(datos[0])
-			log.Println("ACA LLEGO A ENTRAR TAMBIEN Y LOS DATOS ALMACENADOS SON: ", datosAAlmacenar)
-
 			currentPCB.CPU_reg[instruccionDecodificada[1]] = uint8(datosAAlmacenar)
-
-			log.Println("LO GUARDE EN 8: ", currentPCB.CPU_reg[instruccionDecodificada[1]])
 		}
 
 		//-----------------------------------------------------------------------------
@@ -653,21 +625,17 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 			valorSIConv := Convertir[uint32](tipoActualRegSI, valorRegSI)
 			direc_logicaSI = int(valorSIConv)
 
-
 		} else {
 			valorSIConv := Convertir[uint8](tipoActualRegSI, valorRegSI)
 			direc_logicaSI = int(valorSIConv)
 		}
 
-		//direc_logicaSI := int(Convertir[uint32](tipoActualRegSI, valorRegSI))
-		log.Println("La direccion logica de SI es: ", direc_logicaSI)
-
 		direcsFisicasSI := mmu.ObtenerDireccionesFisicas(direc_logicaSI, tamanio, int(currentPCB.PID))
 
-		log.Println("Las direcciones fisicas de SI son: ", direcsFisicasSI)
 		// Lee lo que hay en esa direccion fisica pero no todo, lees lo que te pasaron x param
 		datos := solicitudesmemoria.SolicitarLectura(direcsFisicasSI, int(currentPCB.PID))
-		log.Println("Los datos son: ", datos)
+		fmt.Println("Los datos leidos de memoria son: ", datos)
+
 		// Busca la direccion logica del registro DI
 		valorRegDI := currentPCB.CPU_reg["DI"]
 		tipoActualRegDI := reflect.TypeOf(valorRegDI).String()
@@ -685,16 +653,13 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 	//RESIZE (Tamaño)
 	case "RESIZE":
 		tamanio := globals.PasarAInt(instruccionDecodificada[1])
-		log.Println("MIRA EL TAMNIOOO: ", tamanio)
-
+		
 		respuestaResize := solicitudesmemoria.Resize(tamanio)
-		log.Println("el resize devuelve", respuestaResize)
+		fmt.Println("el resize devuelve", respuestaResize)
 		if respuestaResize != "\"OK\"" {
-			log.Println("ME LAS TOMO DE CPU")
 			currentPCB.EvictionReason = "OUT_OF_MEMORY"
 			pcb.EvictionFlag = true
 		}
-		log.Println("sigoo en cpu")
 	}
 }
 
@@ -703,7 +668,7 @@ type Uint interface{ ~uint8 | ~uint32 }
 func Convertir[T Uint](tipo string, parametro interface{}) T {
 
 	if parametro == "" {
-		log.Fatal("La cadena de texto está vacía")
+		fmt.Printf("La cadena de texto está vacía")
 	}
 
 	fmt.Print("El tipo a convertir es: ", tipo)
@@ -736,7 +701,7 @@ func HallarInterfaz(nombre string, tipo string) (bool, error) {
 		Type: tipo,
 	}
 
-	log.Println("Interfaz a buscar: ", interf)
+	fmt.Println("Interfaz a buscar: ", interf)
 
 	jsonData, err := json.Marshal(interf)
 	if err != nil {
@@ -759,7 +724,7 @@ func HallarInterfaz(nombre string, tipo string) (bool, error) {
 		return false, fmt.Errorf("failed to decode response: %v", err)
 	}
 
-	fmt.Println("ENCONTRE LA INTERFAZZ")
+	fmt.Println("Interfaz encontrada")
 
 	return response, nil
 }
@@ -799,7 +764,7 @@ func SendIOData(datum interface{}, endpoint string) error {
 func ConvertirUint8(parametro string) uint8 {
 	parametroConvertido, err := strconv.Atoi(parametro)
 	if err != nil {
-		log.Fatal("Error al convertir el parametro a uint8")
+		fmt.Print("Error al convertir el parametro a uint8")
 	}
 	return uint8(parametroConvertido)
 }
@@ -807,7 +772,7 @@ func ConvertirUint8(parametro string) uint8 {
 func ConvertirUint32(parametro string) uint32 {
 	parametroConvertido, err := strconv.Atoi(parametro)
 	if err != nil {
-		log.Fatal("Error al convertir el parametro a uint32")
+		fmt.Print("Error al convertir el parametro a uint32")
 	}
 	return uint32(parametroConvertido)
 }

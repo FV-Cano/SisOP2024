@@ -16,14 +16,11 @@ func LTS_Plan() {
 	for {
 
 		if globals.PlanningState == "STOPPED" {
-			// fmt.Print("ESTOY PARADO MI REY\n")
-			// Si funciona es la engaña pichanga máxima
 			globals.LTSPlanBinary <- true
 			<- globals.LTSPlanBinary
 			continue
 		}
 
-		// Si la lista de jobs está vacía, esperar a que tenga al menos uno
 		if len(globals.LTS) == 0 {
 			globals.EmptiedList <- true
 			continue
@@ -33,10 +30,10 @@ func LTS_Plan() {
 		auxJob := slice.Shift(&globals.LTS)
 		globals.LTSMutex.Unlock()
 		if auxJob.PID != 0 {
-			// Los procesos en READY, EXEC y BLOCKED afectan al grado de multiprogramación
 			globals.MultiprogrammingCounter <- int(auxJob.PID)
 			globals.ChangeState(&auxJob, "READY")
 			slice.Push(&globals.STS, auxJob)
+			log.Printf("Cola Ready STS: %v", kernel_api.GetPIDList(globals.STS))
 			globals.STSCounter <- int(auxJob.PID)
 		}
 	}
@@ -45,7 +42,7 @@ func LTS_Plan() {
 func STS_Plan() {
 	switch globals.Configkernel.Planning_algorithm {
 	case "FIFO":
-		log.Println("FIFO algorithm")
+		fmt.Println("FIFO algorithm")
 		for {
 			if globals.PlanningState == "STOPPED" {
 				globals.STSPlanBinary <- true
@@ -54,13 +51,11 @@ func STS_Plan() {
 			}
 
 			<-globals.STSCounter
-			//log.Println("FIFO Planificandoooo")
-			//globals.JobExecBinary <- true
 			FIFO_Plan()
 		}
 
 	case "RR":
-		log.Println("ROUND ROBIN algorithm")
+		fmt.Println("ROUND ROBIN algorithm")
 		for {
 			if globals.PlanningState == "STOPPED" {
 				globals.STSPlanBinary <- true
@@ -68,12 +63,11 @@ func STS_Plan() {
 				continue
 			}
 			<-globals.STSCounter
-			//globals.JobExecBinary <- true
 			RR_Plan()
 		}
 
 	case "VRR":
-		log.Println("VIRTUAL ROUND ROBIN algorithm")
+		fmt.Println("VIRTUAL ROUND ROBIN algorithm")
 		for {
 			if globals.PlanningState == "STOPPED" {
 				globals.STSPlanBinary <- true
@@ -82,13 +76,11 @@ func STS_Plan() {
 			}
 
 			<-globals.STSCounter
-			//log.Println("VRR Planificandoooo")
-			//globals.JobExecBinary <- true
 			VRR_Plan()
 		}
 
 	default:
-		log.Fatalf("Not a planning algorithm")
+		fmt.Println("Not a planning algorithm")
 	}
 }
 
@@ -96,95 +88,40 @@ type T_Quantum struct {
 	TimeExpired chan bool
 }
 
-/*
-*
+/**
   - FIFO_Plan
 */
 func FIFO_Plan() {
-	// 1. Tomo el primer proceso de la lista y lo quito de la misma
 	globals.CurrentJob = slice.Shift(&globals.STS)
 
-	// 2. Cambio su estado a EXEC
 	globals.ChangeState(&globals.CurrentJob, "EXEC")
 	globals.CurrentJob.Executions++
 
-	// 3. Envío el PCB al CPU
 	kernel_api.PCB_Send()
 
 	<-globals.PcbReceived
 
-	// 4. Manejo de desalojo
 	EvictionManagement()
 }
-
-/**
-  - RR_Plan
-*/
-/*
-func RR_Plan(quantum uint32) {
-	//globals.EnganiaPichangaMutex.Lock()
-	// 1. Tomo el primer proceso de la lista y lo quito de la misma
-	globals.CurrentJob = slice.Shift(&globals.STS)
-
-	// 2. Cambio su estado a EXEC
-	globals.ChangeState(&globals.CurrentJob, "EXEC")
-	//globals.EnganiaPichangaMutex.Unlock()
-
-	// 3. Envío el PCB al CPU
-	kernel_api.PCB_Send() // <-- Envía proceso y espera respuesta
-	go startTimer(quantum)
-
-	// 4. Esperar a que el proceso termine o sea desalojado por el timer
-	<- globals.PcbReceived
-
-	// 5. Manejo de desalojo
-	EvictionManagement()
-}
-*/
 
 func RR_Plan() {
-	globals.EnganiaPichangaMutex.Lock() // Paso 1: Bloquear el mutex para asegurar la exclusión mutua
+	globals.EnganiaPichangaMutex.Lock()
 	
-	globals.CurrentJob = slice.Shift(&globals.STS)   // Paso 2: Tomar el primer proceso
-	globals.ChangeState(&globals.CurrentJob, "EXEC") // Cambiar estado a EXEC
+	globals.CurrentJob = slice.Shift(&globals.STS)
+	globals.ChangeState(&globals.CurrentJob, "EXEC")
 	globals.CurrentJob.Executions++
-	globals.EnganiaPichangaMutex.Unlock()            // Desbloquear el mutex después de modificar las variables compartidas
+	globals.EnganiaPichangaMutex.Unlock()
 
 	go startTimer(globals.CurrentJob.Quantum)
-	kernel_api.PCB_Send()                                             // Paso 3: Enviar el PCB al CPU
-	//timer := time.NewTimer(time.Duration(quantum)) // Paso 4: Iniciar el temporizador
+	kernel_api.PCB_Send()                                            
 
-	select {
-		case <-globals.PcbReceived:
-	}
-	/* select {
-	case <-globals.PcbReceived: // Paso 5: Esperar a que el proceso termine
-		// El proceso ha terminado, manejar la finalización
-	case <-timer.C: // El temporizador ha expirado antes de que el proceso termine
-		globals.EnganiaPichangaMutex.Lock()
-		globals.STS = append(globals.STS, globals.CurrentJob) // Paso 6: Agregar el proceso al final de la lista TODO:
-		globals.ChangeState(&globals.CurrentJob, "READY")     // Cambiar el estado a READY
-		globals.EnganiaPichangaMutex.Unlock()
-	} */
+	<-globals.PcbReceived
 
-	EvictionManagement() // Paso 7: Manejar el desalojo
+	EvictionManagement()
 }
 
 func VRR_Plan() {
     globals.EnganiaPichangaMutex.Lock()
-    // Determinar el trabajo actual basado en la prioridad o la cola estándar
-
-	/* pidsPrio := make([]uint32, len(globals.STS_Priority))
-		for i, pcb := range globals.STS_Priority {
-    	pidsPrio[i] = pcb.PID
-	}
-	pids := make([]uint32, len(globals.STS))
-		for i, pcb := range globals.STS {
-    	pids[i] = pcb.PID
-	}
-	
-	fmt.Printf("STS_Priority: %v\n", pidsPrio)
-	fmt.Printf("STS: %v\n", pids) */
 
     if len(globals.STS_Priority) > 0 {
         globals.CurrentJob = slice.Shift(&globals.STS_Priority)
@@ -192,70 +129,31 @@ func VRR_Plan() {
         globals.CurrentJob = slice.Shift(&globals.STS)
     }
 
-    // Cambiar el estado del trabajo actual a EXEC
     globals.ChangeState(&globals.CurrentJob, "EXEC")
 	globals.CurrentJob.Executions++
     globals.EnganiaPichangaMutex.Unlock()
 
-    // Iniciar el temporizador para el quantum del trabajo actual
     timeBefore := time.Now()
     go startTimer(globals.CurrentJob.Quantum)
 
-    // Enviar el PCB al kernel
     kernel_api.PCB_Send()
 
-    // Esperar a recibir la señal de que el PCB ha sido procesado
     <-globals.PcbReceived
 
     // Calcular el tiempo que tomó la ejecución
     timeAfter := time.Now()
     diffTime := uint32(time.Duration(timeAfter.Sub(timeBefore)).Milliseconds())
 
-	log.Printf("\nQuantum con el que ejecutó el PID %d: %d\n", globals.CurrentJob.PID, globals.CurrentJob.Quantum)
-	log.Printf("Difftime: %d\n", diffTime)
-
     if diffTime < globals.CurrentJob.Quantum {
-        // Si el trabajo terminó antes de consumir su quantum, ajustar el quantum restante
         globals.CurrentJob.Quantum = globals.CurrentJob.Quantum - diffTime
 		log.Print("Quantum restante: ", globals.CurrentJob.Quantum)
     } else {
-        // Si el trabajo consumió todo su quantum, restablecer el quantum según la configuración del kernel
         globals.CurrentJob.Quantum = globals.Configkernel.Quantum
     }
 
-    // Manejar la gestión de expulsión después de la ejecución del trabajo
     EvictionManagement()
 }
 
-/*
-func VRR_Plan() {
-	globals.EnganiaPichangaMutex.Lock()
-	if len(globals.STS_Priority) == 0 {
-		globals.CurrentJob = slice.Shift(&globals.STS)
-	} else {
-		globals.CurrentJob = slice.Shift(&globals.STS_Priority)
-	}
-
-	globals.ChangeState(&globals.CurrentJob, "EXEC")
-	globals.EnganiaPichangaMutex.Unlock()
-
-	timeBefore := time.Now()
-	go startTimer(globals.CurrentJob.Quantum)
-	kernel_api.PCB_Send()
-
-	<-globals.PcbReceived
-	timeAfter := time.Now()
-
-	diffTime := uint32(timeAfter.Sub(timeBefore))
-	if diffTime < globals.CurrentJob.Quantum {
-		globals.CurrentJob.Quantum -= diffTime * uint32(time.Millisecond)
-	} else {
-		globals.CurrentJob.Quantum = uint32(globals.Configkernel.Quantum * int(time.Millisecond))
-	}
-
-	EvictionManagement()
-}
-*/
 func startTimer(quantum uint32) {
 	quantumTime := time.Duration(quantum) * time.Millisecond
 	fmt.Println("Quantum time: ", quantumTime)
@@ -276,16 +174,12 @@ func startTimer(quantum uint32) {
 func quantumInterrupt(pcb pcb.T_PCB) {
 	fmt.Printf("Mando interrupción por quantum al PID %d\n", pcb.PID)
 	fmt.Println("La eviction reason es:", pcb.EvictionReason)
-	// Interrumpir proceso actual, response = OK message
+
 	kernel_api.SendInterrupt("QUANTUM", pcb.PID, pcb.Executions)
 }
 
-/*
-*
+/**
   - EvictionManagement
-  - Maneja los desalojos de los procesos
-
-*
 */
 func EvictionManagement() {
 	evictionReason := globals.CurrentJob.EvictionReason
@@ -298,11 +192,10 @@ func EvictionManagement() {
 		
 		pcbAux := globals.CurrentJob
 		slice.Push(&globals.Blocked, globals.CurrentJob)
-		log.Printf("PID: %d - Bloqueado por I/O genérico\n", globals.CurrentJob.PID)
+		log.Printf("PID: %d - Bloqueado por I/O GENERICA\n", globals.CurrentJob.PID)
 		go func() {
 			kernel_api.SolicitarGenSleep(pcbAux)
 		}()
-		//<-globals.JobExecBinary
 
 	case "BLOCKED_IO_STDIN":
 		globals.EnganiaPichangaMutex.Lock()
@@ -310,11 +203,10 @@ func EvictionManagement() {
 		
 		pcbAux := globals.CurrentJob
 		slice.Push(&globals.Blocked, globals.CurrentJob)
-		log.Printf("PID: %d - Bloqueado por I/O de entrada\n", globals.CurrentJob.PID)
+		log.Printf("PID: %d - Bloqueado por I/O STDIN\n", globals.CurrentJob.PID)
 		go func() {
 			kernel_api.SolicitarStdinRead(pcbAux)
 		}()
-		//<-globals.JobExecBinary
 
 	case "BLOCKED_IO_STDOUT":
 		globals.EnganiaPichangaMutex.Lock()
@@ -322,10 +214,10 @@ func EvictionManagement() {
 		
 		pcbAux := globals.CurrentJob
 		slice.Push(&globals.Blocked, globals.CurrentJob)
+		log.Printf("PID: %d - Bloqueado por I/O STDOUT\n", globals.CurrentJob.PID)
 		go func() {
 			kernel_api.SolicitarStdoutWrite(pcbAux)
 		}()
-		//<-globals.JobExecBinary
 
 	case "BLOCKED_IO_DIALFS":
 		globals.EnganiaPichangaMutex.Lock()
@@ -333,29 +225,27 @@ func EvictionManagement() {
 
 		pcbAux := globals.CurrentJob
 		slice.Push(&globals.Blocked, globals.CurrentJob)
+		log.Printf("PID: %d - Bloqueado por I/O DIALFS\n", globals.CurrentJob.PID)
 		go func() {
 			kernel_api.SolicitarDialFS(pcbAux)
 		}()
-		//<-globals.JobExecBinary
 
 	case "TIMEOUT":
 		globals.ChangeState(&globals.CurrentJob, "READY")
 		globals.STS = append(globals.STS, globals.CurrentJob)
 		log.Printf("PID: %d - Desalojado por fin de quantum\n", globals.CurrentJob.PID)
-		//<-globals.JobExecBinary
 		globals.STSCounter <- int(globals.CurrentJob.PID)
 
 	case "EXIT":
 		globals.ChangeState(&globals.CurrentJob, "TERMINATED")
 		kernel_api.KillJob(globals.CurrentJob)
-		//<-globals.JobExecBinary
 		<-globals.MultiprogrammingCounter
 		log.Printf("Finaliza el proceso %d - Motivo: %s\n", globals.CurrentJob.PID, evictionReason)
 
 	case "WAIT":
 		if resource.Exists(globals.CurrentJob.RequestedResource) {
 			resource.RequestConsumption(globals.CurrentJob.RequestedResource)
-			//<-globals.JobExecBinary
+
 		} else {
 			fmt.Print("El recurso no existe\n")
 			globals.CurrentJob.EvictionReason = "EXIT"
@@ -365,28 +255,26 @@ func EvictionManagement() {
 	case "SIGNAL":
 		if resource.Exists(globals.CurrentJob.RequestedResource) {
 			resource.ReleaseConsumption(globals.CurrentJob.RequestedResource)
-			//<-globals.JobExecBinary
+
 		} else {
 			fmt.Print("El recurso no existe\n")
 			globals.CurrentJob.EvictionReason = "EXIT"
 			EvictionManagement()
 		}
 
-	case "OUT_OF_MEMORY":	// ? En qué caso llega acá?
+	case "OUT_OF_MEMORY":
 		globals.ChangeState(&globals.CurrentJob, "TERMINATED")
 		kernel_api.KillJob(globals.CurrentJob)
-		//<-globals.JobExecBinary
 		<-globals.MultiprogrammingCounter
 		log.Printf("Finaliza el proceso %d - Motivo: %s\n", globals.CurrentJob.PID, evictionReason)
 
 	case "INTERRUPTED_BY_USER":
 		globals.ChangeState(&globals.CurrentJob, "TERMINATED")
 		kernel_api.KillJob(globals.CurrentJob)
-		//<-globals.JobExecBinary
 		<-globals.MultiprogrammingCounter
 		log.Printf("Finaliza el proceso %d - Motivo: %s\n", globals.CurrentJob.PID, evictionReason)
 
 	default:
-		log.Fatalf("'%s' no es una razón de desalojo válida", evictionReason)
+		fmt.Printf("'%s' no es una razón de desalojo válida", evictionReason)
 	}
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -30,14 +31,14 @@ func main() {
 	cfg.VEnvMemoria(&globals.ConfigIO.Ip_memory, &globals.ConfigIO.Port_memory)
 	cfg.VEnvIO(&globals.ConfigIO.Ip, &globals.ConfigIO.Port)
 
-	log.Printf("Configuración IO cargada")
+	fmt.Printf("Configuración IO cargada")
 	
 	IORoutes := RegisteredModuleRoutes()
 
 	go server.ServerStart(globals.ConfigIO.Port, IORoutes)
 
 	// Handshake con kernel
-	log.Println("Handshake con Kernel")
+	fmt.Println("Handshake con Kernel")
 
     nombreInterfaz := filepath.Base(os.Args[1])
     nombreInterfaz = strings.TrimSuffix(nombreInterfaz, filepath.Ext(nombreInterfaz))

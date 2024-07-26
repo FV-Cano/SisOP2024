@@ -3,7 +3,6 @@ package server
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 )
 
@@ -24,14 +23,14 @@ func RecibirPaquetes(w http.ResponseWriter, r *http.Request) {
 	var paquete Paquete
 	err := decoder.Decode(&paquete)
 	if err != nil {
-		log.Printf("error al decodificar mensaje: %s\n", err.Error())
+		fmt.Printf("error al decodificar mensaje: %s\n", err.Error())
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("error al decodificar mensaje"))
 		return
 	}
 
-	log.Println("me llego un paquete de un cliente")
-	log.Printf("%+v\n", paquete)
+	fmt.Println("me llego un paquete de un cliente")
+	fmt.Printf("%+v\n", paquete)
 
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("ok"))
@@ -42,14 +41,14 @@ func RecibirMensaje(w http.ResponseWriter, r *http.Request) {
 	var mensaje Mensaje
 	err := decoder.Decode(&mensaje)
 	if err != nil {
-		log.Printf("Error al decodificar mensaje: %s\n", err.Error())
+		fmt.Printf("Error al decodificar mensaje: %s\n", err.Error())
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("Error al decodificar mensaje"))
 		return
 	}
-
-	log.Println("Me llego un mensaje de un cliente")
-	log.Printf("%+v\n", mensaje)
+	
+	fmt.Println("Me llego un mensaje de un cliente")
+	fmt.Printf("%+v\n", mensaje)
 
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("ok"))
@@ -66,13 +65,12 @@ func ServerStart(port int, moduleRoutes ...http.Handler) {
 
 	mux.HandleFunc("/paquetes", RecibirPaquetes)
 	mux.HandleFunc("/mensaje", RecibirMensaje)
-	//mux.HandleFunc("GET /process/{pid}", kernel_api.ProcessState)
 
 	for _, route := range moduleRoutes {
 		mux.Handle("/", route)
 	}
 
-	log.Printf("Server listening on port %d\n", port)
+	fmt.Printf("Server listening on port %d\n", port)
 	err := http.ListenAndServe(":"+fmt.Sprintf("%v", port), mux)
 	if err != nil {
 		panic(err)

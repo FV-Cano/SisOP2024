@@ -1,7 +1,5 @@
 package globals
 
-// Global variables:
-
 import (
 	"log"
 	"sync"
@@ -10,6 +8,7 @@ import (
 	"github.com/sisoputnfrba/tp-golang/utils/pcb"
 )
 
+// Global variables
 var (
 	NextPID 					uint32 = 0
 	LTS 						[]pcb.T_PCB
@@ -28,12 +27,10 @@ var (
 	// * Mutex
 		PidMutex 				sync.Mutex
 		ProcessesMutex 			sync.Mutex
-		STSMutex 				sync.Mutex //!chequear
-		//ControlMutex 			sync.Mutex		// Creería que no es necesario
+		STSMutex 				sync.Mutex
 		LTSMutex 				sync.Mutex
 		BlockedMutex			sync.Mutex
 		MapMutex 				sync.Mutex
-		//EmptiedListMutex		sync.Mutex
 		EnganiaPichangaMutex	sync.Mutex
 	// * Binarios
 		LTSPlanBinary  			= make (chan bool, 1)
@@ -47,8 +44,6 @@ var (
 		MultiprogrammingCounter chan int
 		STSCounter 				chan int
 )
-
-// CurrentJob (kernel_api funcion PCB_Send) se lee
 
 var CurrentJob pcb.T_PCB
 

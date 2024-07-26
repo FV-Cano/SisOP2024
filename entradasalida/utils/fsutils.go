@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"math"
 	"os"
 
@@ -20,7 +19,6 @@ func CrearModificarArchivo(nombreArchivo string, contenido []byte) {
 	var file *os.File
 	var err error
 
-	// TODO REVISAR
 	if nombreArchivo != "dialfs/bitmap.dat" && nombreArchivo != "dialfs/bloques.dat" {
 		nombreArchivo = "dialfs/" + nombreArchivo
 	}
@@ -29,36 +27,34 @@ func CrearModificarArchivo(nombreArchivo string, contenido []byte) {
 	if _, err := os.Stat(nombreArchivo); os.IsNotExist(err) {
 		file, err = os.Create(nombreArchivo)
 		if err != nil {
-			log.Fatalf("Failed creating file: %s", err)
+			fmt.Println("Failed creating file: ", err)
 		}
 	} else {
 		file, err = os.OpenFile(nombreArchivo, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 		if err != nil {
-			log.Fatalf("Failed opening file: %s", err)
+			fmt.Println("Failed opening file: ", err)
 		}
 	}
 
 	// Cierra el archivo al final de la función
 	defer func() {
 		if err := file.Close(); err != nil {
-			log.Fatalf("Failed closing file: %s", err)
+			fmt.Println("Failed closing file: ", err)
 		}
 	}()
 
 	// Escribe el contenido en el archivo
 	_, err = file.Write(contenido)
 	if err != nil {
-		log.Fatalf("Failed writing to file: %s", err)
+		fmt.Println("Failed writing to file: ", err)
 	}
 
 	// Guarda los cambios en el archivo
 	err = file.Sync()
 	if err != nil {
-		log.Fatalf("Failed syncing file: %s", err)
+		fmt.Println("Failed syncing file: ", err)
 	}
 }
-
-//var archivo = LeerArchivoEnStruct(nombreArchivo) //TODO: para que no lo lea siempre
 
 func LeerArchivoEnStruct(nombreArchivo string) *globals.Metadata {
 	// Paso 2: Abrir el archivo
@@ -141,21 +137,6 @@ func EntraEnDisco(tamanioTotalEnBloques int) int {
 	}
 	return (-1)
 }
-/*
-func EntraEnDisco(tamanioTotalEnBloques int) int {
-
-	var i int
-
-	espacio, posicion := CalcularBloquesLibreAPartirDe(i, tamanioTotalEnBloques)
-
-	if espacio <= tamanioTotalEnBloques {
-		return (-1)
-	} else {
-		return posicion
-	}
-}
-*/
-
 
 // * Manejo de BLOQUES
 /**
@@ -191,42 +172,10 @@ func CalcularBloquesLibreAPartirDe(posBloqueInicial int) int {
 	return contadorLibres // Devolvemos el contador de bloques libres
 }
 
-/*
-func CalcularBloquesLibreAPartirDe(bloqueInicial int, bloquesTotales int) (int, int) {
-	if bloqueInicial < 0 || bloqueInicial >= globals.ConfigIO.Dialfs_block_count {
-		log.Fatalf("Initial block index out of range: %d", bloqueInicial)
-	}
-	var i = bloqueInicial
-	var posicion = -1
-	var contadorLibres = 0       // Inicializamos el contador de bloques libres
-	var contadorConsecutivos = 0 // Contador de bloques libres consecutivos
-
-	for i < globals.ConfigIO.Dialfs_block_count {
-		if IsNotSet(i) { // Si el bloque actual no está seteado (es 0),
-			contadorLibres++       // Incrementamos el contador de bloques libres
-			contadorConsecutivos++ // Incrementamos el contador de bloques libres consecutivos
-			if contadorConsecutivos == bloquesTotales {
-				posicion = i - (bloquesTotales - 1)
-				break // Terminamos la iteración si encontramos suficientes bloques contiguos
-			}
-		} else { // Si encontramos un bloque seteado (es 1),
-			contadorConsecutivos = 0 // Reiniciamos el contador de bloques libres consecutivos
-		}
-		i++ // Pasamos al siguiente bloque
-	}
-
-	if contadorConsecutivos < bloquesTotales {
-		posicion = -1 // No se encontraron suficientes bloques libres contiguos
-	}
-
-	fmt.Println("La cantidad de bloques libres es ", contadorLibres)
-	return contadorLibres, posicion // Devolvemos el contador de bloques libres y la posición del primer bloque libre contiguo
-}
-*/
 /**
  * CalcularBloqueLibre: calcula el primer bloque libre en el sistema de archivos
  */
-// TODO: Tirar excepción si no hay bloques libres
+
 func CalcularBloqueLibre() int {
 	var i = 0
 	for i < globals.ConfigIO.Dialfs_block_count {
@@ -243,17 +192,17 @@ func CalcularBloqueLibre() int {
  */
 func LiberarBloquesDesde(numBloque int, tamanioABorrar int) {
 	var i = numBloque - 1
-	var contador = 0 // Inicializa el contador
+	var contador = 0
 	for contador < tamanioABorrar {
 		if i >= globals.ConfigIO.Dialfs_block_count {
-			log.Fatalf("Block index out of range: %d", i)
+			fmt.Println("Block index out of range: ", i)
 			break
 		}
 		if !IsNotSet(i) {
 			Clear(i)
 			contador++
 		} else {
-			break // Rompe el bucle
+			break
 		}
 		i++
 	}
@@ -298,7 +247,7 @@ func ActualizarBloques() {
 
 	archivoMarshallado, err := json.Marshal(bloquesActualizado)
 	if err != nil {
-		log.Fatalf("Failed to marshal metadata: %s", err)
+		fmt.Println("Failed to marshal metadata: ", err)
 	}
 
 	CrearModificarArchivo("dialfs/bloques.dat", archivoMarshallado)
@@ -331,7 +280,7 @@ func ActualizarBitmap() {
 
 	archivoMarshallado, err := json.Marshal(bitmapActualizado)
 	if err != nil {
-		log.Fatalf("Failed to marshal metadata: %s", err)
+		fmt.Println("Failed to marshal metadata: ", err)
 	}
 	CrearModificarArchivo("dialfs/bitmap.dat", archivoMarshallado)
 }

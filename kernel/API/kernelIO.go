@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/sisoputnfrba/tp-golang/kernel/globals"
@@ -13,7 +12,12 @@ import (
 	"github.com/sisoputnfrba/tp-golang/utils/slice"
 )
 
-// ----------------- IO -----------------
+/**
+ * GetIOInterface: Recibe una interfaz de IO y la agrega al sistema.
+
+ * @param w: http.ResponseWriter -> Respuesta a enviar.
+ * @param r: *http.Request -> Request recibido.
+ */
 func GetIOInterface(w http.ResponseWriter, r *http.Request) {
 	var interf device.T_IOInterface
 
@@ -25,7 +29,7 @@ func GetIOInterface(w http.ResponseWriter, r *http.Request) {
 
 	slice.Push(&globals.Interfaces, interf)
 
-	log.Printf("Interface received, type: %s, port: %d\n", interf.InterfaceType, interf.InterfacePort)
+	fmt.Printf("Interface received, type: %s, port: %d\n", interf.InterfaceType, interf.InterfacePort)
 
 	w.WriteHeader(http.StatusOK)
 }
@@ -35,6 +39,13 @@ type SearchInterface struct {
 	Type string `json:"type"`
 }
 
+/**
+ * ExisteInterfaz: Verifica si una interfaz existe en el sistema.
+
+ * @param w: http.ResponseWriter -> Respuesta a enviar.
+ * @param r: *http.Request -> Request recibido.
+*/
+
 func ExisteInterfaz(w http.ResponseWriter, r *http.Request) {
 	var received_data SearchInterface
 	err := json.NewDecoder(r.Body).Decode(&received_data)
@@ -42,7 +53,7 @@ func ExisteInterfaz(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Bad request", http.StatusBadRequest)
 	}
 
-	log.Printf("Received data: %s, %s\n", received_data.Name, received_data.Type)
+	fmt.Printf("Received data: %s, %s\n", received_data.Name, received_data.Type)
 
 	aux, err := SearchDeviceByName(received_data.Name)
 	if err != nil {
@@ -65,10 +76,17 @@ func ExisteInterfaz(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonResp)
 }
 
+/**
+ * SearchDeviceByName: Busca una interfaz por su nombre.
+
+ * @param deviceName: string -> Nombre de la interfaz a buscar.
+ * @return device.T_IOInterface -> Interfaz encontrada.
+*/
+
 func SearchDeviceByName(deviceName string) (device.T_IOInterface, error) {
 	for _, interf := range globals.Interfaces {
 		if interf.InterfaceName == deviceName {
-			log.Println("Interfaz encontrada: ", interf)
+			fmt.Println("Interfaz encontrada: ", interf)
 			return interf, nil
 		}
 	}
@@ -104,6 +122,12 @@ type DialFSRequest struct {
 	Operacion     string
 }
 
+/**
+ * SolicitarGenSleep: Solicita a IO la operación de GEN_SLEEP.
+
+ * @param pcb: pcb.T_PCB -> PCB que solicita la operación.
+*/
+
 func SolicitarGenSleep(pcb pcb.T_PCB) {
 	genSleepDataDecoded := genericInterfaceBody.(struct {
 		InterfaceName string
@@ -112,7 +136,7 @@ func SolicitarGenSleep(pcb pcb.T_PCB) {
 
 	newInter, err := SearchDeviceByName(genSleepDataDecoded.InterfaceName)
 	if err != nil {
-		log.Printf("Device not found: %v", err)
+		fmt.Printf("Device not found: %v", err)
 	}
 
 	genSleep := GenSleep{
@@ -125,19 +149,25 @@ func SolicitarGenSleep(pcb pcb.T_PCB) {
 
 	jsonData, err := json.Marshal(genSleep)
 	if err != nil {
-		log.Printf("Failed to encode GenSleep request: %v", err)
+		fmt.Printf("Failed to encode GenSleep request: %v", err)
 	}
 
 	url := fmt.Sprintf("http://%s:%d/io-operate", newInter.InterfaceIP, newInter.InterfacePort)
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
-		log.Printf("Failed to send PCB: %v", err)
+		fmt.Printf("Failed to send PCB: %v", err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		log.Printf("Unexpected response status: %s", resp.Status)
+		fmt.Printf("Unexpected response status: %s", resp.Status)
 	}
 }
+
+/**
+ * SolicitarStdinRead: Solicita a IO la operación de STDIN_READ.
+
+ * @param pcb: pcb.T_PCB -> PCB que solicita la operación.
+*/
 
 func SolicitarStdinRead(pcb pcb.T_PCB) {
 	stdinDataDecoded := genericInterfaceBody.(struct {
@@ -146,11 +176,11 @@ func SolicitarStdinRead(pcb pcb.T_PCB) {
 		Tamanio            int
 	})
 
-	log.Println("RECIBE STDIN READ: ", stdinDataDecoded)
+	fmt.Println("RECIBE STDIN READ: ", stdinDataDecoded)
 
 	newInter, err := SearchDeviceByName(stdinDataDecoded.InterfaceName)
 	if err != nil {
-		log.Printf("Device not found: %v", err)
+		fmt.Printf("Device not found: %v", err)
 	}
 
 	stdinRead := StdinRead{
@@ -159,28 +189,34 @@ func SolicitarStdinRead(pcb pcb.T_PCB) {
 		DireccionesFisicas: stdinDataDecoded.DireccionesFisicas,
 	}
 
-	log.Println("LE QUIERE MANDAR A IO: ", stdinRead)
+	fmt.Println("LE QUIERE MANDAR A IO: ", stdinRead)
 
 	globals.EnganiaPichangaMutex.Unlock()
 
 	jsonData, err := json.Marshal(stdinRead)
 	if err != nil {
-		log.Printf("Failed to encode StdinRead request: %v", err)
+		fmt.Printf("Failed to encode StdinRead request: %v", err)
 	}
 
 	url := fmt.Sprintf("http://%s:%d/io-operate", newInter.InterfaceIP, newInter.InterfacePort)
 
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
-		log.Printf("Failed to send PCB: %v", err)
+		fmt.Printf("Failed to send PCB: %v", err)
 	}
 
-	log.Println("IO STDIN FUE AVISADO POR KERNEL")
+	fmt.Println("IO STDIN FUE AVISADO POR KERNEL")
 
 	if resp.StatusCode != http.StatusOK {
-		log.Printf("Unexpected response status: %s", resp.Status)
+		fmt.Printf("Unexpected response status: %s", resp.Status)
 	}
 }
+
+/**
+ * SolicitarStdoutWrite: Solicita a IO la operación de STDOUT_WRITE.
+
+ * @param pcb: pcb.T_PCB -> PCB que solicita la operación.
+*/
 
 func SolicitarStdoutWrite(pcb pcb.T_PCB) {
 	stdoutDataDecoded := genericInterfaceBody.(struct {
@@ -190,7 +226,7 @@ func SolicitarStdoutWrite(pcb pcb.T_PCB) {
 
 	newInter, err := SearchDeviceByName(stdoutDataDecoded.InterfaceName)
 	if err != nil {
-		log.Printf("Device not found: %v", err)
+		fmt.Printf("Device not found: %v", err)
 	}
 
 	stdoutWrite := StdoutWrite{
@@ -203,20 +239,26 @@ func SolicitarStdoutWrite(pcb pcb.T_PCB) {
 
 	jsonData, err := json.Marshal(stdoutWrite)
 	if err != nil {
-		log.Printf("Failed to encode StdoutWrite request: %v", err)
+		fmt.Printf("Failed to encode StdoutWrite request: %v", err)
 	}
 
 	url := fmt.Sprintf("http://%s:%d/io-operate", newInter.InterfaceIP, newInter.InterfacePort)
 
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
-		log.Printf("Failed to send PCB: %v", err)
+		fmt.Printf("Failed to send PCB: %v", err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		log.Printf("Unexpected response status: %s", resp.Status)
+		fmt.Printf("Unexpected response status: %s", resp.Status)
 	}
 }
+
+/**
+ * SolicitarDialFS: Solicita a IO la operación de DIAL_FS.
+
+ * @param pcb: pcb.T_PCB -> PCB que solicita la operación.
+*/
 
 func SolicitarDialFS(pcb pcb.T_PCB) {
 	dialFsDataDecoded := genericInterfaceBody.(struct {
@@ -230,7 +272,7 @@ func SolicitarDialFS(pcb pcb.T_PCB) {
 
 	newInter, err := SearchDeviceByName(dialFsDataDecoded.InterfaceName)
 	if err != nil {
-		log.Printf("Device not found: %v", err)
+		fmt.Printf("Device not found: %v", err)
 	}
 
 	dialFS := DialFSRequest{
@@ -247,33 +289,28 @@ func SolicitarDialFS(pcb pcb.T_PCB) {
 
 	jsonData, err := json.Marshal(dialFS)
 	if err != nil {
-		log.Printf("Failed to encode DialFS request: %v", err)
+		fmt.Printf("Failed to encode DialFS request: %v", err)
 	}
 
 	url := fmt.Sprintf("http://%s:%d/io-operate", newInter.InterfaceIP, newInter.InterfacePort)
 
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
-		log.Printf("Failed to send PCB: %v", err)
+		fmt.Printf("Failed to send PCB: %v", err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		log.Printf("Unexpected response status: %s", resp.Status)
+		fmt.Printf("Unexpected response status: %s", resp.Status)
 	}
 }
 
-// -------------------------- Caos de Interfaces --------------------------
-
 var genericInterfaceBody interface{}
 
-/*
-	 RecvData_gensleep: Recibe desde CPU la información necesaria para solicitar un GEN_SLEEP.
+/**
+ * RecvData_gensleep: Recibe desde CPU la información necesaria para solicitar un GEN_SLEEP. 
 
-	 Opera con estructura:
-		- Nombre de la interfaz
-		- Tiempo de espera
-
-*
+ * @param w: http.ResponseWriter -> Respuesta a enviar.
+ * @param r: http.Request -> Request recibido.
 */
 func RecvData_gensleep(w http.ResponseWriter, r *http.Request) {
 	var received_data struct {
@@ -292,14 +329,12 @@ func RecvData_gensleep(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-/*
-	 RecvData_stdin: Recibe desde CPU la información necesaria para solicitar un STDIN_READ.
+/**
+ * RecvData_stdin: Recibe desde CPU la información necesaria para solicitar un STDIN_READ.
 
- Opera con estructura:
-	- Direcciones físicas
-	- Nombre de Interfaz
-	- Tamaño
-**/
+ * @param w: http.ResponseWriter -> Respuesta a enviar.
+ * @param r: http.Request -> Request recibido.
+*/
 
 func RecvData_stdin(w http.ResponseWriter, r *http.Request) {
 	var received_data struct {
@@ -314,20 +349,17 @@ func RecvData_stdin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Println("Received data: ", received_data)
+	fmt.Println("Received data: ", received_data)
 	genericInterfaceBody = received_data
 
 	w.WriteHeader(http.StatusOK)
 }
 
-/*
-	 RecvData_stdout: Recibe desde CPU la información necesaria para solicitar un STDOUT_WRITE.
+/**
+ * RecvData_stdout: Recibe desde CPU la información necesaria para solicitar un STDOUT_WRITE.
 
-	 Opera con estructura:
-		- Direcciones físicas
-		- Nombre de Interfaz
-
-*
+ * @param w: http.ResponseWriter -> Respuesta a enviar.
+ * @param r: *http.Request -> Request recibido.
 */
 func RecvData_stdout(w http.ResponseWriter, r *http.Request) {
 	var received_data struct {
@@ -346,7 +378,13 @@ func RecvData_stdout(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-//DIALFS
+/*
+	 RecvData_dialfs: Recibe desde CPU la información necesaria para solicitar un DIAL_FS.
+
+	 @params:
+		- w: http.ResponseWriter -> Respuesta a enviar.
+		- r: *http.Request -> Request recibido.
+*/
 
 func RecvData_dialfs(w http.ResponseWriter, r *http.Request) {
 	var received_data struct {
@@ -373,7 +411,10 @@ func RecvData_dialfs(w http.ResponseWriter, r *http.Request) {
 /*
 	RecvPCB_IO: Recibe el PCB bloqueado por IO, lo desbloquea y lo agrega a la cola de STS.
 
-*
+	@params:
+		- w: http.ResponseWriter -> Respuesta a enviar.
+		- r: *http.Request -> Request recibido.
+
 */
 func RecvPCB_IO(w http.ResponseWriter, r *http.Request) {
 	var received_pcb pcb.T_PCB
@@ -384,9 +425,9 @@ func RecvPCB_IO(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Println("PCB que nos manda IO (Kernel): PC: ", received_pcb.PC, "PID: ", received_pcb.PID)
+	fmt.Println("PCB que nos manda IO (Kernel): PC: ", received_pcb.PC, "PID: ", received_pcb.PID)
 
-	log.Println("Blocked: ", globals.Blocked)
+	fmt.Println("Blocked: ", globals.Blocked)
 
 	RemoveByID(received_pcb.PID)
 	globals.ChangeState(&received_pcb, "READY")

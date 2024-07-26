@@ -1,7 +1,7 @@
 package main
 
 import (
-	"log"
+	"fmt"
 	"net/http"
 
 	memoria_api "github.com/sisoputnfrba/tp-golang/memoria/API"
@@ -19,26 +19,24 @@ func main() {
 	// Inicializamos la config
 	err := cfg.ConfigInit("config-memory.json", &globals.Configmemory)
 	if err != nil {
-		log.Fatalf("Error al cargar la configuracion %v", err)
+		fmt.Print("Error al cargar la configuracion ", err)
 	}
 
 	cfg.VEnvMemoria(nil, &globals.Configmemory.Port)
 
-	log.Println("Configuracion MEMORIA cargada")
+	fmt.Println("Configuracion MEMORIA cargada")
 
 	globals.User_Memory = make([]byte, globals.Configmemory.Memory_size)
-	//verificar si estan bien los punteros
+
 	// Calculo la cantidad de frames que tendrá la memoria
-	globals.Frames = globals.Configmemory.Memory_size / globals.Configmemory.Page_size //ver si hay que ponerle puntero
+	globals.Frames = globals.Configmemory.Memory_size / globals.Configmemory.Page_size 
 
 	globals.CurrentBitMap = memoria_api.NewBitMap(globals.Frames)
 
 	// Handlers
 	// Iniciar servidor
 
-	// log.Println("Instrucciones leídas por memoria.")
 	go server.ServerStart(globals.Configmemory.Port, RegisteredModuleRoutes())
-	// log.Println("Instrucciones enviadas a CPU")
 
 	select {}
 

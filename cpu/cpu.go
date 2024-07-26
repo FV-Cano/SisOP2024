@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 
@@ -26,7 +27,7 @@ func main() {
 	cfg.VEnvKernel(&globals.Configcpu.IP_kernel, &globals.Configcpu.Port_kernel)
 	cfg.VEnvMemoria(&globals.Configcpu.IP_memory, &globals.Configcpu.Port_memory)
 	
-	log.Println("Configuracion CPU cargada")
+	fmt.Println("Configuracion CPU cargada")
 
 	// Handlers
 	cpuRoutes := RegisteredModuleRoutes()

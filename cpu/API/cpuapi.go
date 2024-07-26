@@ -3,7 +3,6 @@ package cpu_api
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/sisoputnfrba/tp-golang/cpu/cicloInstruccion"
@@ -35,22 +34,20 @@ func PCB_recv(w http.ResponseWriter, r *http.Request) {
 			globals.EvictionMutex.Unlock() 
 			break }
 		globals.EvictionMutex.Unlock()
-		fmt.Printf("El quantum en int es %d\n", int(globals.CurrentJob.Quantum))
-		fmt.Printf("El delay en int es %d\n", globals.MemDelay)
+		
 		if (globals.MemDelay > int(globals.CurrentJob.Quantum)) {
 			globals.CurrentJob.EvictionReason = "TIMEOUT"
 			pcb.EvictionFlag = true
 		}
 		cicloInstruccion.DecodeAndExecute(globals.CurrentJob)
 		
-		log.Println("Los registros de la cpu son", globals.CurrentJob.CPU_reg)
-		//if (globals.MemDelay > int(globals.CurrentJob.Quantum)) {globals.CurrentJob.EvictionReason = "TIMEOUT"; break}
+		fmt.Println("Los registros de la cpu son", globals.CurrentJob.CPU_reg)
+
 	}
 
 	fmt.Println("CPU - El motivo de la interrupción es: ", globals.CurrentJob.EvictionReason)
-	//log.Println("ABER MOSTRAMELON: ", pcb.EvictionFlag) // * Se recordará su contribución a la ciencia
+	//fmt.Println("ABER MOSTRAMELON: ", pcb.EvictionFlag) // * Se recordará su contribución a la ciencia
 	pcb.EvictionFlag = false
-	//log.Println("C PUSO FOLS ", pcb.EvictionFlag)
 
 	jsonResp, err := json.Marshal(globals.CurrentJob)
 	if err != nil {

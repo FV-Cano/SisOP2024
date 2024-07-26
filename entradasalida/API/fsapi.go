@@ -18,24 +18,24 @@ import (
  * InicializarFS: inicializa el sistema de archivos (crea el directorio y el archivo de bitmap) o carga el sistema de archivos desde disco (bitmap.dat y bloques.dat)
  */
 func InicializarFS() {
-	// * Define el nombre del directorio y los archivos
+	// Define el nombre del directorio y los archivos
 	dirName := "dialfs"
 	bitmapFile := "bitmap.dat"
 	blocksFile := "bloques.dat"
 
-	// * Crea el directorio si no existe
+	// Crea el directorio si no existe
 	if _, err := os.Stat(dirName); os.IsNotExist(err) {
 		err = os.Mkdir(dirName, 0755)
 		if err != nil {
-			log.Fatalf("Failed creating directory: %s", err)
+			fmt.Println("Failed creating directory: ", err)
 		}
 
 		fmt.Println("FS - Directorio CREADO")
 	}
 
-	// * Crea el archivo de bitmap si no existe
+	// Crea el archivo de bitmap si no existe
 	if _, err := os.Stat(dirName + "/" + bitmapFile); os.IsNotExist(err) {
-		// Carga elf bitmap en globals
+		// Carga el bitmap en globals
 		globals.CurrentBitMap = ioutils.NewBitMap(globals.ConfigIO.Dialfs_block_count)
 		ioutils.ActualizarBitmap()
 
@@ -45,14 +45,14 @@ func InicializarFS() {
 		// Carga el contenido del archivo
 		file, err := os.Open(dirName + "/" + bitmapFile)
 		if err != nil {
-			log.Fatalf("Failed opening file: %s", err)
+			fmt.Println("Failed opening file: ", err)
 		}
 		defer file.Close()
 
 		// Lee el contenido del archivo
 		contenidoBitmap, err := os.ReadFile(dirName + "/" + bitmapFile)
 		if err != nil {
-			log.Fatalf("Failed to read file: %s", err)
+			fmt.Println("Failed to read file: ", err)
 		}
 
 		fmt.Println("El contenido del bitmap es: ", string(contenidoBitmap))
@@ -61,20 +61,20 @@ func InicializarFS() {
 		// Convierte el contenido a JSON y lo carga en globals
 		err = json.Unmarshal(contenidoBitmap, &bitmapAux)
 		if err != nil {
-			log.Fatalf("Failed to unmarshal contenido: %s", err)
+			fmt.Println("Failed to unmarshal contenido: ", err)
 		}
 
 		globals.CurrentBitMap = bitmapAux.BitMap
 
 		// Verifica que el tamaño del bitmap sea el correcto
 		if len(globals.CurrentBitMap) != globals.ConfigIO.Dialfs_block_count {
-			log.Fatalf("Bitmap size is incorrect")
+			fmt.Println("Bitmap size is incorrect")
 		}
 
 		fmt.Println("FS - Bitmap.dat LEIDO")
 	}
 
-	// * Crea el archivo de bloques si no existe
+	// Crea el archivo de bloques si no existe
 	if _, err := os.Stat(dirName + "/" + blocksFile); os.IsNotExist(err) {
 		// Carga los bloques en globals
 		globals.Blocks = make([]byte, globals.ConfigIO.Dialfs_block_count*globals.ConfigIO.Dialfs_block_size)
@@ -86,14 +86,14 @@ func InicializarFS() {
 		// Carga el contenido del archivo
 		file, err := os.Open(dirName + "/" + blocksFile)
 		if err != nil {
-			log.Fatalf("Failed opening file: %s", err)
+			fmt.Println("Failed opening file: ", err)
 		}
 		defer file.Close()
 
 		// Lee el contenido del archivo
 		contenidoBloques, err := os.ReadFile(dirName + "/" + blocksFile)
 		if err != nil {
-			log.Fatalf("Failed to read file: %s", err)
+			fmt.Println("Failed to read file: ", err)
 		}
 
 		var bloquesAux globals.T_Blocks
@@ -102,24 +102,24 @@ func InicializarFS() {
 		// Convierte el contenido a JSON y lo carga en globals
 		err = json.Unmarshal(contenidoBloques, &bloquesAux)
 		if err != nil {
-			log.Fatalf("Failed to unmarshal contenido: %s", err)
+			fmt.Println("Failed to unmarshal contenido: ", err)
 		}
 
 		globals.Blocks = bloquesAux.Blocks
 
 		// Verifica que el tamaño del slice de bloques sea el correcto
 		if len(globals.Blocks) != globals.ConfigIO.Dialfs_block_count*globals.ConfigIO.Dialfs_block_size {
-			log.Fatalf("Blocks slice size is incorrect")
+			fmt.Println("Blocks slice size is incorrect")
 		}
 
 		fmt.Println("FS - Bloques.dat LEIDO")
 	}
 
-	// * Carga los archivos metadata del directorio si existen
+	// Carga los archivos metadata del directorio si existen
 	globals.Fcbs = make(map[string]globals.Metadata)
 	files, err := os.ReadDir(dirName)
 	if err != nil {
-		log.Fatalf("Failed reading directory: %s", err)
+		fmt.Println("Failed reading directory: ", err)
 	}
 	for _, file := range files {
 		if file.IsDir() || !strings.HasSuffix(file.Name(), ".txt") {
@@ -153,7 +153,7 @@ func CreateFile(pid int, nombreArchivo string) {
 	// Convierte la metadata a JSON
 	metadataJson, err := json.Marshal(metadata)
 	if err != nil {
-		log.Fatalf("Failed to marshal metadata: %s", err)
+		fmt.Println("Failed to marshal metadata: ", err)
 	}
 
 	// Crea el archivo
@@ -227,7 +227,7 @@ func ReadFile(pid int, nombreArchivo string, direccionesFisicas []globals.Direcc
 
 	// Verificar tamaño del archivo a leer valido
 	if limiteLeer > limiteArchivo {
-		log.Println("El tamaño a leer es superior a el correspondiente del archivo")
+		fmt.Println("El tamaño a leer es superior a el correspondiente del archivo")
 	} else {
 		contenidoALeer = ioutils.ReadFs(nombreArchivo, puntero, tamanioLeer)
 		IO_DIALFS_READ(pid, direccionesFisicas, contenidoALeer)
@@ -260,13 +260,7 @@ func WriteFile(pid int, nombreArchivo string, direcciones []globals.DireccionTam
 
 	posInicialByteAEscribir := posicionPuntero + cantidadBytesLeidos
 
-	// TODO: Revisar
 	cantidadBytesFinales := math.Max(float64(archivo.Size), float64(cantidadBytesLeidos+puntero))
-
-	// 1 2 3 4					archivo original 4 bytes
-	// x    					puntero en el byte 2
-	// 8 			 			nuevo contenido 4 bytes
-	// 8 2 3 4					archivo final 5 bytes
 
 	if posInicialByteAEscribir > ultimoByteArchivo {
 		TruncateFile(pid, nombreArchivo, int(cantidadBytesFinales))
@@ -301,10 +295,8 @@ func TruncateFile(pid int, nombreArchivo string, tamanioDeseado int) { //revisar
 
 	fmt.Println("El tamaño original de ", nombreArchivo, " en bloques es ", tamOriginalEnBloques)
 
-	// ? bloqueFinalInicial: El final del archivo actual, bloque donde tiene que arrancar el siguiente archivo
-	// TODO: revisar si es -1 o no
+	// bloqueFinalInicial: El final del archivo actual, bloque donde tiene que arrancar el siguiente archivo
 	bloqueFinalInicial := bloqueInicial + tamOriginalEnBloques
-	//posBloqueFinalInicial := bloqueFinalInicial - 1
 
 	fmt.Println("Bloque inicial ", nombreArchivo, ": ", bloqueInicial)
 	fmt.Println("Bloque final ", nombreArchivo, ": ", bloqueFinalInicial)
@@ -313,14 +305,9 @@ func TruncateFile(pid int, nombreArchivo string, tamanioDeseado int) { //revisar
 	// Si el archivo crece
 	if tamanioDeseado > archivo.Size {
 		contenidoArchivo := ioutils.ReadFs(nombreArchivo, 0, -1)
-		//tamanioATruncarEnBytes := tamanioDeseado - archivo.Size
-		//tamanioATruncarEnBloques := int(math.Ceil(float64(tamanioATruncarEnBytes) / float64(globals.ConfigIO.Dialfs_block_size)))
-
-		// ! Revisar
+	
 		fmt.Println("Tamaño a agrandar ", nombreArchivo, " en bloques: ", tamanioATruncarEnBloques)
 		bloquesLibresAlFinalDelArchivo := ioutils.CalcularBloquesLibreAPartirDe(bloqueFinalInicial)
-
-		//bloquesLibresAlFinalDelArchivo, _:= ioutils.CalcularBloquesLibreAPartirDe(bloqueFinalInicial, tamanioATruncarEnBloques)
 
 		// Hay bloques libres al final del archivo
 		if bloquesLibresAlFinalDelArchivo >= tamanioATruncarEnBloques {
@@ -331,7 +318,7 @@ func TruncateFile(pid int, nombreArchivo string, tamanioDeseado int) { //revisar
 
 			archivoMarshallado, err := json.Marshal(archivo)
 			if err != nil {
-				log.Fatalf("Failed to marshal metadata: %s", err)
+				fmt.Println("Failed to marshal metadata: ", err)
 			}
 
 			ioutils.CrearModificarArchivo(nombreArchivo, archivoMarshallado)
@@ -359,7 +346,7 @@ func TruncateFile(pid int, nombreArchivo string, tamanioDeseado int) { //revisar
 
 				archivoMarshallado, err := json.Marshal(archivo)
 				if err != nil {
-					log.Fatalf("Failed to marshal metadata: %s", err)
+					fmt.Println("Failed to marshal metadata: ", err)
 				}
 
 				ioutils.CrearModificarArchivo(nombreArchivo, archivoMarshallado)
@@ -369,7 +356,7 @@ func TruncateFile(pid int, nombreArchivo string, tamanioDeseado int) { //revisar
 				log.Println("ARCHIVO - ", nombreArchivo, " tiene un tamaño de ", archivoFinal.Size, " y comienza en el bloque ", archivoFinal.InitialBlock)
 				log.Println("FCB - ", nombreArchivo, " tiene un tamaño de ", globals.Fcbs[nombreArchivo].Size, " y comienza en el bloque ", globals.Fcbs[nombreArchivo].InitialBlock)
 
-				time.Sleep(time.Duration(globals.ConfigIO.Dialfs_compaction_delay)) // ! AGREGAMOS ESTO
+				time.Sleep(time.Duration(globals.ConfigIO.Dialfs_compaction_delay)) //
 
 				// No entra el archivo pero alcanza la cantidad de bloques libres
 			} else if ioutils.ContadorDeEspaciosLibres() >= tamFinalEnBloques {
@@ -392,28 +379,21 @@ func TruncateFile(pid int, nombreArchivo string, tamanioDeseado int) { //revisar
 
 				ioutils.OcuparBloquesDesde(primerBloqueLibre, tamFinalEnBloques)
 
-				// Bloque 1 - Posicion 0
-				// 1 * 16 - 1 = 15
-				// 0 * 16 = 0
-
 				archivoMarshallado, err := json.Marshal(archivo)
 				if err != nil {
-					log.Fatalf("Failed to marshal metadata: %s", err)
+					fmt.Println("Failed to marshal metadata: ", err)
 				}
 
 				ioutils.CrearModificarArchivo(nombreArchivo, archivoMarshallado)
 				globals.Fcbs[nombreArchivo] = archivo
 
 			} else {
-				log.Print("No hay espacio suficiente para el archivo ", nombreArchivo)
+				fmt.Print("No hay espacio suficiente para el archivo ", nombreArchivo)
 			}
 		}
 
 		// Si el archivo se achica
 	} else if tamanioDeseado < archivo.Size {
-		//tamanioATruncarEnBytes := archivo.Size - tamanioDeseado
-		//tamanioATruncarEnBloques := int(math.Ceil(float64(tamanioATruncarEnBytes) / float64(globals.ConfigIO.Dialfs_block_size)))
-
 		// Liberar los bloques que ya no se usan
 		bloqueFinal := bloqueFinalInicial - 1
 		ioutils.LiberarBloque(bloqueFinal, tamanioATruncarEnBloques)
@@ -422,7 +402,7 @@ func TruncateFile(pid int, nombreArchivo string, tamanioDeseado int) { //revisar
 
 		archivoMarshallado, err := json.Marshal(archivo)
 		if err != nil {
-			log.Fatalf("Failed to marshal metadata: %s", err)
+			fmt.Println("Failed to marshal metadata: ", err)
 		}
 
 		ioutils.CrearModificarArchivo(nombreArchivo, archivoMarshallado)
@@ -431,41 +411,6 @@ func TruncateFile(pid int, nombreArchivo string, tamanioDeseado int) { //revisar
 
 	log.Printf("PID: %d - Truncar Archivo: %s - Tamaño: %d", pid, nombreArchivo, tamanioDeseado)
 }
-
-/* func Compactar() {
-	var bloquesDeArchivos = make([]byte, len(globals.Blocks))
-
-	tamBloqueEnBytes := globals.ConfigIO.Dialfs_block_size
-
-	for i := range globals.CurrentBitMap {
-		ioutils.Clear(i)
-	}
-
-	for _, metadata := range globals.Fcbs {
-		tamArchivoEnBloques := int(math.Max(1, math.Ceil(float64(metadata.Size)/float64(globals.ConfigIO.Dialfs_block_size))))
-		bloqueInicial := metadata.InitialBlock
-
-		for i := bloqueInicial - 1; i < tamArchivoEnBloques; i++ {
-			primerByteACopiar := i * tamBloqueEnBytes
-			ultimoByteACopiar := primerByteACopiar + tamBloqueEnBytes - 1
-
-			bloquesDeArchivos = copy(bloquesDeArchivos, globals.Blocks[primerByteACopiar:ultimoByteACopiar]...)
-		}
-
-		metadata.InitialBlock = ioutils.CalcularBloqueLibre()
-	}
-
-	globals.Blocks = bloquesDeArchivos
-
-	for i := range bloquesDeArchivos {
-		ioutils.Set(i)
-	}
-
-	ioutils.ActualizarBloques()
-	ioutils.ActualizarBitmap()
-
-	time.Sleep(time.Duration(globals.ConfigIO.Dialfs_compaction_delay))
-} */
 
 func Compactar() {
 	var bloquesDeArchivos = make([]byte, len(globals.Blocks))
@@ -489,9 +434,6 @@ func Compactar() {
 		for i := 0; i < tamArchivoEnBloques; i++ {
 			primerByteACopiar := (bloqueInicial + i - 1) * tamBloqueEnBytes
 			ultimoByteACopiar := primerByteACopiar + tamBloqueEnBytes //- 1
-			/*if ultimoByteACopiar > len(globals.Blocks) {
-			    ultimoByteACopiar = len(globals.Blocks)
-			} */
 
 			n := copy(bloquesDeArchivos[offset:], globals.Blocks[primerByteACopiar:ultimoByteACopiar])
 
@@ -508,7 +450,7 @@ func Compactar() {
 
 		archivoMarshallado, err := json.Marshal(metadata)
 		if err != nil {
-			log.Fatalf("Failed to marshal metadata: %s", err)
+			fmt.Println("Failed to marshal metadata: ", err)
 		}
 
 		ioutils.CrearModificarArchivo(nombreArchivo, archivoMarshallado)

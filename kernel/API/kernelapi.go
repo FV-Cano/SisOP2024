@@ -77,6 +77,7 @@ func ProcessInit(w http.ResponseWriter, r *http.Request) {
 		EvictionReason:    "",
 		Resources:         make(map[string]int), // * El valor por defecto es 0, tener en cuenta por las dudas a la hora de testear
 		RequestedResource: "",
+		Executions:        0,
 	}
 
 	var respBody ProcessStart_BRS = ProcessStart_BRS{PID: newPcb.PID}
@@ -155,7 +156,7 @@ func ProcessDelete(w http.ResponseWriter, r *http.Request) {
 	}
 	// Si el proceso está en ejecución, se envía una interrupción para desalojarlo con INTERRUPTED_BY_USER, de lo contrario se elimina directamente y se saca de la cola en la que se encuentre 
 	if (pid == globals.CurrentJob.PID && globals.CurrentJob.State == "EXEC") {
-		SendInterrupt("DELETE", pid)
+		SendInterrupt("DELETE", pid, -1)
 	} else {
 		DeleteByID(pid)
 	}
@@ -464,14 +465,16 @@ func RemoveFromBlocked(pid uint32) {
 type InterruptionRequest struct {
 	InterruptionReason string `json:"InterruptionReason"`
 	Pid                uint32 `json:"pid"`
+	ExecutionNumber    int    `json:"execution_number"`
 }
 
-func SendInterrupt(reason string, pid uint32) {
+func SendInterrupt(reason string, pid uint32, executionNumber int) {
 	url := fmt.Sprintf("http://%s:%d/interrupt", globals.Configkernel.IP_cpu, globals.Configkernel.Port_cpu)
 
 	bodyInt, err := json.Marshal(InterruptionRequest{
 		InterruptionReason: reason,
 		Pid:                pid,
+		ExecutionNumber:    executionNumber,
 	})
 	if err != nil {
 		return

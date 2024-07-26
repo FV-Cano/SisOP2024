@@ -47,6 +47,7 @@ func PCB_recv(w http.ResponseWriter, r *http.Request) {
 		//if (globals.MemDelay > int(globals.CurrentJob.Quantum)) {globals.CurrentJob.EvictionReason = "TIMEOUT"; break}
 	}
 
+	fmt.Println("CPU - El motivo de la interrupción es: ", globals.CurrentJob.EvictionReason)
 	//log.Println("ABER MOSTRAMELON: ", pcb.EvictionFlag) // * Se recordará su contribución a la ciencia
 	pcb.EvictionFlag = false
 	//log.Println("C PUSO FOLS ", pcb.EvictionFlag)
@@ -63,6 +64,7 @@ func PCB_recv(w http.ResponseWriter, r *http.Request) {
 type InterruptionRequest struct {
 	InterruptionReason string `json:"InterruptionReason"`
 	Pid                uint32 `json:"pid"`
+	ExecutionNumber    int    `json:"execution_number"`
 }
 
 /**
@@ -78,7 +80,13 @@ func HandleInterruption(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, ok := globals.EvictionReasons[globals.CurrentJob.EvictionReason]; !ok && request.Pid == globals.CurrentJob.PID {
+	fmt.Println("PID Requerido: ", request.Pid)
+	fmt.Println("PID Actual: ", globals.CurrentJob.PID)
+	
+	if _, ok := globals.EvictionReasons[globals.CurrentJob.EvictionReason]; !ok && request.Pid == globals.CurrentJob.PID && (globals.CurrentJob.Executions == request.ExecutionNumber || request.ExecutionNumber == -1) {
+		fmt.Println("Se acepta interrumpir PID: ", request.Pid)
+		fmt.Printf("Motivo de interrupción: %s\n", request.InterruptionReason)
+
 		globals.EvictionMutex.Lock()
 		pcb.EvictionFlag = true
 		globals.EvictionMutex.Unlock()

@@ -61,7 +61,6 @@ func STS_Plan() {
 
 	case "RR":
 		log.Println("ROUND ROBIN algorithm")
-		quantum := uint32(time.Duration(globals.Configkernel.Quantum) * time.Millisecond)	// TODO change
 		for {
 			if globals.PlanningState == "STOPPED" {
 				globals.STSPlanBinary <- true
@@ -70,7 +69,7 @@ func STS_Plan() {
 			}
 			<-globals.STSCounter
 			//globals.JobExecBinary <- true
-			RR_Plan(quantum)
+			RR_Plan()
 		}
 
 	case "VRR":
@@ -107,6 +106,7 @@ func FIFO_Plan() {
 
 	// 2. Cambio su estado a EXEC
 	globals.ChangeState(&globals.CurrentJob, "EXEC")
+	globals.CurrentJob.Executions++
 
 	// 3. Envío el PCB al CPU
 	kernel_api.PCB_Send()
@@ -142,20 +142,20 @@ func RR_Plan(quantum uint32) {
 }
 */
 
-func RR_Plan(quantum uint32) {
+func RR_Plan() {
 	globals.EnganiaPichangaMutex.Lock() // Paso 1: Bloquear el mutex para asegurar la exclusión mutua
 	
 	globals.CurrentJob = slice.Shift(&globals.STS)   // Paso 2: Tomar el primer proceso
 	globals.ChangeState(&globals.CurrentJob, "EXEC") // Cambiar estado a EXEC
+	globals.CurrentJob.Executions++
 	globals.EnganiaPichangaMutex.Unlock()            // Desbloquear el mutex después de modificar las variables compartidas
 
-	go startTimer(quantum)
+	go startTimer(globals.CurrentJob.Quantum)
 	kernel_api.PCB_Send()                                             // Paso 3: Enviar el PCB al CPU
 	//timer := time.NewTimer(time.Duration(quantum)) // Paso 4: Iniciar el temporizador
 
 	select {
-	case <-globals.PcbReceived:
-
+		case <-globals.PcbReceived:
 	}
 	/* select {
 	case <-globals.PcbReceived: // Paso 5: Esperar a que el proceso termine
@@ -174,7 +174,7 @@ func VRR_Plan() {
     globals.EnganiaPichangaMutex.Lock()
     // Determinar el trabajo actual basado en la prioridad o la cola estándar
 
-	pidsPrio := make([]uint32, len(globals.STS_Priority))
+	/* pidsPrio := make([]uint32, len(globals.STS_Priority))
 		for i, pcb := range globals.STS_Priority {
     	pidsPrio[i] = pcb.PID
 	}
@@ -184,7 +184,7 @@ func VRR_Plan() {
 	}
 	
 	fmt.Printf("STS_Priority: %v\n", pidsPrio)
-	fmt.Printf("STS: %v\n", pids)
+	fmt.Printf("STS: %v\n", pids) */
 
     if len(globals.STS_Priority) > 0 {
         globals.CurrentJob = slice.Shift(&globals.STS_Priority)
@@ -194,6 +194,7 @@ func VRR_Plan() {
 
     // Cambiar el estado del trabajo actual a EXEC
     globals.ChangeState(&globals.CurrentJob, "EXEC")
+	globals.CurrentJob.Executions++
     globals.EnganiaPichangaMutex.Unlock()
 
     // Iniciar el temporizador para el quantum del trabajo actual
@@ -210,7 +211,7 @@ func VRR_Plan() {
     timeAfter := time.Now()
     diffTime := uint32(time.Duration(timeAfter.Sub(timeBefore)).Milliseconds())
 
-	log.Printf("\nQuantum con el que ejecutó: %d\n", globals.CurrentJob.Quantum)
+	log.Printf("\nQuantum con el que ejecutó el PID %d: %d\n", globals.CurrentJob.PID, globals.CurrentJob.Quantum)
 	log.Printf("Difftime: %d\n", diffTime)
 
     if diffTime < globals.CurrentJob.Quantum {
@@ -257,15 +258,26 @@ func VRR_Plan() {
 */
 func startTimer(quantum uint32) {
 	quantumTime := time.Duration(quantum) * time.Millisecond
+	fmt.Println("Quantum time: ", quantumTime)
 	auxPcb := globals.CurrentJob
-	time.Sleep(quantumTime)
 
+	timeBefore := time.Now()
+	
+	time.Sleep(quantumTime)
+	
+	timeAfter := time.Now()
+    diffTime := uint32(time.Duration(timeAfter.Sub(timeBefore)).Milliseconds())
+	fmt.Println("START TIMER - Difftime: ", diffTime)	
+
+	fmt.Println("Salió de mimir el PID", auxPcb.PID)
 	quantumInterrupt(auxPcb)
 }
 
 func quantumInterrupt(pcb pcb.T_PCB) {
+	fmt.Printf("Mando interrupción por quantum al PID %d\n", pcb.PID)
+	fmt.Println("La eviction reason es:", pcb.EvictionReason)
 	// Interrumpir proceso actual, response = OK message
-	kernel_api.SendInterrupt("QUANTUM", pcb.PID)
+	kernel_api.SendInterrupt("QUANTUM", pcb.PID, pcb.Executions)
 }
 
 /*
@@ -277,6 +289,7 @@ func quantumInterrupt(pcb pcb.T_PCB) {
 */
 func EvictionManagement() {
 	evictionReason := globals.CurrentJob.EvictionReason
+	globals.CurrentJob.EvictionReason = ""
 
 	switch evictionReason {
 	case "BLOCKED_IO_GEN":

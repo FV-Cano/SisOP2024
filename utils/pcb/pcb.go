@@ -10,6 +10,7 @@ type T_PCB struct {
 	EvictionReason 		string  					`json:"eviction_reason"`
 	Resources 			map[string]int				`json:"resources"`
 	RequestedResource 	string 						`json:"requested_resource"`
+	Executions 			int 						`json:"executions"`
 }
 
 func TipoReg(reg string) string {

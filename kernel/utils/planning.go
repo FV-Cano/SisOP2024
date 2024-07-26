@@ -146,7 +146,7 @@ func VRR_Plan() {
 
     if diffTime < globals.CurrentJob.Quantum {
         globals.CurrentJob.Quantum = globals.CurrentJob.Quantum - diffTime
-		log.Print("Quantum restante: ", globals.CurrentJob.Quantum)
+		fmt.Print("Quantum restante: ", globals.CurrentJob.Quantum)
     } else {
         globals.CurrentJob.Quantum = globals.Configkernel.Quantum
     }

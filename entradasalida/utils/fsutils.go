@@ -242,8 +242,7 @@ func OcuparBloquesDesde(numBloque int, tamanioASetear int) {
  * ActualizarBloques: actualiza el archivo de bloques en el sistema de archivos
  */
 func ActualizarBloques() {
-	var bloquesActualizado globals.T_Blocks
-	bloquesActualizado.Blocks = globals.Blocks
+	bloquesActualizado := globals.Blocks
 
 	archivoMarshallado, err := json.Marshal(bloquesActualizado)
 	if err != nil {
@@ -275,8 +274,7 @@ func IsNotSet(i int) bool {
 }
 
 func ActualizarBitmap() {
-	var bitmapActualizado globals.T_Bitmap
-	bitmapActualizado.BitMap = globals.CurrentBitMap
+	bitmapActualizado := globals.CurrentBitMap
 
 	archivoMarshallado, err := json.Marshal(bitmapActualizado)
 	if err != nil {

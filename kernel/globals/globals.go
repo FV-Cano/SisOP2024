@@ -16,9 +16,11 @@ var (
 	STS 						[]pcb.T_PCB
 	Blocked 					[]pcb.T_PCB
 	STS_Priority 				[]pcb.T_PCB
+	Terminated 					[]pcb.T_PCB
 	Interfaces 					[]device.T_IOInterface
 	ResourceMap					map[string][]pcb.T_PCB
 	Resource_instances  		map[string]int
+	PlanningState				string
 )
 
 // Global semaphores
@@ -27,16 +29,19 @@ var (
 		PidMutex 				sync.Mutex
 		ProcessesMutex 			sync.Mutex
 		STSMutex 				sync.Mutex //!chequear
-		ControlMutex 			sync.Mutex
+		//ControlMutex 			sync.Mutex		// Creería que no es necesario
 		LTSMutex 				sync.Mutex
+		BlockedMutex			sync.Mutex
 		MapMutex 				sync.Mutex
-		EmptiedListMutex		sync.Mutex
+		//EmptiedListMutex		sync.Mutex
 		EnganiaPichangaMutex	sync.Mutex
 	// * Binarios
-		PlanBinary  			= make (chan bool, 1)
+		LTSPlanBinary  			= make (chan bool, 1)
+		STSPlanBinary  			= make (chan bool, 1)
 		JobExecBinary			= make (chan bool, 1)
 		PcbReceived				= make (chan bool, 1)
 		AvailablePcb			= make (chan bool, 1)
+		EmptiedList				= make (chan bool, 1)
 	// * Contadores
 		// Chequea si hay procesos en la cola de listos, lo usamos en EvictionManagement y en ProcessInit
 		MultiprogrammingCounter chan int
@@ -54,7 +59,7 @@ type T_ConfigKernel struct {
 	IP_cpu 						string 		`json:"ip_cpu"`
 	Port_cpu 					int 		`json:"port_cpu"`
 	Planning_algorithm 			string 		`json:"planning_algorithm"`
-	Quantum 					int 		`json:"quantum"`
+	Quantum 					uint32 		`json:"quantum"`
 	Resources 					[]string 	`json:"resources"`
 	Resource_instances 			[]int 		`json:"resource_instances"`
 	Multiprogramming 			int 		`json:"multiprogramming"`

@@ -4,6 +4,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
+	"strings"
 
 	IO_api "github.com/sisoputnfrba/tp-golang/entradasalida/API"
 	"github.com/sisoputnfrba/tp-golang/entradasalida/globals"
@@ -13,28 +15,43 @@ import (
 	cfg "github.com/sisoputnfrba/tp-golang/utils/config"
 )
 
-// una funcion que codifique las unidades de trabajo en un json
-
 func main() {
 	// Iniciar loggers
 	logger.ConfigurarLogger("io.log")
 	logger.LogfileCreate("io_debug.log")
 
 	// Inicializar config
-	err := cfg.ConfigInit(os.Args[2], &globals.ConfigIO)
+	err := cfg.ConfigInit(os.Args[1], &globals.ConfigIO)
 	if err != nil {
 		log.Fatalf("Error al cargar la configuracion %v", err)
 	}
-	log.Printf("Configuración IO cargada")
+	
+	cfg.VEnvKernel(&globals.ConfigIO.Ip_kernel, &globals.ConfigIO.Port_kernel)
+	cfg.VEnvMemoria(&globals.ConfigIO.Ip_memory, &globals.ConfigIO.Port_memory)
+	cfg.VEnvIO(&globals.ConfigIO.Ip, &globals.ConfigIO.Port)
 
+	log.Printf("Configuración IO cargada")
+	
 	IORoutes := RegisteredModuleRoutes()
 
 	go server.ServerStart(globals.ConfigIO.Port, IORoutes)
 
 	// Handshake con kernel
 	log.Println("Handshake con Kernel")
-	IO_api.HandshakeKernel(os.Args[1])
+
+    nombreInterfaz := filepath.Base(os.Args[1])
+    nombreInterfaz = strings.TrimSuffix(nombreInterfaz, filepath.Ext(nombreInterfaz))
+	IO_api.HandshakeKernel(nombreInterfaz)
+	
 	globals.Generic_QueueChannel = make(chan globals.GenSleep, 1)
+	globals.Stdin_QueueChannel = make(chan globals.StdinRead, 1)
+	globals.Stdout_QueueChannel = make(chan globals.StdoutWrite, 1)
+	globals.DialFS_QueueChannel = make(chan globals.DialFSRequest, 1)
+
+	// Si la interfaz es de tipo DialFS se debe inicializar el sistema de archivos
+	if globals.ConfigIO.Type == "DIALFS" {
+		IO_api.InicializarFS()
+	}
 
 	go IO_api.IOWork()
 
@@ -45,9 +62,6 @@ func RegisteredModuleRoutes() http.Handler {
 	moduleHandler := &server.ModuleHandler{
 		RouteHandlers: map[string]http.HandlerFunc{
 			"POST /io-operate":	IO_api.InterfaceQueuePCB,
-			// "POST /io-gen-sleep": 	IO_api.IOGenSleep, 	Deprecated
-			// "POST /io-stdin-read": 	IO_api.IOStdinRead,
-			// "POST /io-stdin-write": IO_api.IOStdoutWrite,
 		},
 	}
 	return moduleHandler

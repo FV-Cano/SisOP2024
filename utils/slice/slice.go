@@ -6,8 +6,21 @@ package slice
  * @param slice: Slice de cualquier tipo.
  * @param index: Índice del elemento a remover.
  */
-func RemoveAtIndex[T any](slice *[]T, index int) {
+func RemoveAtIndex[T any](slice *[]T, index int) T {
+	element := (*slice)[index]
 	*slice = append((*slice)[:index], (*slice)[index+1:]...)
+	return element
+}
+
+/**
+ * InsertAtIndex: Inserta un elemento en un slice en el índice proporcionado.
+
+ * @param slice: Slice de cualquier tipo.
+ * @param index: Índice donde se va a ingresar el elemento.
+ * @param elem:  Elemento a ingresar.
+ */
+func InsertAtIndex[T any](slice *[]T, index int, elem T) {
+	*slice = append((*slice)[:index], append([]T{elem}, (*slice)[index:]...)...)
 }
 
 /**

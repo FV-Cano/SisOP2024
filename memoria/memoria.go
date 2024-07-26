@@ -21,6 +21,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error al cargar la configuracion %v", err)
 	}
+
+	cfg.VEnvMemoria(nil, &globals.Configmemory.Port)
+
 	log.Println("Configuracion MEMORIA cargada")
 
 	globals.User_Memory = make([]byte, globals.Configmemory.Memory_size)
@@ -49,10 +52,11 @@ func RegisteredModuleRoutes() http.Handler {
 			"GET /enviarMarco":        memoria_api.EnviarMarco,      //implementada en la MMU
 			"PATCH /resize":           memoria_api.Resize,           //implementada en CPU
 			"PATCH /finalizarProceso": memoria_api.FinalizarProceso, //falta implementar desde KERNEL
-			"GET /read":               memoria_api.LeerMemoria,      // implementada en cpu
+			"POST /read":              memoria_api.LeerMemoria,      // implementada en cpu
 			"POST /write":             memoria_api.EscribirMemoria, // implementada en cpu
 			"GET /tamPagina":          memoria_api.Page_size,
 			"GET /tamTabla":           memoria_api.PedirTamTablaPaginas,        //falta implementar desde cliente
+			"GET /delay":			   memoria_api.SendDelay,                    //falta implementar desde cliente
 		},
 	}
 	return moduleHandler

@@ -3,10 +3,12 @@ package cpu_api
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/sisoputnfrba/tp-golang/cpu/cicloInstruccion"
 	"github.com/sisoputnfrba/tp-golang/cpu/globals"
+	"github.com/sisoputnfrba/tp-golang/utils/generics"
 	"github.com/sisoputnfrba/tp-golang/utils/pcb"
 )
 
@@ -25,17 +27,30 @@ func PCB_recv(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	globals.CurrentJob = received_pcb
+	globals.CurrentJob = &received_pcb
 
-	for !pcb.EvictionFlag {
-		cicloInstruccion.DecodeAndExecute(&globals.CurrentJob)
-
-		fmt.Println("Los registros de la cpu son", globals.CurrentJob.CPU_reg)
+	for {
+		globals.EvictionMutex.Lock()
+		if pcb.EvictionFlag { 
+			globals.EvictionMutex.Unlock() 
+			break }
+		globals.EvictionMutex.Unlock()
+		fmt.Printf("El quantum en int es %d\n", int(globals.CurrentJob.Quantum))
+		fmt.Printf("El delay en int es %d\n", globals.MemDelay)
+		if (globals.MemDelay > int(globals.CurrentJob.Quantum)) {
+			globals.CurrentJob.EvictionReason = "TIMEOUT"
+			pcb.EvictionFlag = true
+		}
+		cicloInstruccion.DecodeAndExecute(globals.CurrentJob)
+		
+		log.Println("Los registros de la cpu son", globals.CurrentJob.CPU_reg)
+		//if (globals.MemDelay > int(globals.CurrentJob.Quantum)) {globals.CurrentJob.EvictionReason = "TIMEOUT"; break}
 	}
 
-	//fmt.Println("ABER MOSTRAMELON: ", pcb.EvictionFlag) // * Se recordará su contribución a la ciencia
+	fmt.Println("CPU - El motivo de la interrupción es: ", globals.CurrentJob.EvictionReason)
+	//log.Println("ABER MOSTRAMELON: ", pcb.EvictionFlag) // * Se recordará su contribución a la ciencia
 	pcb.EvictionFlag = false
-	//fmt.Println("C PUSO FOLS ", pcb.EvictionFlag)
+	//log.Println("C PUSO FOLS ", pcb.EvictionFlag)
 
 	jsonResp, err := json.Marshal(globals.CurrentJob)
 	if err != nil {
@@ -49,6 +64,7 @@ func PCB_recv(w http.ResponseWriter, r *http.Request) {
 type InterruptionRequest struct {
 	InterruptionReason string `json:"InterruptionReason"`
 	Pid                uint32 `json:"pid"`
+	ExecutionNumber    int    `json:"execution_number"`
 }
 
 /**
@@ -64,119 +80,37 @@ func HandleInterruption(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	evictionReasons := map[string]struct{}{
-		"EXIT":       {},
-		"BLOCKED_IO": {},
-		"OUT_OF_MEMORY": {},
-	}
+	fmt.Println("PID Requerido: ", request.Pid)
+	fmt.Println("PID Actual: ", globals.CurrentJob.PID)
+	
+	if _, ok := globals.EvictionReasons[globals.CurrentJob.EvictionReason]; !ok && request.Pid == globals.CurrentJob.PID && (globals.CurrentJob.Executions == request.ExecutionNumber || request.ExecutionNumber == -1) {
+		fmt.Println("Se acepta interrumpir PID: ", request.Pid)
+		fmt.Printf("Motivo de interrupción: %s\n", request.InterruptionReason)
 
-	if _, ok := evictionReasons[globals.CurrentJob.EvictionReason]; !ok && request.Pid == globals.CurrentJob.PID {
+		globals.EvictionMutex.Lock()
+		pcb.EvictionFlag = true
+		globals.EvictionMutex.Unlock()
+
 		switch request.InterruptionReason {
 		case "QUANTUM":
-			pcb.EvictionFlag = true
 			globals.CurrentJob.EvictionReason = "TIMEOUT"
+
+		case "DELETE":
+			globals.CurrentJob.EvictionReason = "INTERRUPTED_BY_USER"
 		}
 	}
 
 	w.WriteHeader(http.StatusOK)
 }
-/*
-func BuscarEnTLB(pid int, pagina int) bool {
 
-	if entry, exists := tlb.CurrentTLB[pid]; exists && entry.Pagina == pagina {
-		return true
+func RequestMemoryDelay() {
+	url := fmt.Sprintf("http://%s:%d/delay", globals.Configcpu.IP_memory, globals.Configcpu.Port_memory)
+
+	var delayStruct struct {
+		Delay int
 	}
-	return false
+
+	generics.DoRequest("GET", url, nil, &delayStruct)
+
+	globals.MemDelay = delayStruct.Delay
 }
-
-func FrameEnTLB(pid int, pagina int) int {
-
-	if entry, exists := tlb.CurrentTLB[pid]; exists && entry.Pagina == pagina {
-		ActualizarTLB(pid, pagina, tlb.CurrentTLB[pid].Marco)
-		return tlb.CurrentTLB[pid].Marco
-	}
-	return -1
-
-}
-
-func ObtenerPagina(direccionLogica int, nroPag int, tamanio int) int {
-	pagina := (direccionLogica + nroPag*tamanio) / tamanio
-
-	return pagina
-}
-
-func ObtenerOffset(direccionLogica int, nroPag int, tamanio int) int {
-
-	offset := (direccionLogica + nroPag*tamanio) % tamanio
-
-	return offset
-}
-
-func CalcularDireccionFisica(frame int, offset int, tamanio int) int {
-
-	direccionBase := frame * tamanio
-
-	return direccionBase + offset
-
-}
-
-/*func ActualizarTLB(pid, pagina, marco int) { 
-	if globals.Configcpu.Algorithm_tlb == "FIFO" {
-	if len(tlb.CurrentTLB) >= globals.Configcpu.Number_felling_tlb {
-		// Si la TLB está llena, eliminar la entrada más antigua (FIFO)
-		for key := range tlb.CurrentTLB {
-			delete(tlb.CurrentTLB, key)
-			break
-		}
-	}
-	tlb.CurrentTLB[pid] = tlb.Pagina_marco{Pagina: pagina, Marco: marco}
-
-	}
-}
-
-func ActualizarTLB(pid, pagina, marco int) { 
-	switch globals.Configcpu.Algorithm_tlb {
-		case "FIFO":
-        if !BuscarEnTLB(pid, pagina) { //Si la página no está en la tlb
-            if len(tlb.CurrentTLB) < globals.Configcpu.Number_felling_tlb {
-                // Si la TLB no está llena, agregar la entrada
-                tlb.CurrentTLB[pid] = tlb.Pagina_marco{Pagina: pagina, Marco: marco}
-                tlb.OrderedKeys = append(tlb.OrderedKeys, pid) // Agregar la clave al final de la lista
-            } else {
-                // Si la TLB está llena, eliminar la entrada más antigua (FIFO)
-                oldestKey := tlb.OrderedKeys[0] // Obtener la clave más antigua
-                delete(tlb.CurrentTLB, oldestKey) // Eliminar la entrada más antigua
-                tlb.OrderedKeys = tlb.OrderedKeys[1:] // Eliminar la clave más antigua de la lista
-                tlb.CurrentTLB[pid] = tlb.Pagina_marco{Pagina: pagina, Marco: marco} // Agregar la nueva entrada
-                tlb.OrderedKeys = append(tlb.OrderedKeys, pid) // Agregar la nueva clave al final de la lista
-            } 
-        } 
-			
-		case "LRU":
-			 if !BuscarEnTLB(pid, pagina) { //Si la página no está en la tlb
-				if len(tlb.CurrentTLB) < globals.Configcpu.Number_felling_tlb {
-					// Si la TLB no está llena, agregar la entrada
-					tlb.CurrentTLB[pid] = tlb.Pagina_marco{Pagina: pagina, Marco: marco}
-					tlb.OrderedKeys = append(tlb.OrderedKeys, pid) // Agregar la clave al final de la lista
-				} else {
-					// Si la TLB está llena, eliminar la entrada más antigua (FIFO)
-					oldestKey := tlb.OrderedKeys[0] // Obtener la clave más antigua
-					delete(tlb.CurrentTLB, oldestKey) // Eliminar la entrada más antigua
-					tlb.OrderedKeys = tlb.OrderedKeys[1:] // Eliminar la clave más antigua de la lista
-					tlb.CurrentTLB[pid] = tlb.Pagina_marco{Pagina: pagina, Marco: marco} // Agregar la nueva entrada
-					tlb.OrderedKeys = append(tlb.OrderedKeys, pid) // Agregar la nueva clave al final de la lista
-				}
-			} else { //SI LA PAGINA YA EXISTE EN LA TLB, LLEVARLA AL FINAL DE LA LISTA
-				// Eliminar la entrada existente y agregarla nuevamente
-				for i, key := range tlb.OrderedKeys {
-					if key == pid {
-						// Eliminar la clave de la lista
-						tlb.OrderedKeys = append(tlb.OrderedKeys[:i], tlb.OrderedKeys[i+1:]...)
-						break
-					}
-				}
-				tlb.CurrentTLB[pid] = tlb.Pagina_marco{Pagina: pagina, Marco: marco} // Agregar la nueva entrada
-				tlb.OrderedKeys = append(tlb.OrderedKeys, pid) // Agregar la nueva clave al final de la lista
-			}
-	}
-}*/

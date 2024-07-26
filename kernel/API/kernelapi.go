@@ -9,19 +9,20 @@ import (
 	"strconv"
 
 	"github.com/sisoputnfrba/tp-golang/kernel/globals"
-	"github.com/sisoputnfrba/tp-golang/utils/device"
+	resource "github.com/sisoputnfrba/tp-golang/kernel/resources"
 	"github.com/sisoputnfrba/tp-golang/utils/pcb"
 	"github.com/sisoputnfrba/tp-golang/utils/slice"
 )
 
-/* Glossary:
+// ! Verificar que no se genere ningún problema de dependencias con resources
 
+/* Glossary:
 - BRQ: Body Request
 - BRS: Body Response
-
 */
 
 type ProcessStart_BRQ struct {
+	PID  uint32 `json:"pid"`
 	Path string `json:"path"`
 }
 
@@ -32,14 +33,13 @@ type ProcessStart_BRS struct {
 type GetInstructions_BRQ struct {
 	Path string `json:"path"`
 	Pid  uint32 `json:"pid"`
-	Pc 	uint32  `json:"pc"`
+	Pc   uint32 `json:"pc"`
 }
 
-/**
- * ProcessInit: Inicia un proceso en base a un archivo dentro del FS de Linux.
-	[x] Creación de PCB
-	[x] Asignación de PID incrementando en 1 por cada proceso creado
-	[x] Estado de proceso: NEW
+/*
+*
+  - ProcessInit: Inicia un proceso en base a un archivo dentro del FS de Linux.
+    [ ] Testeada
 */
 func ProcessInit(w http.ResponseWriter, r *http.Request) {
 	var request ProcessStart_BRQ
@@ -50,42 +50,35 @@ func ProcessInit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	pathInst, err := json.Marshal(fmt.Sprintf(request.Path))
-    if err != nil {
-        http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
-        return
-    }
+	if err != nil {
+		http.Error(w, "Error al codificar los datos como JSON", http.StatusInternalServerError)
+		return
+	}
 	pathInstString := string(pathInst)
-	
+
 	newPcb := &pcb.T_PCB{
-		PID: 			generatePID(),
-		PC: 			0,
-		Quantum: 		uint32(globals.Configkernel.Quantum),
-		CPU_reg: 		map[string]interface{}{
-							"AX": uint8(0),
-							"BX": uint8(0),
-							"CX": uint8(0),
-							"DX": uint8(0),
-							"EAX": uint32(0),
-							"EBX": uint32(0),
-							"ECX": uint32(0),
-							"EDX": uint32(0),
-							"SI": uint32(0),
-							"DI": uint32(0),
-						},
-		State: 			"NEW",
-		EvictionReason: "",
-		Resources: 		make(map[string]int),	// * El valor por defecto es 0, tener en cuenta por las dudas a la hora de testear
+		PID:     request.PID, // ! ESTO NO ESTABA >:v
+		PC:      0,
+		Quantum: globals.Configkernel.Quantum,
+		CPU_reg: map[string]interface{}{
+			"AX":  uint8(0),
+			"BX":  uint8(0),
+			"CX":  uint8(0),
+			"DX":  uint8(0),
+			"EAX": uint32(0),
+			"EBX": uint32(0),
+			"ECX": uint32(0),
+			"EDX": uint32(0),
+			"SI":  uint32(0),
+			"DI":  uint32(0),
+			"PC":  uint32(0),
+		},
+		State:             "NEW",
+		EvictionReason:    "",
+		Resources:         make(map[string]int), // * El valor por defecto es 0, tener en cuenta por las dudas a la hora de testear
 		RequestedResource: "",
+		Executions:        0,
 	}
-
-	// Si la lista está vacía, la desbloqueo
-	if len(globals.LTS) == 0 {
-		globals.EmptiedListMutex.Unlock()
-	}
-
-	globals.LTSMutex.Lock()
-	slice.Push(&globals.LTS, *newPcb)
-	defer globals.LTSMutex.Unlock()
 
 	var respBody ProcessStart_BRS = ProcessStart_BRS{PID: newPcb.PID}
 	response, err := json.Marshal(respBody)
@@ -99,44 +92,60 @@ func ProcessInit(w http.ResponseWriter, r *http.Request) {
 
 	bodyInst, err := json.Marshal(GetInstructions_BRQ{
 		Path: pathInstString,
-		Pid: newPcb.PID,
-		Pc: newPcb.PC,
+		Pid:  newPcb.PID,
+		Pc:   newPcb.PC,
 	})
 	if err != nil {
 		return
 	}
-	
+
 	requerirInstrucciones, err := http.NewRequest("POST", url, bytes.NewBuffer(bodyInst))
 	if err != nil {
 		log.Printf("POST request failed (No se pueden cargar instrucciones): %v", err)
 	}
-	
+
 	cliente := &http.Client{}
 	requerirInstrucciones.Header.Set("Content-Type", "application/json")
 	recibirRespuestaInstrucciones, err := cliente.Do(requerirInstrucciones)
-	if (err != nil || recibirRespuestaInstrucciones.StatusCode != http.StatusOK) {
+	if err != nil || recibirRespuestaInstrucciones.StatusCode != http.StatusOK {
 		log.Fatal("Error en CargarInstrucciones (memoria)", err)
 	}
 
+	// Si la lista está vacía, la desbloqueo
+	if len(globals.LTS) == 0 {
+		globals.LTSMutex.Lock()
+		slice.Push(&globals.LTS, *newPcb)
+		defer globals.LTSMutex.Unlock()
+		<-globals.EmptiedList
+	} else {
+		globals.LTSMutex.Lock()
+		slice.Push(&globals.LTS, *newPcb)
+		defer globals.LTSMutex.Unlock()
+	}
+
 	log.Printf("Se crea el proceso %d en %s\n", newPcb.PID, newPcb.State)
+	
 
 	w.WriteHeader(http.StatusOK)
 	w.Write(response)
 }
 
-func generatePID() uint32 {
+/* func generatePID() uint32 {
 	globals.PidMutex.Lock()
 	defer globals.PidMutex.Unlock()
 	globals.NextPID++
 	return globals.NextPID
-}
+} */
 
-/**
- * ProcessDelete: Elimina un proceso en base a un PID. Realiza las operaciones como si el proceso llegase a EXIT
-	[ ] Cambio de estado de proceso: EXIT
-	[ ] Liberación de recursos
-	[ ] Liberación de archivos
-	[ ] Liberación de memoria 
+/*
+*
+
+  - ProcessDelete: Elimina un proceso en base a un PID. Realiza las operaciones como si el proceso llegase a EXIT
+    [ ] Cambio de estado de proceso: EXIT
+    [ ] Liberación de recursos
+    [ ] Liberación de memoria
+
+    [ ] Testeada
 */
 func ProcessDelete(w http.ResponseWriter, r *http.Request) {
 	pidString := r.PathValue("pid")
@@ -145,41 +154,44 @@ func ProcessDelete(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
-	// Elimino el proceso de la lista de procesos
-	RemoveByID(pid)
+	// Si el proceso está en ejecución, se envía una interrupción para desalojarlo con INTERRUPTED_BY_USER, de lo contrario se elimina directamente y se saca de la cola en la que se encuentre 
+	if (pid == globals.CurrentJob.PID && globals.CurrentJob.State == "EXEC") {
+		SendInterrupt("DELETE", pid, -1)
+	} else {
+		DeleteByID(pid)
+	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Job deleted")) // ! No tiene que devolver nada
 }
 
 type ProcessStatus_BRS struct {
 	State string `json:"state"`
 }
 
-/**
- * ProcessState: Devuelve el estado de un proceso en base a un PID
-	[ ] Devuelve el estado del proceso
-
-	Por el momento devuelve un dato hardcodeado
+/*
+*
+  - ProcessState: Devuelve el estado de un proceso en base a un PID
+    [ ] Testeada
 */
 func ProcessState(w http.ResponseWriter, r *http.Request) {
+	log.Println("HOLAAA ESTOY EN PROCESS STATE")
 	pidString := r.PathValue("pid")
 	pid, err := GetPIDFromString(pidString)
 	if err != nil {
+		log.Println("Error al convertir PID a string: ", pidString, err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	process, _ := SearchByID(pid, globals.LTS)
-	if process == nil {
-		process, _ = SearchByID(pid, globals.STS)
-	} 
-	
+	log.Println("Vamos a buscar el proceso con PID: ", pid)
+
+	process, _ := SearchByID(pid, getProcessList())
 	if process == nil {
 		http.Error(w, "Process not found", http.StatusNotFound)
 		return
 	}
+
+	log.Println("Encontré esto: ", process)
 
 	result := ProcessStatus_BRS{State: process.State}
 
@@ -195,30 +207,37 @@ func ProcessState(w http.ResponseWriter, r *http.Request) {
 
 /**
  * PlanificationStart: Retoma el STS y LTS en caso de que la planificación se encuentre pausada. Si no, ignora la petición.
-*/
+ */
 func PlanificationStart(w http.ResponseWriter, r *http.Request) {
+	globals.PlanningState = "RUNNING"
+	<- globals.LTSPlanBinary
+	<- globals.STSPlanBinary
+	fmt.Println("Planification Started")
 	w.WriteHeader(http.StatusOK)
-	<- globals.PlanBinary
 }
 
-/**
- * PlanificationStop: Detiene el STS y LTS en caso de que la planificación se encuentre en ejecución. Si no, ignora la petición.
-	El proceso que se encuentra en ejecución NO es desalojado. Una vez que salga de EXEC se pausa el manejo de su motivo de desalojo.
-	El resto de procesos bloqueados van a pausar su transición a la cola de Ready
+/*
+*
+  - PlanificationStop: Detiene el STS y LTS en caso de que la planificación se encuentre en ejecución. Si no, ignora la petición.
+    El proceso que se encuentra en ejecución NO es desalojado. Una vez que salga de EXEC se pausa el manejo de su motivo de desalojo.
+    El resto de procesos bloqueados van a pausar su transición a la cola de Ready
 */
 func PlanificationStop(w http.ResponseWriter, r *http.Request) {
+	globals.PlanningState = "STOPPED"
+	globals.LTSPlanBinary <- true
+	globals.STSPlanBinary <- true
+	fmt.Println("Planification Stopped")
 	w.WriteHeader(http.StatusOK)
-	globals.PlanBinary <- false
 }
 
 type ProcessList_BRS struct {
-	Pid int `json:"pid"`
+	Pid   int    `json:"pid"`
 	State string `json:"state"`
 }
 
 /**
  * ProcessList: Devuelve una lista de procesos con su PID y estado
-*/
+ */
 func ProcessList(w http.ResponseWriter, r *http.Request) {
 	allProcesses := getProcessList()
 
@@ -238,23 +257,41 @@ func ProcessList(w http.ResponseWriter, r *http.Request) {
 	w.Write(response)
 }
 
-/**
- * getProcessList: Devuelve una lista de todos los procesos en el sistema (LTS, STS, Blocked, STS_Priority, CurrentJob)
+/*
+*
 
- * @return []pcb.T_PCB: Lista de procesos
+  - getProcessList: Devuelve una lista de todos los procesos en el sistema (LTS, STS, Blocked, STS_Priority, CurrentJob)
+
+  - @return []pcb.T_PCB: Lista de procesos
 */
 func getProcessList() []pcb.T_PCB {
-	allProcesses := append(globals.LTS, globals.STS...)
-	allProcesses = append(allProcesses, globals.Blocked...)
+	var allProcesses []pcb.T_PCB
+	allProcesses = append(allProcesses, globals.LTS...)
+	allProcesses = append(allProcesses, globals.STS...)
 	allProcesses = append(allProcesses, globals.STS_Priority...)
-	allProcesses = append(allProcesses, globals.CurrentJob)
+	allProcesses = append(allProcesses, globals.Blocked...)
+	allProcesses = append(allProcesses, globals.Terminated...)
+	if globals.CurrentJob.PID != 0 && pidIsNotOnList(globals.CurrentJob.PID, allProcesses){
+		allProcesses = append(allProcesses, globals.CurrentJob)
+	}
 	return allProcesses
 }
 
-/**
- * PCB_Send: Envía un PCB al CPU y recibe la respuesta
+func pidIsNotOnList(pid uint32, list []pcb.T_PCB) bool {
+	for _, process := range list {
+		if process.PID == pid {
+			return false
+		}
+	}
+	return true
+}
 
- * @return error: Error en caso de que falle el envío
+/*
+*
+
+  - PCB_Send: Envía un PCB al CPU y recibe la respuesta
+
+  - @return error: Error en caso de que falle el envío
 */
 func PCB_Send() error {
 	//Encode data
@@ -292,74 +329,125 @@ func PCB_Send() error {
 	return nil
 }
 
-func PCB_recv(w http.ResponseWriter, r *http.Request) {
-	var received_pcb pcb.T_PCB
+/*
+*
 
-	// Decode PCB
-	err := json.NewDecoder(r.Body).Decode(&received_pcb)
-	if err != nil {
-		http.Error(w, "Failed to decode PCB", http.StatusBadRequest)
-		return
-	}
-		
-	globals.CurrentJob = received_pcb
-	globals.PcbReceived <- true
+  - SearchByID: Busca un proceso en la lista de procesos en base a su PID
 
-	// Encode PCB
-	jsonResp, err := json.Marshal(received_pcb)
-	if err != nil {
-		http.Error((w), "Failed to encode PCB response", http.StatusInternalServerError)
-	}
+  - @param pid: PID del proceso a buscar
 
-	// Send back PCB
-	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(jsonResp)	
-}
+  - @param processList: Lista de procesos
 
-/**
- * SearchByID: Busca un proceso en la lista de procesos en base a su PID
-
- * @param pid: PID del proceso a buscar
- * @param processList: Lista de procesos
- * @return *pcb.T_PCB: Proceso encontrado
+  - @return *pcb.T_PCB: Proceso encontrado
 */
 func SearchByID(pid uint32, processList []pcb.T_PCB) (*pcb.T_PCB, int) {
-	for i, process := range processList {
-		if process.PID == pid {
-			return &process, i
+	if len(processList) == 0 {
+		return nil, -1
+	} else {
+		for i, process := range processList {
+			if process.PID == pid {
+				return &process, i
+			}
 		}
 	}
 	return nil, -1
 }
 
-/**
- * RemoveByID: Remueve un proceso de la lista de procesos en base a su PID
-
- * @param pid: PID del proceso a remover
+/*
+	// TODO: Mover a utils/slice
+	* DeleteByID: Remueve un proceso de la lista de procesos en base a su PID
+	* @param pid: PID del proceso a remover
 */
-func RemoveByID(pid uint32) error {
-	_, ltsIndex := SearchByID(pid, globals.LTS)
-	_, stsIndex := SearchByID(pid, globals.STS)
-	
-	if ltsIndex != -1 {
-		globals.LTSMutex.Lock()
-		defer globals.LTSMutex.Unlock()
-		slice.RemoveAtIndex(&globals.LTS, ltsIndex)	
-	} else if stsIndex != -1 {
-		globals.STSMutex.Lock()
-		defer globals.STSMutex.Unlock()
-		slice.RemoveAtIndex(&globals.STS, stsIndex)
+func DeleteByID(pid uint32) error {
+	pcbToDelete := RemoveByID(pid)
+
+	if pcbToDelete.PID == 0 {
+		return fmt.Errorf("process with PID %d not found", pid)
+	} else {
+		KillJob(pcbToDelete)
 	}
-	
+
 	return nil
 }
 
-/**
- * GetPIDFromQueryPath: Convierte un PID en formato string a uint32
+func RemoveByID(pid uint32) pcb.T_PCB {
+	_, ltsIndex := SearchByID(pid, globals.LTS)
+	_, stsIndex := SearchByID(pid, globals.STS)
+	_, blockedIndex := SearchByID(pid, globals.Blocked)
 
- * @param pidString: PID en formato string
- * @return uint32: PID extraído
+	var removedPCB pcb.T_PCB
+
+	if ltsIndex != -1 {
+		globals.LTSMutex.Lock()
+		defer globals.LTSMutex.Unlock()
+		removedPCB = slice.RemoveAtIndex(&globals.LTS, ltsIndex)
+		// Evita bloqueo de lista vacía
+		if (len(globals.LTS) == 0) {
+			globals.EmptiedList <- true
+		}
+	} else if stsIndex != -1 {
+		globals.STSMutex.Lock()
+		defer globals.STSMutex.Unlock()
+		removedPCB = slice.RemoveAtIndex(&globals.STS, stsIndex)
+		<- globals.MultiprogrammingCounter
+		<- globals.STSCounter
+	} else if blockedIndex != -1 {
+		globals.BlockedMutex.Lock()
+		defer globals.BlockedMutex.Unlock()
+		removedPCB = slice.RemoveAtIndex(&globals.Blocked, blockedIndex)
+	} else {
+		return pcb.T_PCB{PID: 0} 
+	}
+
+	return removedPCB
+}
+
+func KillJob(pcb pcb.T_PCB) {
+	globals.ChangeState(&pcb, "TERMINATED")
+	if (resource.HasResources(pcb)) {
+		advancedDeleting(pcb)
+	}
+	slice.Push(&globals.Terminated, pcb)
+	RequestMemoryRelease(pcb.PID)
+	fmt.Print("Se eliminó el proceso ", pcb.PID, " satisfactoriamente\n")
+}
+
+func advancedDeleting(pcb pcb.T_PCB) {
+	for _ , res := range globals.Configkernel.Resources {
+		if count, ok := pcb.Resources[res]; ok && count > 0 {
+			pcb.Resources[res] = 0
+			for range count {
+				globals.Resource_instances[res]++
+				resource.ReleaseJobIfBlocked(res)
+			}
+		}
+
+		getIndex := func() int {
+			for i, pcbResource := range globals.ResourceMap[res] {
+				if pcbResource.PID == pcb.PID {
+					return i
+				}
+			}
+			return -1
+		}
+
+		index := getIndex()
+
+		if index != -1 {
+			globals.MapMutex.Lock()
+			globals.ResourceMap[res] = append(globals.ResourceMap[res][:index], globals.ResourceMap[res][index+1:]...)
+			globals.MapMutex.Unlock()
+		}
+	}
+}
+
+/*
+*
+  - GetPIDFromQueryPath: Convierte un PID en formato string a uint32
+
+  - @param pidString: PID en formato string
+
+  - @return uint32: PID extraído
 */
 func GetPIDFromString(pidString string) (uint32, error) {
 	pid64, error := strconv.ParseUint(pidString, 10, 32)
@@ -369,369 +457,63 @@ func GetPIDFromString(pidString string) (uint32, error) {
 func RemoveFromBlocked(pid uint32) {
 	for i, pcb := range globals.Blocked {
 		if pcb.PID == pid {
-			globals.MapMutex.Lock()
-			defer globals.MapMutex.Unlock()
 			slice.RemoveAtIndex(&globals.Blocked, i)
 		}
 	}
-
 }
 
-// ----------------- IO -----------------
-func GetIOInterface(w http.ResponseWriter, r *http.Request) {
-	var interf device.T_IOInterface
-	
-	err := json.NewDecoder(r.Body).Decode(&interf)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	slice.Push(&globals.Interfaces, interf)
-
-	log.Printf("Interface received, type: %s, port: %d\n", interf.InterfaceType, interf.InterfacePort)
-
-	w.WriteHeader(http.StatusOK)
-}
-type SearchInterface struct {
-	Name string `json:"name"`
-	Type string `json:"type"`
-}
-func ExisteInterfaz(w http.ResponseWriter, r *http.Request) {
-	var received_data SearchInterface
-	err := json.NewDecoder(r.Body).Decode(&received_data)
-	if err != nil {
-		http.Error(w, "Bad request", http.StatusBadRequest)
-	}
-	
-	log.Printf("Received data: %s, %s\n", received_data.Name, received_data.Type)
-
-	aux, err := SearchDeviceByName(received_data.Name)
-	if err != nil {
-		http.Error(w, "Device not found", http.StatusNotFound)
-	}
-	
-	var response bool
-	if aux.InterfaceType == received_data.Type {
-		response = true
-	} else {
-		response = false
-	}
-
-	jsonResp, err := json.Marshal(response)
-	if err != nil {
-		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(jsonResp)
+type InterruptionRequest struct {
+	InterruptionReason string `json:"InterruptionReason"`
+	Pid                uint32 `json:"pid"`
+	ExecutionNumber    int    `json:"execution_number"`
 }
 
-func SearchDeviceByName(deviceName string) (device.T_IOInterface, error) {
-	for _, interf := range globals.Interfaces {
-		if interf.InterfaceName == deviceName  {
-			fmt.Println("Interfaz encontrada: ", interf)
-			return interf, nil
-		}
-	}
-	return device.T_IOInterface{}, fmt.Errorf("device not found")
-}
+func SendInterrupt(reason string, pid uint32, executionNumber int) {
+	url := fmt.Sprintf("http://%s:%d/interrupt", globals.Configkernel.IP_cpu, globals.Configkernel.Port_cpu)
 
-
-// * Types para realizar solicitudes a IO
-type GenSleep struct {
-	Pcb	 				pcb.T_PCB
-	Inter 				device.T_IOInterface
-	TimeToSleep 		int
-}
-
-type StdinRead struct {
-	Pcb 				pcb.T_PCB
-	Inter 				device.T_IOInterface
-	DireccionesFisicas 	[]globals.DireccionTamanio
-	Tamanio 			int
-}
-
-type StdoutWrite struct {
-	Pcb 				pcb.T_PCB
-	Inter 				device.T_IOInterface
-	DireccionesFisicas 	[]globals.DireccionTamanio
-}
-
-
-func SolicitarGenSleep(pcb pcb.T_PCB) {
-	genSleepDataDecoded := genericInterfaceBody.(struct {
-		Interfac_Name string
-		SleepTime     int
+	bodyInt, err := json.Marshal(InterruptionRequest{
+		InterruptionReason: reason,
+		Pid:                pid,
+		ExecutionNumber:    executionNumber,
 	})
-
-	newInter, err := SearchDeviceByName(genSleepDataDecoded.Interfac_Name)
 	if err != nil {
-		log.Printf("Device not found: %v", err)
-	}
-	
-	genSleep := GenSleep{
-		Pcb: 			pcb,
-		Inter: 			newInter, 
-		TimeToSleep: 	genSleepDataDecoded.SleepTime,
-	}
-
-	globals.EnganiaPichangaMutex.Unlock()
-	
-	jsonData, err := json.Marshal(genSleep)
-	if err != nil {
-		log.Printf("Failed to encode GenSleep request: %v", err)
-	}
-
-	url := fmt.Sprintf("http://%s:%d/io-operate", newInter.InterfaceIP, newInter.InterfacePort)
-	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
-	if err != nil {
-		log.Printf("Failed to send PCB: %v", err)
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		log.Printf("Unexpected response status: %s", resp.Status)
-	}
-}
-
-func SolicitarStdinRead(pcb pcb.T_PCB) {
-	stdinDataDecoded := genericInterfaceBody.(struct {
-		DireccionesFisicas 	[]globals.DireccionTamanio
-		InterfaceName 		string
-		Tamanio 			int
-	})
-
-	newInter, err := SearchDeviceByName(stdinDataDecoded.InterfaceName)
-	if err != nil {
-		log.Printf("Device not found: %v", err)
-	}
-
-	stdinRead := StdinRead {
-		Pcb: 					pcb,
-		Inter	: 				newInter,
-		DireccionesFisicas:		stdinDataDecoded.DireccionesFisicas,
-		Tamanio: 				stdinDataDecoded.Tamanio,
-	}
-
-	globals.EnganiaPichangaMutex.Unlock()
-
-	jsonData, err := json.Marshal(stdinRead)
-	if err != nil {
-		log.Printf("Failed to encode StdinRead request: %v", err)
-	}
-
-	url := fmt.Sprintf("http://%s:%d/io-operate", newInter.InterfaceIP, newInter.InterfacePort)
-
-	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
-	if err != nil {
-		log.Printf("Failed to send PCB: %v", err)
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		log.Printf("Unexpected response status: %s", resp.Status)
-	}
-}
-
-func SolicitarStdoutWrite(pcb pcb.T_PCB) {
-	stdoutDataDecoded := genericInterfaceBody.(struct {
-		DireccionesFisicas 	[]globals.DireccionTamanio
-		InterfaceName 		string
-	})
-
-	newInter, err := SearchDeviceByName(stdoutDataDecoded.InterfaceName)
-	if err != nil {
-		log.Printf("Device not found: %v", err)
-	}
-
-	stdoutWrite := StdoutWrite {
-		Pcb: 					pcb,
-		Inter: 					newInter,
-		DireccionesFisicas: 	stdoutDataDecoded.DireccionesFisicas,
-	}
-
-	globals.EnganiaPichangaMutex.Unlock()
-
-	jsonData, err := json.Marshal(stdoutWrite)
-	if err != nil {
-		log.Printf("Failed to encode StdoutWrite request: %v", err)
-	}
-
-	url := fmt.Sprintf("http://%s:%d/io-operate", newInter.InterfaceIP, newInter.InterfacePort)
-
-	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
-	if err != nil {
-		log.Printf("Failed to send PCB: %v", err)
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		log.Printf("Unexpected response status: %s", resp.Status)
-	}
-}
-
-// TODO: No entiendo que hace el available.pcb
-
-/* func IOStdinRead(w http.ResponseWriter, r *http.Request) {
-	var infoRecibida struct {
-		DireccionesFisicas []globals.DireccionTamanio
-		Interfaz device.T_IOInterface
-		Tamanio int
-	}
-	
-	err := json.NewDecoder(r.Body).Decode(&infoRecibida)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	// Da la orden a la interfaz STDIN de leer			
-	url := fmt.Sprintf("http://%s:%d/io-operate", infoRecibida.Interfaz.InterfaceIP, infoRecibida.Interfaz.InterfacePort)
-
-	bodyStdin, err := json.Marshal(struct {
-		DireccionesFisicas []globals.DireccionTamanio
-		Tamanio int
-	} {infoRecibida.DireccionesFisicas, infoRecibida.Tamanio})
+	enviarInterrupcion, err := http.NewRequest("POST", url, bytes.NewBuffer(bodyInt))
 	if err != nil {
-		log.Printf("Failed to encode adresses: %v", err)
+		log.Fatalf("POST request failed (No se puede enviar interrupción): %v", err)
 	}
 
-	response, err := http.Post(url, "application/json", bytes.NewBuffer(bodyStdin))
-	if err != nil {
-		log.Printf("Failed to send adresses: %v", err)
+	cliente := &http.Client{}
+	enviarInterrupcion.Header.Set("Content-Type", "application/json")
+	recibirRta, err := cliente.Do(enviarInterrupcion)
+	if err != nil || recibirRta.StatusCode != http.StatusOK {
+		log.Fatal("Error al interrupir proceso", err)
 	}
-
-	if response.StatusCode != http.StatusOK {
-		log.Printf("Unexpected response status: %s", response.Status)
-	}
-
-	log.Println("Kernel mandó a leer a la interfaz: ", infoRecibida.Interfaz.InterfaceType, infoRecibida.Interfaz.InterfacePort)
-
-	globals.AvailablePcb <- true // TODO: Chequear si con la nueva implementacion se delega a la lista de bloqueados
-	w.WriteHeader(http.StatusOK)
-} */
-
-/* func IOStdoutWrite(w http.ResponseWriter, r *http.Request) {
-	var infoRecibida struct {
-		DireccionesFisicas []globals.DireccionTamanio
-		Interfaz device.T_IOInterface
-	}
-	
-	err := json.NewDecoder(r.Body).Decode(&infoRecibida)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	// Da la orden a la interfaz STDOUT de mostrar por pantalla la salida			
-	url := fmt.Sprintf("http://%s:%d/io-operate", infoRecibida.Interfaz.InterfaceIP, infoRecibida.Interfaz.InterfacePort)
-
-	bodyStdout, err := json.Marshal(infoRecibida.DireccionesFisicas)
-	if err != nil {
-		log.Printf("Failed to encode adresses: %v", err)
-	}
-
-	response, err := http.Post(url, "application/json", bytes.NewBuffer(bodyStdout))
-	if err != nil {
-		log.Printf("Failed to send adresses: %v", err)
-	}
-
-	if response.StatusCode != http.StatusOK {
-		log.Printf("Unexpected response status: %s", response.Status)
-	}
-
-	log.Println("Kernel mandó a escribir a la interfaz: ", infoRecibida.Interfaz.InterfaceIP, infoRecibida.Interfaz.InterfacePort)
-
-	globals.AvailablePcb <- true
-	w.WriteHeader(http.StatusOK)
-} */
-
-// -------------------------- Caos de Interfaces --------------------------
-
-var genericInterfaceBody 	interface{}
-
-/*
- RecvData_gensleep: Recibe desde CPU la información necesaria para solicitar un GEN_SLEEP.
-
- Opera con estructura:
-	- Nombre de la interfaz
-	- Tiempo de espera
-**/
-func RecvData_gensleep(w http.ResponseWriter, r *http.Request) {
-	var received_data struct {
-		Interfac_Name 	string
-		SleepTime 		int
-	}
-
-	err := json.NewDecoder(r.Body).Decode(&received_data)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	genericInterfaceBody = received_data
-	// TODO: conectar con llamada iogen
 }
 
-/*
- RecvData_stdin: Recibe desde CPU la información necesaria para solicitar un STDIN_READ.
+func RequestMemoryRelease(pid uint32) {
+	cliente := &http.Client{}
+	url := fmt.Sprintf("http://%s:%d/finalizarProceso", globals.Configkernel.IP_memory, globals.Configkernel.Port_memory)
 
- Opera con estructura:
-	- Direcciones físicas
-	- Nombre de Interfaz
-	- Tamaño
-**/
-func RecvData_stdin(w http.ResponseWriter, r *http.Request) {
-	var received_data struct {
-		DireccionesFisicas 	[]globals.DireccionTamanio
-		InterfaceName		string
-		Tamanio 			int
-	}
-
-	err := json.NewDecoder(r.Body).Decode(&received_data)
+	req, err := http.NewRequest("PATCH", url, nil)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		fmt.Printf("Error al crear request para finalizar proceso: %v", err)
 	}
 
-	genericInterfaceBody = received_data
-}
+	q := req.URL.Query()
+	q.Add("pid", strconv.Itoa(int(pid)))
+	req.URL.RawQuery = q.Encode()
 
-/*
- RecvData_stdout: Recibe desde CPU la información necesaria para solicitar un STDOUT_WRITE.
-
- Opera con estructura:
-	- Direcciones físicas
-	- Nombre de Interfaz
-**/
-func RecvData_stdout(w http.ResponseWriter, r *http.Request) {
-	var received_data struct {
-		DireccionesFisicas 	[]globals.DireccionTamanio
-		InterfaceName		string
-	}
-
-	err := json.NewDecoder(r.Body).Decode(&received_data)
+	req.Header.Set("Content-Type", "application/json")
+	respuesta, err := cliente.Do(req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		fmt.Printf("Error al finalizar proceso en memoria: %v", err)
 	}
 
-	genericInterfaceBody = received_data
-}
-
-/*
- RecvPCB_IO: Recibe el PCB bloqueado por IO, lo desbloquea y lo agrega a la cola de STS.
-**/
-func RecvPCB_IO(w http.ResponseWriter, r *http.Request) {
-	var received_pcb pcb.T_PCB
-
-	err := json.NewDecoder(r.Body).Decode(&received_pcb)
-	if err != nil {
-		http.Error(w, "Failed to decode PCB", http.StatusBadRequest)
-		return
+	// Verificar el código de estado de la respuesta
+	if respuesta.StatusCode != http.StatusOK {
+		fmt.Printf("Error al finalizar proceso en memoria: %v", err)
 	}
-	
-	globals.MultiprogrammingCounter <- 1
-	globals.ChangeState(&received_pcb, "READY")
-	slice.Push(&globals.STS, received_pcb)
-
-	w.WriteHeader(http.StatusOK)
 }

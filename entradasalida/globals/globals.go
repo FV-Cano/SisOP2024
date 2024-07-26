@@ -5,6 +5,20 @@ import (
 	"github.com/sisoputnfrba/tp-golang/utils/pcb"
 )
 
+var (
+	CurrentBitMap []int
+	Blocks []byte
+	Fcbs map[string]Metadata
+)
+
+type T_Bitmap struct {
+	BitMap []int `json:"bitmap"`
+}
+
+type T_Blocks struct {
+	Blocks []byte `json:"blocks"`
+}
+
 type T_ConfigIO struct {
 	Ip                 		string `json:"ip"`
 	Port               		int    `json:"port"`
@@ -17,6 +31,7 @@ type T_ConfigIO struct {
 	Dialfs_path        		string `json:"dialfs_path"`
 	Dialfs_block_size  		int    `json:"dialfs_block_size"`
 	Dialfs_block_count 		int    `json:"dialfs_block_count"`
+	Dialfs_compaction_delay int    `json:"dialfs_compaction_delay"`
 }
 
 // ----------------- Body types -----------------
@@ -31,7 +46,6 @@ type StdinRead struct {
 	Pcb 					pcb.T_PCB
 	Inter 					device.T_IOInterface
 	DireccionesFisicas 		[]DireccionTamanio
-	Tamanio 				int
 }
 
 type StdoutWrite struct {
@@ -40,13 +54,28 @@ type StdoutWrite struct {
 	DireccionesFisicas 		[]DireccionTamanio
 }
 
+type DialFSRequest struct {
+	Pcb 					pcb.T_PCB
+	Inter 					device.T_IOInterface
+	NombreArchivo 			string
+	Tamanio 				int
+	Puntero					int
+	Direccion				[]DireccionTamanio
+	Operacion				string
+}
 
 var ConfigIO 				T_ConfigIO
 var Generic_QueueChannel 	chan GenSleep
 var Stdin_QueueChannel 		chan StdinRead
 var Stdout_QueueChannel 	chan StdoutWrite
+var DialFS_QueueChannel 	chan DialFSRequest
 
 type DireccionTamanio struct {
 	DireccionFisica 		int
 	Tamanio         		int
+}
+
+type Metadata struct {
+	InitialBlock 			int 	`json:"initial_block"`
+	Size 					int 	`json:"size"`
 }

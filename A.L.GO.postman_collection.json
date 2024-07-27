@@ -1,22 +1,45 @@
 {
 	"info": {
-		"_postman_id": "4a43a832-6d7a-40b6-8f86-595cbc3eb2e6",
+		"_postman_id": "d14ea708-9aaf-47f4-a26f-fecbc829407f",
 		"name": "A.L.GO",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-		"_exporter_id": "33964966"
+		"_exporter_id": "34635270",
+		"_collection_link": "https://cloudy-equinox-997718.postman.co/workspace/My-Workspace~9b52a18d-3c37-47af-8ec8-3270129db32c/collection/34635270-d14ea708-9aaf-47f4-a26f-fecbc829407f?action=share&source=collection_link&creator=34635270"
 	},
 	"item": [
 		{
 			"name": "Kernel",
 			"item": [
 				{
-					"name": "Crear proceso",
+					"name": "Obtener lista de procesos",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://127.0.0.1:8001/process",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8001",
+							"path": [
+								"process"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Crear proceso (ours)",
 					"request": {
 						"method": "PUT",
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"path\": \"/1.txt\"\n}",
+							"raw": "{\n    \"pid\": 1,\n    \"path\": \"/our/5.txt\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -41,10 +64,19 @@
 					"response": []
 				},
 				{
-					"name": "Obtener lista de procesos",
+					"name": "Crear proceso (cátedra)",
 					"request": {
-						"method": "GET",
+						"method": "PUT",
 						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"pid\": 1,\n    \"path\": \"/scripts_memoria/MEMORIA_1\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
 						"url": {
 							"raw": "http://127.0.0.1:8001/process",
 							"protocol": "http",
@@ -57,6 +89,52 @@
 							"port": "8001",
 							"path": [
 								"process"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Ver estado de un proceso",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://127.0.0.1:8001/process/2",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8001",
+							"path": [
+								"process",
+								"2"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Borrar proceso",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "http://127.0.0.1:8001/process/4",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8001",
+							"path": [
+								"process",
+								"4"
 							]
 						}
 					},
@@ -116,18 +194,46 @@
 					"response": []
 				},
 				{
-					"name": "Ver instancias de recurso",
+					"name": "Instancias de recursos",
 					"request": {
 						"method": "GET",
-						"header": []
+						"header": [],
+						"url": {
+							"raw": "http://127.0.0.1:8001/resource-info",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8001",
+							"path": [
+								"resource-info"
+							]
+						}
 					},
 					"response": []
 				},
 				{
-					"name": "Procesos bloqueados por recurso",
+					"name": "Recursos bloqueados",
 					"request": {
 						"method": "GET",
-						"header": []
+						"header": [],
+						"url": {
+							"raw": "http://127.0.0.1:8001/resourceblocked",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8001",
+							"path": [
+								"resourceblocked"
+							]
+						}
 					},
 					"response": []
 				}

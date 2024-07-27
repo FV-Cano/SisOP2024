@@ -114,7 +114,6 @@ func PasarAInt(cadena string) int {
 }
 
 // --------------------------------------------------------------------------------------//
-// AJUSTAR TAMANiO DE UN PROCESO: CPU le hace la peticion desde estoVaParaCpuApi.go
 func Resize(w http.ResponseWriter, r *http.Request) {
 	queryParams := r.URL.Query()
 	tamanio := queryParams.Get("tamanio")
@@ -313,7 +312,7 @@ func EscribirMemoria(w http.ResponseWriter, r *http.Request) {
 }
 
 // por cada struct va a ESCRIBIR la memoria en el tamaño que le pide
-func EscribirEnMemoria(direccionesTamanios []globals.DireccionTamanio, valor_a_escribir []byte, pid int) string { //TODO: tenemos que validar que al proceso le corresponda escribir ahí o ya la validación la hizo cpu al traducir la dirección?
+func EscribirEnMemoria(direccionesTamanios []globals.DireccionTamanio, valor_a_escribir []byte, pid int) string {
 	/*Ante un pedido de escritura, escribir lo indicado a partir de la dirección física pedida.
 	En caso satisfactorio se responderá un mensaje de ‘OK’.*/
 

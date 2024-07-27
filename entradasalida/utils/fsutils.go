@@ -251,21 +251,21 @@ func ActualizarBloques() {
 func NewBitMap(size int) []byte {
 	NewBMAp := make([]byte, size)
 	for i := 0; i < size; i++ {
-		NewBMAp[i] = 0
+		NewBMAp[i] = byte(0)
 	}
 	return NewBMAp
 }
 
 func Set(i int) {
-	globals.CurrentBitMap[i] = 1
+	globals.CurrentBitMap[i] = byte(1)
 }
 
 func Clear(i int) {
-	globals.CurrentBitMap[i] = 0
+	globals.CurrentBitMap[i] = byte(0)
 }
 
 func IsNotSet(i int) bool {
-	return globals.CurrentBitMap[i] == 0
+	return globals.CurrentBitMap[i] == byte(0)
 }
 
 func ActualizarBitmap() {

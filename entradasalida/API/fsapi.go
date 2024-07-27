@@ -55,15 +55,6 @@ func InicializarFS() {
 			fmt.Println("Failed to read file: ", err)
 		}
 
-		// fmt.Println("El contenido del bitmap es: ", string(contenidoBitmap))
-
-		/* var bitmapAux []byte
-		// Convierte el contenido a JSON y lo carga en globals
-		err = json.Unmarshal(contenidoBitmap, &bitmapAux)
-		if err != nil {
-			fmt.Println("Failed to unmarshal contenido: ", err)
-		} */
-
 		globals.CurrentBitMap = contenidoBitmap
 
 		// Verifica que el tamaño del bitmap sea el correcto
@@ -95,14 +86,6 @@ func InicializarFS() {
 		if err != nil {
 			fmt.Println("Failed to read file: ", err)
 		}
-
-		/* bloquesAux := make([]byte, globals.ConfigIO.Dialfs_block_count*globals.ConfigIO.Dialfs_block_size) */
-
-		/* // Convierte el contenido a JSON y lo carga en globals
-		err = json.Unmarshal(contenidoBloques, &bloquesAux)
-		if err != nil {
-			fmt.Println("Failed to unmarshal contenido: ", err)
-		} */
 
 		globals.Blocks = contenidoBloques
 

@@ -244,11 +244,6 @@ func OcuparBloquesDesde(numBloque int, tamanioASetear int) {
 func ActualizarBloques() {
 	bloquesActualizado := globals.Blocks
 
-	/* archivoMarshallado, err := json.Marshal(bloquesActualizado)
-	if err != nil {
-		fmt.Println("Failed to marshal metadata: ", err)
-	} */
-
 	CrearModificarArchivo("dialfs/bloques.dat", bloquesActualizado)
 }
 
@@ -276,9 +271,5 @@ func IsNotSet(i int) bool {
 func ActualizarBitmap() {
 	bitmapActualizado := globals.CurrentBitMap
 
-	/* archivoMarshallado, err := json.Marshal(bitmapActualizado)
-	if err != nil {
-		fmt.Println("Failed to marshal metadata: ", err)
-	} */
 	CrearModificarArchivo("dialfs/bitmap.dat", bitmapActualizado)
 }

@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	CurrentBitMap []int
+	CurrentBitMap []byte
 	Blocks []byte
 	Fcbs map[string]Metadata
 )

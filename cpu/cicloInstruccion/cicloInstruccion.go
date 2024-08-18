@@ -655,7 +655,7 @@ func DecodeAndExecute(currentPCB *pcb.T_PCB) {
 		tamanio := globals.PasarAInt(instruccionDecodificada[1])
 		
 		respuestaResize := solicitudesmemoria.Resize(tamanio)
-		fmt.Println("el resize devuelve", respuestaResize)
+		fmt.Println("El resize devuelve", respuestaResize)
 		if respuestaResize != "\"OK\"" {
 			currentPCB.EvictionReason = "OUT_OF_MEMORY"
 			pcb.EvictionFlag = true

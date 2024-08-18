@@ -132,7 +132,6 @@ func ObtenerDireccionesFisicas(direccionLogica int, tamanio int, pid int) []glob
 
 	if PedirTamTablaPaginas(pid) == 0 {
 		tamanioTotal = desplazamiento + tamanio
-		fmt.Print("Entre por primera vez a la tabla, tamaño", tamanioTotal)
 	} else {
 		if tlb.BuscarEnTLB(pid, numeroPagina) {
 			log.Printf("PID: %d - TLB HIT - Pagina: %d", pid, numeroPagina)
@@ -146,7 +145,6 @@ func ObtenerDireccionesFisicas(direccionLogica int, tamanio int, pid int) []glob
 	}
 
 	if tamanioTotal > PedirTamTablaPaginas(pid)*tamPagina {
-		fmt.Print("Voy a Solicitar Resize")
 		solicitudesmemoria.Resize(tamanioTotal)
 	}
 

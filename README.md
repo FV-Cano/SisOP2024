@@ -1,6 +1,6 @@
 <h1 align="center">A.L.<span>GO</span></h1>
 
-This project was developed for the subject Operative Systems (1st Semester 2024). It serves as a conceptualization of an operating system, breaking down its core functionalities into four distinct modules: Kernel, Memory, CPU, and IO Interfaces. These modules interact to provide a simplified representation of how an operating system functions.
+This project was developed for the subject Operative Systems (1st Semester 2024). It serves as a conceptualization of an operating system, breaking down its core functionalities into four distinct modules: Kernel, Memory, CPU, and IO Interfaces. These modules interact to provide a simplified representation of how an operating system functions. The project was developed to fulfill the guidelines of [this document](https://docs.google.com/document/d/1w0PK_ZCUHsvGrVER_rKW7HkqLjHdkC6H0IBsmHUqhS4/edit)
 
 These are some several key features implemented in this project:
 
@@ -44,7 +44,7 @@ To run tests, first you must run some additional commands. Inside the algo-prueb
   export KERNEL_HOST=127.0.0.1
   export KERNEL_PORT=8001
 ```
-After that, you can run the following commands for testing purposes. However, before running tests you must update config files inside the project. To see config file values for each test and expected values, visit the following document: https://docs.google.com/document/d/1XsBsJynoN5A9PTsTEaZsj0q3zsEtcnLgdAHOQ4f_4-g/edit
+After that, you can run the following commands for testing purposes. However, before running tests you must update config files inside the project. To see config file values for each test and expected values, visit the [test document](https://docs.google.com/document/d/1XsBsJynoN5A9PTsTEaZsj0q3zsEtcnLgdAHOQ4f_4-g/edit) 
 
 Inside scripts_kernel folder:
 ```bash
